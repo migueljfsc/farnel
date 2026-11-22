@@ -1,0 +1,82 @@
+name: deploy-worker
+
+# Builds the SPA and deploys it, with the Worker, to Cloudflare, once the repository variable
+# DEPLOY_ENABLED is 'true' (README, "Go live"). The deploy belongs to wrangler, not OpenTofu.
+#
+# Required GitHub secrets (shared with the terraform workflow):
+#   CLOUDFLARE_API_TOKEN    — Account · Workers Scripts Edit, Account · D1 Edit
+#   CLOUDFLARE_ACCOUNT_ID
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "worker/**"
+      - "shared/**"
+      - "wrangler.jsonc"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - "eslint.config.js"
+      - ".github/workflows/deploy-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: cloudflare-production
+      url: https://farnel.migueljfsc.dev
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+      - run: pnpm build
+
+      # Schema before code. Migrations are forward-only; this runs unattended.
+      - name: Apply D1 migrations
+        uses: cloudflare/wrangler-action@v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.166.0"
+          command: d1 migrations apply farnel-prod --remote
+
+      # Up to three attempts, a minute apart.
+      - name: Deploy Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for attempt in 1 2 3; do
+            pnpm exec wrangler deploy && exit 0
+            if [ "$attempt" -lt 3 ]; then sleep 60; fi
+          done
+          exit 1
