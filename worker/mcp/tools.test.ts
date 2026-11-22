@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addDish, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId } from "../test/fixtures";
+import { addDish, addHousehold, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId } from "../test/fixtures";
 import { runTool, TOOLS } from "./tools";
 
 const db = env.DB;
@@ -33,6 +33,7 @@ describe("mcp tools", () => {
   });
 
   it("returns a rejected plan as an error with its reasons and saves nothing", async () => {
+    await addHousehold(db);
     const a = await addDish(db, "A", { interval: 14 });
     await addPlan(db, "2026-11-09", [{ dishId: a, cookDate: "2026-11-10" }]);
     const plan = { weekStart: "2026-11-23", cookings: [{ dishId: a, cookDate: "2026-11-23", portions: 2, meals: [{ date: "2026-11-23", slot: "lunch" }] }] };
@@ -52,6 +53,16 @@ describe("mcp tools", () => {
     const data = result.data as { dish: { status: string; createdBy: string }; ingredientsToReview: number[] };
     expect(data.dish).toMatchObject({ status: "pending", createdBy: "claude" });
     expect(data.ingredientsToReview).toHaveLength(1);
+  });
+
+  it("saves a plan for the people named, with one portion per meal each", async () => {
+    const ana = await addPerson(db, "a@example.com", "Ana");
+    await addPerson(db, "b@example.com", "Bea");
+    const dish = await addDish(db, "Sopa");
+    const plan = { weekStart: "2026-11-23", peopleIds: [ana], cookings: [{ dishId: dish, cookDate: "2026-11-23", portions: 1, meals: [{ date: "2026-11-23", slot: "lunch" }] }] };
+    const result = await runTool("save_plan", db, plan, clock);
+    expect(result.isError).toBeUndefined();
+    expect((result.data as { plan: { people: { name: string }[] } }).plan.people).toEqual([{ id: ana, name: "Ana" }]);
   });
 
   it("rejects arguments that do not match the tool's schema", async () => {

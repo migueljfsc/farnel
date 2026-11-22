@@ -87,9 +87,10 @@ Real prices (scraping supermarket sites, as PlanMyMeals does) vs. estimated cost
 ### 5.1 Concepts
 - **Person** — one of the two users, identified by the email Access authenticates. Has hard
   restrictions and soft preferences.
-- **Restriction** — a named property an ingredient can have (v1 seeds `gluten`; the model allows
-  more, e.g. lactose). A person's restriction is either **hard** (never served) or **soft** (a
-  preference with a weight).
+- **Restriction** — a named property an ingredient can have (gluten, lactose…), added to or removed
+  from a person by name. A person's restriction is either **hard** (never served) or **soft** (a
+  preference with a weight). Only restrictions someone has are asked about; removing the last one
+  keeps its ingredient decisions for when it comes back.
 - **Ingredient** — name, unit (`g`, `ml`, `un`), estimated price per unit, and a per-restriction
   status set by a person: `safe` or `forbidden`, or `unknown` until
   someone decides. `unknown` is a to-do, not a classification: the web UI lists every unknown
@@ -105,9 +106,9 @@ Real prices (scraping supermarket sites, as PlanMyMeals does) vs. estimated cost
 - **Meal** — a date and a slot (`lunch` | `dinner`) covered by a cooking.
 - **Feedback** — per person per cooking: rating 1–5 and an optional comment.
 
-**Portions.** A portion is one person's serving. Both people eat every planned meal, so a meal
-consumes 2 portions; a cooking of a dish yields `portions` and must cover
-`meals × 2 ≤ portions`. Scaling a dish to a cooking scales its ingredient quantities linearly.
+**Portions.** A portion is one person's serving. A plan records who eats it (everyone unless chosen
+otherwise when planning); every meal of the plan consumes one portion per eater, so a cooking must
+cover `meals × eaters ≤ portions`. Scaling a dish to a cooking scales its ingredient quantities linearly.
 
 **Time.** All dates are calendar dates in `Europe/Lisbon`; a week starts on Monday. "Past" means
 before today in that zone.
@@ -118,9 +119,8 @@ week) is left to Claude through tags and soft preferences.
 ### 5.2 Rules (server-enforced)
 1. **Eligible dish** for a week starting `W`:
    - status `validated`, and
-   - for every hard restriction of *any* person, every ingredient of the dish is `safe` for it
-     (both people eat every planned meal; a `forbidden` or `unknown` ingredient excludes the
-     dish), and
+   - for every hard restriction of *any person eating the plan*, every ingredient of the dish is
+     `safe` for it (a `forbidden` or `unknown` ingredient excludes the dish), and
    - `last_cooked(dish)` is null, or `last_cooked + repeat_interval_days <= first cook date in the
      proposed plan` — where `last_cooked` is the latest cook date among cookings of that dish
      with status `planned` or `done` (skipped and replaced cookings do not count), excluding the

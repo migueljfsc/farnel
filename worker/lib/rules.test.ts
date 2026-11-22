@@ -60,6 +60,7 @@ describe("validatePlan", () => {
       [2, dish({ id: 2 })],
     ]),
     hardRestrictionIds: [GLUTEN],
+    eaters: 2,
     today,
     takenMeals: new Set<string>(),
     ...extra,
@@ -101,6 +102,12 @@ describe("validatePlan", () => {
     for (const [cooking, code] of cases) {
       expect(validatePlan(plan([cooking]), facts())).toEqual([{ code, cooking: 0, dishId: 1 }]);
     }
+  });
+
+  it("needs one portion per person eating each meal", () => {
+    const meals = [lunch("2026-11-23"), lunch("2026-11-24")];
+    expect(validatePlan(plan([{ dishId: 1, cookDate: "2026-11-23", portions: 2, meals }]), facts({ eaters: 1 }))).toEqual([]);
+    expect(validatePlan(plan([{ dishId: 1, cookDate: "2026-11-23", portions: 3, meals }]), facts({ eaters: 2 }))).toEqual([{ code: "portions", cooking: 0, dishId: 1 }]);
   });
 
   it("rejects cooking in the past", () => {

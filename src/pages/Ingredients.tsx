@@ -27,7 +27,8 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
     >
       <Loaded data={ingredients.data && restrictions.data ? { ...ingredients.data, ...restrictions.data } : undefined} error={ingredients.error ?? restrictions.error}>
         {(data) => {
-          const shown = toDecide ? data.ingredients.filter((i) => Object.values(i.statuses).includes("unknown")) : data.ingredients;
+          const undecided = (i: IngredientView) => data.restrictions.some((r) => (i.statuses[r.id] ?? "unknown") === "unknown");
+          const shown = toDecide ? data.ingredients.filter(undecided) : data.ingredients;
           return shown.length === 0 ? (
             <p className="text-sm text-stone-500">{toDecide ? "Nothing to decide." : "No ingredients yet."}</p>
           ) : (

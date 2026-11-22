@@ -1,10 +1,9 @@
 import type { DishStatus } from "../../shared/types";
-import { fail, json, noContent } from "../lib/http";
-import { dishInput, ingredientPatch, restrictionCreate } from "../lib/schemas";
+import { json, noContent } from "../lib/http";
+import { dishInput, ingredientPatch } from "../lib/schemas";
 import {
   archiveDish,
   createDish,
-  createRestriction,
   getDish,
   listDishes,
   listIngredients,
@@ -61,12 +60,4 @@ export const catalogueRoutes: Route[] = [
   route("GET", /^\/api\/undecided$/, async ({ db }) => json({ items: await listUndecided(db) })),
 
   route("GET", /^\/api\/restrictions$/, async ({ db }) => json({ restrictions: await listRestrictions(db) })),
-  route(
-    "POST",
-    /^\/api\/restrictions$/,
-    withBody(restrictionCreate, async ({ db }, { name }) => {
-      const result = await createRestriction(db, name);
-      return result === "name_taken" ? fail(result, 409) : json(result, 201);
-    }),
-  ),
 ];

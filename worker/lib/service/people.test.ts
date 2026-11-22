@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addPerson, resetDb, restrictionId } from "../../test/fixtures";
-import { createPerson, findPersonByEmail, getSettings, listPeople, setPersonRestrictions, setPreferences, updateSettings } from "./people";
+import { addIngredient, addPerson, addPersonRestriction, resetDb, restrictionId } from "../../test/fixtures";
+import { listIngredients } from "./catalogue";
+import { createPerson, findPersonByEmail, getSettings, hardRestrictionIds, listPeople, setPersonRestrictions, setPreferences, updatePerson, updateSettings } from "./people";
 
 const db = env.DB;
 
@@ -30,6 +31,32 @@ describe("people", () => {
     expect(created).toEqual({ id: expect.any(Number) });
     expect(await findPersonByEmail(db, "b@example.com")).toMatchObject({ name: "Bea" });
     expect(await createPerson(db, { email: "B@Example.com", name: "Other" })).toBe("email_taken");
+  });
+
+  it("adds and removes a person's restrictions by name, keeping ingredient decisions", async () => {
+    const id = await addPerson(db, "a@example.com", "Ana");
+    const milk = await addIngredient(db, "Leite");
+    await updatePerson(db, id, { restrictions: [{ name: "Lactose", kind: "hard", weight: 1 }], preferences: "" });
+    const [person] = await listPeople(db);
+    expect(person.restrictions).toEqual([{ restrictionId: expect.any(Number), name: "lactose", kind: "hard", weight: 1 }]);
+    const lactose = person.restrictions[0].restrictionId;
+    await db.prepare("UPDATE ingredient_restrictions SET status = 'forbidden' WHERE ingredient_id = ?1 AND restriction_id = ?2").bind(milk, lactose).run();
+
+    await updatePerson(db, id, { restrictions: [], preferences: "" });
+    expect((await listPeople(db))[0].restrictions).toEqual([]);
+    await updatePerson(db, id, { restrictions: [{ name: "lactose", kind: "soft", weight: 2 }], preferences: "" });
+    expect((await listIngredients(db)).find((i) => i.id === milk)?.statuses[lactose]).toBe("forbidden");
+  });
+
+  it("collects hard restrictions for everyone or for the people eating", async () => {
+    const gluten = await restrictionId(db);
+    const ana = await addPerson(db, "a@example.com", "Ana");
+    const bea = await addPerson(db, "b@example.com", "Bea");
+    await addPersonRestriction(db, ana, gluten, "hard");
+    await addPersonRestriction(db, bea, gluten, "soft");
+    expect(await hardRestrictionIds(db)).toEqual([gluten]);
+    expect(await hardRestrictionIds(db, [ana])).toEqual([gluten]);
+    expect(await hardRestrictionIds(db, [bea])).toEqual([]);
   });
 
   it("reads and writes settings", async () => {

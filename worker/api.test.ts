@@ -40,7 +40,14 @@ describe("api", () => {
     expect(await (await call("POST", "/api/dishes", { ...dish, portions: 0 })).json()).toEqual({ error: "invalid" });
   });
 
+  it("sets a person's restrictions by name", async () => {
+    expect((await call("PUT", `/api/people/${me}`, { restrictions: [{ name: "gluten", kind: "hard", weight: 1 }], preferences: "" })).status).toBe(204);
+    const { people } = (await (await call("GET", "/api/people")).json()) as { people: { restrictions: { name: string; kind: string }[] }[] };
+    expect(people[0].restrictions).toMatchObject([{ name: "gluten", kind: "hard" }]);
+  });
+
   it("creates a dish, refuses to validate it until its ingredients are decided, then validates it", async () => {
+    await call("PUT", `/api/people/${me}`, { restrictions: [{ name: "gluten", kind: "hard", weight: 1 }], preferences: "" });
     const dish = { name: "Sopa", portions: 4, repeatIntervalDays: 7, tags: ["sopa"], ingredients: [{ name: "Cenoura", quantity: 300, unit: "g" }] };
     const created = await call("POST", "/api/dishes", dish);
     expect(created.status).toBe(201);

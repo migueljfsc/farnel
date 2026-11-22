@@ -36,6 +36,11 @@ export async function addPerson(db: D1Database, email: string, name: string): Pr
   return row!.id;
 }
 
+/** Two people, so a meal eats 2 portions. */
+export async function addHousehold(db: D1Database): Promise<[number, number]> {
+  return [await addPerson(db, "one@example.com", "One"), await addPerson(db, "two@example.com", "Two")];
+}
+
 export async function addPersonRestriction(db: D1Database, personId: number, restriction: number, kind: "hard" | "soft", weight = 1): Promise<void> {
   await db
     .prepare("INSERT INTO person_restrictions (person_id, restriction_id, kind, weight) VALUES (?1, ?2, ?3, ?4)")

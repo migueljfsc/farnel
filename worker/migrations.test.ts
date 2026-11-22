@@ -12,6 +12,11 @@ describe("initial schema", () => {
     expect(row).toEqual({ id: 1, weekly_budget_cents: 6000, lunches_per_week: 5 });
   });
 
+  it("records who eats each plan", async () => {
+    const { results } = await env.DB.prepare("PRAGMA table_info(plan_people)").all<{ name: string }>();
+    expect(results.map((c) => c.name)).toEqual(["plan_id", "person_id"]);
+  });
+
   it("refuses two cookings for the same meal", async () => {
     await env.DB.batch([
       env.DB.prepare("INSERT INTO dishes (id, name, portions, repeat_interval_days, status, created_by, created_at) VALUES (1, 'x', 2, 0, 'validated', 'person', '')"),

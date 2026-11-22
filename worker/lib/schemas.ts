@@ -31,6 +31,7 @@ export const dishInput = z.object({
 export const planInput = z.object({
   weekStart: date,
   notes: z.string().max(2000).optional(),
+  peopleIds: z.array(id).min(1).max(20).optional().describe("Who eats this plan (ids from get_context); everyone when omitted"),
   cookings: z
     .array(
       z.object({
@@ -60,12 +61,10 @@ export const rating = z.number().int().min(1).max(5);
 export const feedback = z.object({ rating, comment: z.string().max(MAX_COMMENT).default("") });
 
 export const personUpdate = z.object({
-  restrictions: z.array(z.object({ restrictionId: id, kind: z.enum(["hard", "soft"]), weight: z.number().int().min(1).max(5) })).max(20),
+  restrictions: z.array(z.object({ name: z.string().trim().min(1).max(40), kind: z.enum(["hard", "soft"]), weight: z.number().int().min(1).max(5) })).max(20),
   preferences: z.string().max(2000),
 });
 
 export const personCreate = z.object({ email: z.email().max(254), name: z.string().trim().min(1).max(60) });
 
 export const settings = z.object({ weeklyBudgetCents: cents, lunchesPerWeek: z.number().int().min(0).max(14) });
-
-export const restrictionCreate = z.object({ name: z.string().trim().min(1).max(40) });

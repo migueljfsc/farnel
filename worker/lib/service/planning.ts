@@ -6,7 +6,7 @@ import { costPerPortionCents, eligibility, lineCostCents, mealKey, validatePlan,
 import { addDays } from "../../../shared/time";
 import { MAX_COMMENT, rating as ratingSchema } from "../schemas";
 import { loadDishes, loadDishFacts } from "./catalogue";
-import { getSettings, hardRestrictionIds } from "./people";
+import { getSettings, hardRestrictionIds, resolvePeople } from "./people";
 
 const RECENT_COMMENTS = 3;
 
@@ -17,12 +17,14 @@ async function planIdForWeek(db: D1Database, weekStart: string): Promise<number 
 
 // ---------------------------------------------------------------- candidates
 
-export async function listCandidates(db: D1Database, weekStart: string, today: string, tags: string[] = []): Promise<Candidate[]> {
+/** Dishes the people eating (everyone when not given) can have that week. */
+export async function listCandidates(db: D1Database, weekStart: string, today: string, tags: string[] = [], peopleIds?: number[]): Promise<Candidate[]> {
+  const people = peopleIds ? idList(peopleIds) : null;
   const excludePlanId = await planIdForWeek(db, weekStart);
   const onDate = weekStart > today ? weekStart : today;
   const [dishes, hard, ratings, comments, soft] = await Promise.all([
     loadDishes(db, { status: "validated", excludePlanId }),
-    hardRestrictionIds(db),
+    hardRestrictionIds(db, peopleIds),
     rows<{ dishId: number; personId: number; person: string; average: number; count: number }>(
       db.prepare(
         `SELECT c.dish_id AS dishId, f.person_id AS personId, p.name AS person, ROUND(AVG(f.rating), 1) AS average, COUNT(*) AS count
@@ -38,11 +40,13 @@ export async function listCandidates(db: D1Database, weekStart: string, today: s
       ),
     ),
     rows<{ person: string; restrictionId: number; restriction: string }>(
-      db.prepare(
+      db
+        .prepare(
         `SELECT p.name AS person, r.id AS restrictionId, r.name AS restriction
          FROM person_restrictions pr JOIN people p ON p.id = pr.person_id JOIN restrictions r ON r.id = pr.restriction_id
-         WHERE pr.kind = 'soft' ORDER BY p.name, r.name`,
-      ),
+         WHERE pr.kind = 'soft' AND (?1 IS NULL OR pr.person_id IN (SELECT value FROM json_each(?1))) ORDER BY p.name, r.name`,
+        )
+        .bind(people),
     ),
   ]);
 
@@ -82,10 +86,13 @@ export async function savePlan(
     if (started) return { ok: false, errors: [{ code: "plan_locked" }] };
   }
 
+  const eaters = await resolvePeople(db, input.peopleIds);
+  if (!eaters || eaters.length === 0) return { ok: false, errors: [{ code: "unknown_person" }] };
+
   const weekEnd = addDays(input.weekStart, 6);
   const [dishes, hard, taken, settings] = await Promise.all([
     loadDishFacts(db, { ids: input.cookings.map((c) => c.dishId), excludePlanId: existing }),
-    hardRestrictionIds(db),
+    hardRestrictionIds(db, eaters),
     rows<Meal>(
       db
         .prepare(
@@ -96,7 +103,7 @@ export async function savePlan(
     ),
     getSettings(db),
   ]);
-  const errors = validatePlan(input, { dishes, hardRestrictionIds: hard, today, takenMeals: new Set(taken.map(mealKey)) });
+  const errors = validatePlan(input, { dishes, hardRestrictionIds: hard, eaters: eaters.length, today, takenMeals: new Set(taken.map(mealKey)) });
   if (errors.length) return { ok: false, errors };
 
   const costs = input.cookings.map((c) => costPerPortionCents(dishes.get(c.dishId)!).cents * c.portions);
@@ -108,6 +115,7 @@ export async function savePlan(
     db
       .prepare("INSERT INTO plans (week_start, budget_cents, total_cents, notes, created_at) VALUES (?1, ?2, ?3, ?4, ?5)")
       .bind(input.weekStart, settings.weeklyBudgetCents, total, input.notes ?? "", now),
+    ...eaters.map((personId) => db.prepare(`INSERT INTO plan_people (plan_id, person_id) VALUES (${PLAN}, ?2)`).bind(input.weekStart, personId)),
     ...input.cookings.flatMap((c, i) => [
       db
         .prepare(`INSERT INTO cookings (plan_id, dish_id, cook_date, portions, cost_cents) VALUES (${PLAN}, ?2, ?3, ?4, ?5)`)
@@ -196,9 +204,20 @@ export async function getPlan(db: D1Database, weekStart: string, today: string):
   const plan = await db
     .prepare("SELECT week_start AS weekStart, budget_cents AS budgetCents, total_cents AS totalCents, notes FROM plans WHERE week_start = ?1")
     .bind(weekStart)
-    .first<Omit<PlanView, "overBudget" | "cookings">>();
+    .first<Omit<PlanView, "overBudget" | "cookings" | "people">>();
   if (!plan) return null;
-  return { ...plan, overBudget: plan.totalCents > plan.budgetCents, cookings: await loadCookings(db, { weekStart }, today, "ASC") };
+  const [people, cookings] = await Promise.all([
+    rows<{ id: number; name: string }>(
+      db
+        .prepare(
+          `SELECT p.id, p.name FROM plan_people pp JOIN people p ON p.id = pp.person_id
+           WHERE pp.plan_id = (SELECT id FROM plans WHERE week_start = ?1) ORDER BY p.id`,
+        )
+        .bind(weekStart),
+    ),
+    loadCookings(db, { weekStart }, today, "ASC"),
+  ]);
+  return { ...plan, overBudget: plan.totalCents > plan.budgetCents, people, cookings };
 }
 
 /** Cookings dated within [from, to], newest first. */

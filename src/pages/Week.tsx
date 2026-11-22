@@ -2,7 +2,7 @@ import { useState } from "react";
 import { APP_NAME } from "../../shared/app";
 import { formatDay, formatMoney } from "../../shared/format";
 import { addDays, todayLisbon, weekStartOf } from "../../shared/time";
-import type { CookingView, DishSummary, PlanView, ShoppingList } from "../../shared/types";
+import type { CookingView, DishSummary, PersonView, PlanView, ShoppingList } from "../../shared/types";
 import { Badge, Button, Card, ErrorText, Field, Link, Loaded, Page } from "../components/ui";
 import { buttonClass, inputClass } from "../components/styles";
 import { claudeLinks, planPrompt } from "../lib/claude";
@@ -34,7 +34,8 @@ export function Week({ weekStart }: { weekStart?: string }) {
           plan ? (
             <>
               <p className="text-sm text-stone-600">
-                Planned {formatMoney(plan.totalCents)} of {formatMoney(plan.budgetCents)} {plan.overBudget && <Badge tone="red">over budget</Badge>}
+                For {plan.people.map((p) => p.name).join(", ")} · planned {formatMoney(plan.totalCents)} of {formatMoney(plan.budgetCents)}{" "}
+                {plan.overBudget && <Badge tone="red">over budget</Badge>}
               </p>
               {plan.notes && <p className="text-sm italic text-stone-600">{plan.notes}</p>}
               <div className="space-y-2">
@@ -56,9 +57,14 @@ export function Week({ weekStart }: { weekStart?: string }) {
 }
 
 function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; hasPlan: boolean; onRefresh: () => void }) {
+  const { data } = useApi<{ people: PersonView[] }>("/api/people");
+  const people = data?.people ?? [];
   const [notes, setNotes] = useState("");
+  const [skipped, setSkipped] = useState<Set<number>>(new Set());
   const [copied, setCopied] = useState(false);
-  const prompt = planPrompt({ weekStart, notes });
+  const eating = people.filter((p) => !skipped.has(p.id));
+  const toggle = (id: number) => setSkipped((s) => (s.has(id) ? new Set([...s].filter((x) => x !== id)) : new Set([...s, id])));
+  const prompt = planPrompt({ weekStart, notes, eaters: eating.length === people.length ? null : eating.map((p) => p.name) });
   const links = claudeLinks(prompt);
   const copy = async () => {
     await navigator.clipboard.writeText(prompt);
@@ -68,10 +74,21 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
   return (
     <Card className="space-y-2">
       <h2 className="font-medium">{hasPlan ? "Re-plan with Claude" : "Plan with Claude"}</h2>
+      {people.length > 1 && (
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="font-medium text-stone-700">Who is eating?</span>
+          {people.map((p) => (
+            <label key={p.id} className="flex items-center gap-1">
+              <input type="checkbox" checked={!skipped.has(p.id)} onChange={() => toggle(p.id)} />
+              {p.name}
+            </label>
+          ))}
+        </div>
+      )}
       <Field label="Anything special this week?">
         <input className={inputClass} placeholder="e.g. we eat out Thursday, guests on Saturday" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
-      <div className="flex flex-wrap gap-2">
+      <div className={`flex flex-wrap gap-2 ${eating.length === 0 ? "pointer-events-none opacity-50" : ""}`}>
         <a className={buttonClass("primary")} href={links.app}>Open in Claude app</a>
         <a className={buttonClass("secondary")} href={links.web} target="_blank" rel="noreferrer">Open claude.ai</a>
         <Button variant="secondary" onClick={copy}>{copied ? "Copied" : "Copy prompt"}</Button>

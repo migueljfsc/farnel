@@ -48,6 +48,8 @@ export function eligibility(dish: DishFacts, hardRestrictionIds: number[], onDat
 export interface PlanInput {
   weekStart: string;
   notes?: string;
+  /** Who eats this plan; everyone when absent. */
+  peopleIds?: number[];
   cookings: { dishId: number; cookDate: string; portions: number; meals: { date: string; slot: Slot }[] }[];
 }
 
@@ -62,7 +64,8 @@ export type PlanErrorCode =
   | "meal_before_cook"
   | "in_past"
   | "meal_taken"
-  | "plan_locked";
+  | "plan_locked"
+  | "unknown_person";
 
 export interface PlanError {
   code: PlanErrorCode;
@@ -73,13 +76,14 @@ export interface PlanError {
 
 export interface PlanFacts {
   dishes: Map<number, DishFacts>;
+  /** Hard restrictions of the people eating. */
   hardRestrictionIds: number[];
+  /** People eating each meal: one portion each. */
+  eaters: number;
   today: string;
   /** `date|slot` of meals that other weeks' plans cover. */
   takenMeals: Set<string>;
 }
-
-export const PORTIONS_PER_MEAL = 2;
 
 export const mealKey = (meal: { date: string; slot: Slot }): string => `${meal.date}|${meal.slot}`;
 
@@ -100,7 +104,7 @@ export function validatePlan(input: PlanInput, facts: PlanFacts): PlanError[] {
       if (!dish) return "unknown_dish";
       if (seenDishes.has(cooking.dishId)) return "duplicate_dish";
       if (cooking.meals.length === 0) return "empty_meals";
-      if (cooking.portions < cooking.meals.length * PORTIONS_PER_MEAL) return "portions";
+      if (cooking.portions < cooking.meals.length * facts.eaters) return "portions";
       if (!inWeek(cooking.cookDate) || cooking.meals.some((m) => !inWeek(m.date))) return "date_out_of_week";
       if (cooking.meals.some((m) => m.date < cooking.cookDate)) return "meal_before_cook";
       if (cooking.cookDate < facts.today) return "in_past";

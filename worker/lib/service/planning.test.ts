@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addDish, addIngredient, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId } from "../../test/fixtures";
+import { addDish, addHousehold, addIngredient, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId } from "../../test/fixtures";
 import type { PlanInput } from "../rules";
 import { getPlan, history, listCandidates, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
 
@@ -12,6 +12,8 @@ const lunch = (date: string) => ({ date, slot: "lunch" as const });
 beforeEach(() => resetDb(db));
 
 describe("savePlan", () => {
+  beforeEach(() => addHousehold(db));
+
   it("saves a valid plan with costs and meals", async () => {
     const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
     const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400]] });
@@ -46,7 +48,7 @@ describe("savePlan", () => {
     await addPersonRestriction(db, await addPerson(db, "a@example.com", "A"), gluten, "hard");
     const bread = await addIngredient(db, "Pão", { statuses: { gluten: "forbidden" } });
     const a = await addDish(db, "A", { ingredients: [[bread, 1]] });
-    const result = await savePlan(db, { weekStart: "2026-11-23", cookings: [{ dishId: a, cookDate: "2026-11-23", portions: 2, meals: [lunch("2026-11-23")] }] }, TODAY, NOW);
+    const result = await savePlan(db, { weekStart: "2026-11-23", cookings: [{ dishId: a, cookDate: "2026-11-23", portions: 3, meals: [lunch("2026-11-23")] }] }, TODAY, NOW);
     expect(result).toEqual({ ok: false, errors: [{ code: "restricted", cooking: 0, dishId: a }] });
   });
 
@@ -88,6 +90,47 @@ describe("savePlan", () => {
     const a = await addDish(db, "A", { portions: 2, ingredients: [[steak, 1000]] });
     await savePlan(db, { weekStart: "2026-11-23", cookings: [{ dishId: a, cookDate: "2026-11-23", portions: 2, meals: [lunch("2026-11-23")] }] }, TODAY, NOW);
     expect(await getPlan(db, "2026-11-23", TODAY)).toMatchObject({ totalCents: 20000, overBudget: true });
+  });
+});
+
+describe("who is eating", () => {
+  async function household() {
+    const gluten = await restrictionId(db);
+    const ana = await addPerson(db, "a@example.com", "Ana");
+    const bea = await addPerson(db, "b@example.com", "Bea");
+    await addPersonRestriction(db, bea, gluten, "hard");
+    const bread = await addIngredient(db, "Pão", { statuses: { gluten: "forbidden" } });
+    const dish = await addDish(db, "Tosta", { ingredients: [[bread, 1]] });
+    return { ana, bea, dish };
+  }
+  const cooking = (dishId: number, portions: number) => ({ dishId, cookDate: "2026-11-23", portions, meals: [lunch("2026-11-23")] });
+
+  it("plans for everyone by default, with everyone's restrictions and a portion each", async () => {
+    const { ana, bea, dish } = await household();
+    expect(await savePlan(db, { weekStart: "2026-11-23", cookings: [cooking(dish, 2)] }, TODAY, NOW)).toEqual({
+      ok: false,
+      errors: [{ code: "restricted", cooking: 0, dishId: dish }],
+    });
+    expect((await listCandidates(db, "2026-11-23", TODAY)).map((c) => c.id)).toEqual([]);
+    const other = await addDish(db, "Sopa");
+    const saved = await savePlan(db, { weekStart: "2026-11-23", cookings: [cooking(other, 2)] }, TODAY, NOW);
+    expect(saved.ok && saved.plan.people.map((p) => p.id)).toEqual([ana, bea]);
+  });
+
+  it("plans for one person with only their restrictions and one portion per meal", async () => {
+    const { ana, dish } = await household();
+    expect((await listCandidates(db, "2026-11-23", TODAY, [], [ana])).map((c) => c.id)).toEqual([dish]);
+    const saved = await savePlan(db, { weekStart: "2026-11-23", peopleIds: [ana], cookings: [cooking(dish, 1)] }, TODAY, NOW);
+    expect(saved.ok).toBe(true);
+    expect((await getPlan(db, "2026-11-23", TODAY))?.people).toEqual([{ id: ana, name: "Ana" }]);
+  });
+
+  it("rejects people who are not in the household", async () => {
+    const { dish } = await household();
+    expect(await savePlan(db, { weekStart: "2026-11-23", peopleIds: [999], cookings: [cooking(dish, 1)] }, TODAY, NOW)).toEqual({
+      ok: false,
+      errors: [{ code: "unknown_person" }],
+    });
   });
 });
 

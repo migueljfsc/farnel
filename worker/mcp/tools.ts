@@ -48,6 +48,7 @@ export const TOOLS: Tool[] = [
         today,
         settings,
         people: people.map((p) => ({
+          id: p.id,
           name: p.name,
           hard: p.restrictions.filter((r) => r.kind === "hard").map((r) => r.name),
           soft: p.restrictions.filter((r) => r.kind === "soft").map((r) => ({ restriction: r.name, weight: r.weight })),
@@ -61,10 +62,14 @@ export const TOOLS: Tool[] = [
   }),
   tool({
     name: "list_candidates",
-    description: "Dishes that can be planned for the week: validated, safe for every hard restriction, and past their repeat interval. With cost per portion, ratings, recent comments and soft-restriction flags.",
-    input: weekArgs.extend({ tags: z.array(z.string()).optional().describe("Only dishes with any of these tags") }),
-    async run(db, { weekStart, tags }, { today }) {
-      const candidates = await listCandidates(db, weekStart, today, tags);
+    description:
+      "Dishes that can be planned for the week: validated, safe for every hard restriction of the people eating, and past their repeat interval. With cost per portion, ratings, recent comments and the eaters' soft-restriction flags.",
+    input: weekArgs.extend({
+      tags: z.array(z.string()).optional().describe("Only dishes with any of these tags"),
+      peopleIds: planInput.shape.peopleIds,
+    }),
+    async run(db, { weekStart, tags, peopleIds }, { today }) {
+      const candidates = await listCandidates(db, weekStart, today, tags, peopleIds);
       return { summary: `${candidates.length} candidate dishes for the week of ${weekStart}.`, data: { candidates } };
     },
   }),
@@ -89,7 +94,7 @@ export const TOOLS: Tool[] = [
   tool({
     name: "save_plan",
     description:
-      "Saves the week's plan, replacing an existing plan for that week unless it has started. Each cooking is one dish cooked on cookDate with enough portions for its meals (2 per meal). Every rule is checked; a rejected plan returns the reasons and saves nothing.",
+      "Saves the week's plan for the people eating (peopleIds; everyone when omitted), replacing an existing plan for that week unless it has started. Each cooking is one dish cooked on cookDate with enough portions for its meals: one per person eating, per meal. Every rule is checked; a rejected plan returns the reasons and saves nothing.",
     input: planInput,
     async run(db, input, { today, now }) {
       const result = await savePlan(db, input, today, now);

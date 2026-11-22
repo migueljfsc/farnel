@@ -86,6 +86,8 @@ export interface CookingView {
 
 export interface PlanView {
   weekStart: string;
+  /** Who eats this plan. */
+  people: { id: number; name: string }[];
   budgetCents: number;
   totalCents: number;
   overBudget: boolean;

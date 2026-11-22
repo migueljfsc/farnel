@@ -1,8 +1,16 @@
 import type { PersonView, RestrictionKind, Settings } from "../../../shared/types";
-import { isUniqueViolation, rows } from "../db";
+import { idList, isUniqueViolation, rows } from "../db";
+import { restrictionByName } from "./catalogue";
 
 export interface RestrictionChoice {
   restrictionId: number;
+  kind: RestrictionKind;
+  weight: number;
+}
+
+/** A restriction as a person states it: by name, created on first use. */
+export interface NamedRestriction {
+  name: string;
   kind: RestrictionKind;
   weight: number;
 }
@@ -60,11 +68,16 @@ export async function setPersonRestrictions(
 export async function updatePerson(
   db: D1Database,
   personId: number,
-  update: { restrictions: RestrictionChoice[]; preferences: string },
+  update: { restrictions: NamedRestriction[]; preferences: string },
 ): Promise<"ok" | "not_found"> {
   const exists = await db.prepare("SELECT 1 FROM people WHERE id = ?1").bind(personId).first();
   if (!exists) return "not_found";
-  await db.batch([...restrictionStatements(db, personId, update.restrictions), preferencesStatement(db, personId, update.preferences)]);
+  const choices = new Map<number, RestrictionChoice>();
+  for (const r of update.restrictions) {
+    const restrictionId = await restrictionByName(db, r.name);
+    choices.set(restrictionId, { restrictionId, kind: r.kind, weight: r.weight });
+  }
+  await db.batch([...restrictionStatements(db, personId, [...choices.values()]), preferencesStatement(db, personId, update.preferences)]);
   return "ok";
 }
 
@@ -84,10 +97,25 @@ export async function setPreferences(db: D1Database, personId: number, text: str
   await preferencesStatement(db, personId, text).run();
 }
 
-/** Restrictions that are hard for anyone: both people eat every planned meal. */
-export async function hardRestrictionIds(db: D1Database): Promise<number[]> {
-  const result = await rows<{ id: number }>(db.prepare("SELECT DISTINCT restriction_id AS id FROM person_restrictions WHERE kind = 'hard' ORDER BY id"));
+/** Restrictions that are hard for any of the people (everyone when not given). */
+export async function hardRestrictionIds(db: D1Database, personIds?: number[]): Promise<number[]> {
+  const result = await rows<{ id: number }>(
+    db
+      .prepare(
+        `SELECT DISTINCT restriction_id AS id FROM person_restrictions
+         WHERE kind = 'hard' AND (?1 IS NULL OR person_id IN (SELECT value FROM json_each(?1))) ORDER BY id`,
+      )
+      .bind(personIds ? idList(personIds) : null),
+  );
   return result.map((r) => r.id);
+}
+
+/** The ids of the given people that exist, or of everyone; null when any given id is unknown. */
+export async function resolvePeople(db: D1Database, personIds?: number[]): Promise<number[] | null> {
+  const all = (await rows<{ id: number }>(db.prepare("SELECT id FROM people ORDER BY id"))).map((p) => p.id);
+  if (!personIds) return all;
+  const unique = [...new Set(personIds)];
+  return unique.every((id) => all.includes(id)) ? unique.sort((a, b) => a - b) : null;
 }
 
 export async function getSettings(db: D1Database): Promise<Settings> {

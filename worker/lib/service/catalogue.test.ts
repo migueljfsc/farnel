@@ -6,7 +6,8 @@ import {
   archiveDish,
   catalogueCounts,
   createDish,
-  createRestriction,
+  listRestrictions,
+  restrictionByName,
   getDish,
   listDishes,
   listIngredients,
@@ -31,7 +32,14 @@ const input = (name: string, lines: DishInput["ingredients"], extra: Partial<Dis
   ...extra,
 });
 
-beforeEach(() => resetDb(db));
+let ana: number;
+
+/** Gluten is in use: Ana has it as a hard restriction. */
+beforeEach(async () => {
+  await resetDb(db);
+  ana = await addPerson(db, "ana@example.com", "Ana");
+  await addPersonRestriction(db, ana, await restrictionId(db), "hard");
+});
 
 describe("ingredients", () => {
   it("reuses an ingredient whose name differs only in case, accents or spacing", async () => {
@@ -69,12 +77,28 @@ describe("ingredients", () => {
 });
 
 describe("restrictions", () => {
-  it("marks every existing ingredient undecided for a new restriction", async () => {
+  it("creates a restriction once, undecided on every existing ingredient, and reuses it by name", async () => {
     await addIngredient(db, "Leite");
-    const created = await createRestriction(db, "lactose");
-    expect(created).toEqual({ id: expect.any(Number) });
+    const id = await restrictionByName(db, "lactose");
+    expect(await restrictionByName(db, " Lactose ")).toBe(id);
+    await addPersonRestriction(db, ana, id, "soft");
     expect((await listUndecided(db)).map((u) => u.restriction)).toEqual(["lactose"]);
-    expect(await createRestriction(db, "Lactose")).toBe("name_taken");
+  });
+
+  it("only asks about restrictions someone has", async () => {
+    await addIngredient(db, "Leite");
+    await restrictionByName(db, "lactose");
+    expect(await listUndecided(db)).toEqual([]);
+    expect((await listRestrictions(db)).map((r) => r.name)).toEqual(["gluten"]);
+    expect(await catalogueCounts(db)).toEqual({ pendingDishes: 0, undecided: 0 });
+  });
+
+  it("does not hold a dish back for a restriction no one has", async () => {
+    const lactose = await restrictionByName(db, "lactose");
+    const milk = await addIngredient(db, "Leite", { statuses: { lactose: "unknown" } });
+    const dish = await addDish(db, "Arroz doce", { status: "pending", ingredients: [[milk, 500]] });
+    expect(await validateDish(db, dish)).toEqual({ ok: true });
+    expect(lactose).toEqual(expect.any(Number));
   });
 });
 
@@ -161,15 +185,5 @@ describe("last cooked", () => {
     const { cookingIds } = await addPlan(db, "2026-11-02", [{ dishId: a, cookDate: "2026-11-02" }]);
     await db.prepare("INSERT INTO feedback (cooking_id, person_id, rating, comment, updated_at) VALUES (?1, ?2, 4, 'bom', '')").bind(cookingIds[0], person).run();
     expect((await getDish(db, a))?.feedback).toEqual([{ cookingId: cookingIds[0], date: "2026-11-02", personId: person, person: "Ana", rating: 4, comment: "bom" }]);
-  });
-});
-
-describe("hard restrictions", () => {
-  it("unions hard restrictions across people", async () => {
-    const { hardRestrictionIds } = await import("./people");
-    const gluten = await restrictionId(db);
-    await addPersonRestriction(db, await addPerson(db, "a@example.com", "A"), gluten, "hard");
-    await addPersonRestriction(db, await addPerson(db, "b@example.com", "B"), gluten, "soft");
-    expect(await hardRestrictionIds(db)).toEqual([gluten]);
   });
 });

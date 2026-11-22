@@ -38,6 +38,9 @@ export type UnitMismatch = { ok: false; error: "unit_mismatch"; ingredient: stri
 
 // ---------------------------------------------------------------- restriction statuses
 
+/** Restrictions someone has. Only these are asked about; others keep their decisions for later. */
+const IN_USE = "(SELECT restriction_id FROM person_restrictions)";
+
 type Statuses = Record<number, RestrictionStatus>;
 
 /** Statuses by ingredient id, for the given ingredients or all of them. */
@@ -61,7 +64,7 @@ async function undecidedIngredientIds(db: D1Database, dishId: number): Promise<n
       .prepare(
         `SELECT DISTINCT di.ingredient_id AS id FROM dish_ingredients di
          JOIN ingredient_restrictions ir ON ir.ingredient_id = di.ingredient_id
-         WHERE di.dish_id = ?1 AND ir.status = 'unknown' ORDER BY id`,
+         WHERE di.dish_id = ?1 AND ir.status = 'unknown' AND ir.restriction_id IN ${IN_USE} ORDER BY id`,
       )
       .bind(dishId),
   );
@@ -387,32 +390,41 @@ export async function listUndecided(db: D1Database): Promise<UndecidedItem[]> {
     db.prepare(
       `SELECT i.id AS ingredientId, i.name AS ingredient, r.id AS restrictionId, r.name AS restriction
        FROM ingredient_restrictions ir JOIN ingredients i ON i.id = ir.ingredient_id JOIN restrictions r ON r.id = ir.restriction_id
-       WHERE ir.status = 'unknown' ORDER BY i.name COLLATE NOCASE, r.name`,
+       WHERE ir.status = 'unknown' AND ir.restriction_id IN ${IN_USE} ORDER BY i.name COLLATE NOCASE, r.name`,
     ),
   );
 }
 
+/** Restrictions someone has. */
 export async function listRestrictions(db: D1Database): Promise<Restriction[]> {
-  return rows<Restriction>(db.prepare("SELECT id, name FROM restrictions ORDER BY name"));
+  return rows<Restriction>(db.prepare(`SELECT id, name FROM restrictions WHERE id IN ${IN_USE} ORDER BY name`));
 }
 
-/** A new restriction starts `unknown` on every existing ingredient. */
-export async function createRestriction(db: D1Database, name: string): Promise<{ id: number } | "name_taken"> {
-  try {
-    const row = await db.prepare("INSERT INTO restrictions (name) VALUES (?1) RETURNING id").bind(name.trim()).first<{ id: number }>();
-    await db.prepare("INSERT INTO ingredient_restrictions (ingredient_id, restriction_id, status) SELECT id, ?1, 'unknown' FROM ingredients").bind(row!.id).run();
-    return { id: row!.id };
-  } catch (error) {
-    if (isUniqueViolation(error)) return "name_taken";
-    throw error;
-  }
+/**
+ * The restriction with this name, created when new. A new restriction starts `unknown` on every
+ * existing ingredient; an existing one keeps its decisions.
+ */
+export async function restrictionByName(db: D1Database, name: string): Promise<number> {
+  const clean = name.trim().toLowerCase();
+  const [, , found] = await db.batch<{ id: number }>([
+    db.prepare("INSERT INTO restrictions (name) VALUES (?1) ON CONFLICT (name) DO NOTHING").bind(clean),
+    db
+      .prepare(
+        `INSERT INTO ingredient_restrictions (ingredient_id, restriction_id, status)
+         SELECT i.id, r.id, 'unknown' FROM ingredients i, restrictions r WHERE r.name = ?1
+         ON CONFLICT (ingredient_id, restriction_id) DO NOTHING`,
+      )
+      .bind(clean),
+    db.prepare("SELECT id FROM restrictions WHERE name = ?1").bind(clean),
+  ]);
+  return found.results[0].id;
 }
 
 export async function catalogueCounts(db: D1Database): Promise<{ pendingDishes: number; undecided: number }> {
   const row = await db
     .prepare(
       `SELECT (SELECT COUNT(*) FROM dishes WHERE status = 'pending') AS pendingDishes,
-              (SELECT COUNT(*) FROM ingredient_restrictions WHERE status = 'unknown') AS undecided`,
+              (SELECT COUNT(*) FROM ingredient_restrictions WHERE status = 'unknown' AND restriction_id IN ${IN_USE}) AS undecided`,
     )
     .first<{ pendingDishes: number; undecided: number }>();
   return row!;
