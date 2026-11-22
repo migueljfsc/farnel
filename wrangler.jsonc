@@ -24,9 +24,9 @@
   // Access values come from `tofu output` after the first apply. AUD tags and the team domain
   // are identifiers, not secrets.
   "vars": {
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD_WEB": "",
-    "ACCESS_AUD_MCP": ""
+    "ACCESS_TEAM_DOMAIN": "https://migueljfsc.cloudflareaccess.com",
+    "ACCESS_AUD_WEB": "901fba06d05511a3696197a78bcbb9a406054643f61c38e5df9dd352fc93e8ff",
+    "ACCESS_AUD_MCP": "2504e3f083357b009a6d879a53f9b5536048b59de5ee79e4600f69690a84fdab"
   },
 
   // database_id comes from `tofu output d1_database_id` after the first apply.
@@ -34,7 +34,7 @@
     {
       "binding": "DB",
       "database_name": "farnel-prod",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "ca1ba106-1aa2-44da-9873-4f0f41b9d25b",
       "migrations_dir": "./worker/migrations"
     }
   ],
