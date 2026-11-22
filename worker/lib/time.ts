@@ -18,3 +18,8 @@ const weekday = (date: string): number => new Date(toUtcNoon(date)).getUTCDay();
 export const isMonday = (date: string): boolean => weekday(date) === 1;
 
 export const weekStartOf = (date: string): string => addDays(date, -((weekday(date) + 6) % 7));
+
+/** One clock reading per request: today's date in Lisbon and the ISO timestamp. */
+export function clockAt(now: Date = new Date()): { today: string; now: string } {
+  return { today: todayLisbon(now), now: now.toISOString() };
+}
