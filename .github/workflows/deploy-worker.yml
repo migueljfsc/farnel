@@ -1,7 +1,7 @@
 name: deploy-worker
 
-# Builds the SPA and deploys it, with the Worker, to Cloudflare, once the repository variable
-# DEPLOY_ENABLED is 'true' (README, "Go live"). The deploy belongs to wrangler, not OpenTofu.
+# Builds the SPA and deploys it, with the Worker, to Cloudflare. The deploy belongs to wrangler,
+# not OpenTofu.
 #
 # Required GitHub secrets (shared with the terraform workflow):
 #   CLOUDFLARE_API_TOKEN    — Account · Workers Scripts Edit, Account · D1 Edit
@@ -35,7 +35,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment:
       name: cloudflare-production

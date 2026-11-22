@@ -50,11 +50,12 @@ into Claude Code connected to the local server (below).
 
 ## Go live
 
-Everything below runs once; afterwards CI applies the stack and deploys on every push to `main`.
+Every push to `main` applies the stack (when it changes) and deploys the Worker. Once, the first time:
 
 1. **Zero Trust** (dashboard): the organisation has a team domain; *One-time PIN* is enabled as a
    login method; *Settings → Access → Strict service token authentication* is on.
-2. **First apply** (locally, from `infrastructure/terraform/cloudflare`):
+2. **First apply**: the `terraform` workflow applies on push and prints the outputs in its
+   "Outputs" step. To apply locally instead (from `infrastructure/terraform/cloudflare`):
 
    ```sh
    export CLOUDFLARE_API_TOKEN=…            # D1 Edit, Access: Apps and Policies Edit, Access: Service Tokens Edit
@@ -68,8 +69,7 @@ Everything below runs once; afterwards CI applies the stack and deploys on every
    `tofu output access_aud_web`, `access_aud_mcp` and `https://<team>.cloudflareaccess.com` into its
    `vars`. Commit.
 4. **GitHub**: secrets `CLOUDFLARE_API_TOKEN` (plus Workers Scripts Edit), `CLOUDFLARE_ACCOUNT_ID`,
-   `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `ACCESS_EMAILS`; environment `cloudflare-production`;
-   repository variable `DEPLOY_ENABLED=true`.
+   `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `ACCESS_EMAILS`; environment `cloudflare-production`.
 5. **Deploy**: push to `main` (or run `deploy-worker`), then add the people:
 
    ```sh

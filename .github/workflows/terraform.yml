@@ -3,8 +3,6 @@ name: terraform
 # Plans on PRs that touch the stack, applies on merge to main.
 #
 # Required GitHub secrets:
-# Runs only when the repository variable DEPLOY_ENABLED is 'true' (README, "Go live").
-#
 #   CLOUDFLARE_API_TOKEN    — Account · D1 Edit, Access: Apps and Policies Edit, Access: Service Tokens Edit
 #   CLOUDFLARE_ACCOUNT_ID   — also builds the R2 state endpoint
 #   R2_ACCESS_KEY_ID        — R2 token for the S3-compatible state backend
@@ -44,7 +42,7 @@ defaults:
 jobs:
   plan:
     # Dependabot runs receive no repository secrets.
-    if: vars.DEPLOY_ENABLED == 'true' && github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -89,7 +87,7 @@ jobs:
             }
 
   apply:
-    if: vars.DEPLOY_ENABLED == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: cloudflare-production
     steps:
@@ -103,3 +101,7 @@ jobs:
 
       - name: Apply
         run: tofu apply -auto-approve -input=false -var-file=contexts/prod.tfvars
+
+      # The ids and AUD tags wrangler.jsonc needs; sensitive outputs print as <sensitive>.
+      - name: Outputs
+        run: tofu output

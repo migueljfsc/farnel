@@ -1,5 +1,5 @@
 {
-  // CI deploys once DEPLOY_ENABLED is set (README, "Go live"). Locally: pnpm build && pnpm deploy:worker --dry-run
+  // Deployed by .github/workflows/deploy-worker.yml on push to main. Locally: pnpm build && pnpm deploy:worker --dry-run
   //
   // Static assets are served without invoking the script; only the paths in run_worker_first
   // run it, so page loads stay outside the free tier's request budget.

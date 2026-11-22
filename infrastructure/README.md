@@ -2,8 +2,8 @@
 
 One stack: [`terraform/cloudflare/`](terraform/cloudflare/) owns the D1 database (jurisdiction
 `eu`), the two Cloudflare Access applications (web app and `/mcp`), their policies, and the
-service token claude.ai uses. It is applied by `.github/workflows/terraform.yml` once the
-repository variable `DEPLOY_ENABLED` is `true`.
+service token claude.ai uses. It is applied by `.github/workflows/terraform.yml` on push to
+`main`.
 
 ## Outside the stack
 
