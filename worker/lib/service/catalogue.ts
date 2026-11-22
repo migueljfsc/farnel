@@ -172,9 +172,9 @@ export async function loadDishFacts(db: D1Database, query: Pick<DishQuery, "ids"
   return new Map((await loadDishRecords(db, query)).map((d) => [d.id, toFacts(d)]));
 }
 
-/** Summaries keyed by id, for callers that combine them with their own data. */
-export async function loadDishSummaries(db: D1Database, query: DishQuery = {}): Promise<Map<number, DishSummary>> {
-  return new Map((await loadDishRecords(db, query)).map((d) => [d.id, toSummary(d)]));
+/** Each dish as rule facts and as a summary, for callers that need both. */
+export async function loadDishes(db: D1Database, query: DishQuery = {}): Promise<{ facts: DishFacts; summary: DishSummary }[]> {
+  return (await loadDishRecords(db, query)).map((d) => ({ facts: toFacts(d), summary: toSummary(d) }));
 }
 
 export async function listDishes(db: D1Database, filter: { status?: DishStatus; tag?: string } = {}): Promise<DishSummary[]> {
