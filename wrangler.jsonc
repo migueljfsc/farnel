@@ -1,0 +1,40 @@
+{
+  // CI deploys once DEPLOY_ENABLED is set (README, "Go live"). Locally: pnpm build && pnpm deploy:worker --dry-run
+  //
+  // Static assets are served without invoking the script; only the paths in run_worker_first
+  // run it, so page loads stay outside the free tier's request budget.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "farnel",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-11-01",
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/mcp"]
+  },
+
+  "routes": [{ "pattern": "farnel.migueljfsc.dev", "custom_domain": true }],
+  "workers_dev": false,
+
+  // Access values come from `tofu output` after the first apply. AUD tags and the team domain
+  // are identifiers, not secrets.
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD_WEB": "",
+    "ACCESS_AUD_MCP": ""
+  },
+
+  // database_id comes from `tofu output d1_database_id` after the first apply.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "farnel-prod",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "./worker/migrations"
+    }
+  ],
+
+  "observability": { "enabled": true }
+}
