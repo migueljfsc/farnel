@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addPerson, resetDb, restrictionId } from "../../test/fixtures";
-import { findPersonByEmail, getSettings, listPeople, setPersonRestrictions, setPreferences, updateSettings } from "./people";
+import { createPerson, findPersonByEmail, getSettings, listPeople, setPersonRestrictions, setPreferences, updateSettings } from "./people";
 
 const db = env.DB;
 
@@ -23,6 +23,13 @@ describe("people", () => {
     expect(await listPeople(db)).toEqual([
       { id, email: "a@example.com", name: "Ana", preferences: "likes fish", restrictions: [{ restrictionId: gluten, name: "gluten", kind: "soft", weight: 3 }] },
     ]);
+  });
+
+  it("adds a person, refusing an email already in the household", async () => {
+    const created = await createPerson(db, { email: "b@example.com", name: "Bea" });
+    expect(created).toEqual({ id: expect.any(Number) });
+    expect(await findPersonByEmail(db, "b@example.com")).toMatchObject({ name: "Bea" });
+    expect(await createPerson(db, { email: "B@Example.com", name: "Other" })).toBe("email_taken");
   });
 
   it("reads and writes settings", async () => {

@@ -1,7 +1,7 @@
-import { json, noContent } from "../lib/http";
-import { personUpdate, settings } from "../lib/schemas";
+import { fail, json, noContent } from "../lib/http";
+import { personCreate, personUpdate, settings } from "../lib/schemas";
 import { catalogueCounts } from "../lib/service/catalogue";
-import { findPersonByEmail, getSettings, listPeople, updatePerson, updateSettings } from "../lib/service/people";
+import { createPerson, findPersonByEmail, getSettings, listPeople, updatePerson, updateSettings } from "../lib/service/people";
 import { idParam, outcome, route, withBody, type Route } from "./routing";
 
 export const peopleRoutes: Route[] = [
@@ -10,6 +10,14 @@ export const peopleRoutes: Route[] = [
     return json({ person, ...counts });
   }),
   route("GET", /^\/api\/people$/, async ({ db }) => json({ people: await listPeople(db) })),
+  route(
+    "POST",
+    /^\/api\/people$/,
+    withBody(personCreate, async ({ db }, body) => {
+      const result = await createPerson(db, body);
+      return result === "email_taken" ? fail(result, 409) : json(result, 201);
+    }),
+  ),
   route(
     "PUT",
     /^\/api\/people\/(\d+)$/,

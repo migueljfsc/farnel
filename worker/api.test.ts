@@ -69,6 +69,15 @@ describe("api", () => {
     expect(row).toEqual({ person_id: me, rating: 5 });
   });
 
+  it("adds a person and refuses an invalid email", async () => {
+    expect((await call("POST", "/api/people", { email: "not-an-email", name: "X" })).status).toBe(400);
+    const created = await call("POST", "/api/people", { email: "b@example.com", name: "Bea" });
+    expect(created.status).toBe(201);
+    expect((await call("POST", "/api/people", { email: "b@example.com", name: "Bea" })).status).toBe(409);
+    const { people } = (await (await call("GET", "/api/people")).json()) as { people: { name: string }[] };
+    expect(people.map((p) => p.name)).toEqual(["Ana", "Bea"]);
+  });
+
   it("reads and writes settings", async () => {
     expect((await call("PUT", "/api/settings", { weeklyBudgetCents: 5000, lunchesPerWeek: 6 })).status).toBe(204);
     expect(await (await call("GET", "/api/settings")).json()).toEqual({ settings: { weeklyBudgetCents: 5000, lunchesPerWeek: 6 } });

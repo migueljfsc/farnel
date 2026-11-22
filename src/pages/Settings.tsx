@@ -20,6 +20,7 @@ export function Settings() {
             {data.people.map((p) => (
               <PersonForm key={p.id} person={p} restrictions={data.restrictions} onSaved={people.reload} />
             ))}
+            <NewPerson onCreated={people.reload} />
             <NewRestriction onCreated={restrictions.reload} />
           </>
         )}
@@ -108,6 +109,34 @@ function PersonForm({ person, restrictions, onSaved }: { person: PersonView; res
         <Button onClick={() => save(async () => { await api.put(`/api/people/${person.id}`, body()); onSaved(); })}>Save</Button>
         {status}
       </div>
+    </Card>
+  );
+}
+
+function NewPerson({ onCreated }: { onCreated: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [save, status] = useSave();
+  const add = () =>
+    save(async () => {
+      await api.post("/api/people", { name, email: email.trim() });
+      setName("");
+      setEmail("");
+      onCreated();
+    });
+  return (
+    <Card className="space-y-2">
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="Add person: name">
+          <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="Email they sign in with">
+          <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <Button disabled={!name.trim() || !email.trim()} onClick={add}>Add</Button>
+        {status}
+      </div>
+      <p className="text-xs text-stone-500">Online, they also need to be on the sign-in list (Access) to open the app.</p>
     </Card>
   );
 }

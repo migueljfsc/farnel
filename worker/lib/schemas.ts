@@ -64,6 +64,8 @@ export const personUpdate = z.object({
   preferences: z.string().max(2000),
 });
 
+export const personCreate = z.object({ email: z.email().max(254), name: z.string().trim().min(1).max(60) });
+
 export const settings = z.object({ weeklyBudgetCents: cents, lunchesPerWeek: z.number().int().min(0).max(14) });
 
 export const restrictionCreate = z.object({ name: z.string().trim().min(1).max(40) });

@@ -1,5 +1,5 @@
 import type { PersonView, RestrictionKind, Settings } from "../../../shared/types";
-import { rows } from "../db";
+import { isUniqueViolation, rows } from "../db";
 
 export interface RestrictionChoice {
   restrictionId: number;
@@ -15,6 +15,16 @@ export interface Person {
 
 export async function findPersonByEmail(db: D1Database, email: string): Promise<Person | null> {
   return db.prepare("SELECT id, email, name FROM people WHERE email = ?1").bind(email).first<Person>();
+}
+
+export async function createPerson(db: D1Database, person: { email: string; name: string }): Promise<{ id: number } | "email_taken"> {
+  try {
+    const row = await db.prepare("INSERT INTO people (email, name) VALUES (?1, ?2) RETURNING id").bind(person.email, person.name).first<{ id: number }>();
+    return { id: row!.id };
+  } catch (error) {
+    if (isUniqueViolation(error)) return "email_taken";
+    throw error;
+  }
 }
 
 export async function listPeople(db: D1Database): Promise<PersonView[]> {
