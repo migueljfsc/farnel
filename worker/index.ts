@@ -9,7 +9,7 @@ import { secured } from "./lib/http";
 import { route } from "./router";
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    return secured(await route(request, env));
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    return secured(await route(request, env, ctx));
   },
 } satisfies ExportedHandler<Env>;

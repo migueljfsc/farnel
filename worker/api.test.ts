@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { createExecutionContext } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 import worker from "./index";
 import { addPerson, resetDb, restrictionId } from "./test/fixtures";
@@ -11,6 +12,7 @@ const call = (method: string, path: string, body?: unknown, contentType = "appli
       body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
     }),
     env,
+    createExecutionContext(),
   );
 
 let me: number;

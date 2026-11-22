@@ -38,5 +38,5 @@ Node >= 22.12, pnpm 11.
 - `wrangler.jsonc` `name`, route and D1 `database_name`
 - `infrastructure/terraform/cloudflare/variables.tf` `project_name` default, and `backend.tf` state key
 - `.github/workflows/deploy-worker.yml` environment URL and D1 migrations command
-- `src/lib/app.ts` `APP_NAME`
+- `shared/app.ts` `APP_NAME` (page title and MCP server name)
 - this README's commands
