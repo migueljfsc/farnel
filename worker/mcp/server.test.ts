@@ -30,6 +30,13 @@ describe("mcp endpoint", () => {
     for (const name of ["get_context", "save_plan", "add_dish"]) expect(text).toContain(name);
   });
 
+  it("runs a tool and reports invalid arguments as a tool error", async () => {
+    const ok = await (await rpc("localhost", { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "get_context", arguments: {} } })).text();
+    expect(ok).toContain("weekly budget");
+    const bad = await (await rpc("localhost", { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_dish", arguments: { id: "x" } } })).text();
+    expect(bad).toContain('"isError":true');
+  });
+
   it("refuses a caller without an Access token", async () => {
     expect((await rpc("farnel.example.com", INITIALIZE)).status).toBe(401);
   });

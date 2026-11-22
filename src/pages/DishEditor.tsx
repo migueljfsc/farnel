@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatDay, formatMoney, parseMoney } from "../../shared/format";
+import { nameKey } from "../../shared/names";
 import type { DishDetail, IngredientView, Restriction, Unit } from "../../shared/types";
 import { IngredientStatuses } from "../components/IngredientStatuses";
 import { Badge, Button, Card, ErrorText, Field, inputClass, Loaded, Page, Stars } from "../components/ui";
@@ -22,7 +23,8 @@ interface Form {
   lines: Line[];
 }
 
-const EMPTY: Form = { name: "", notes: "", portions: "4", repeatIntervalDays: "14", tags: "", lines: [{ name: "", quantity: "", unit: "g", price: "" }] };
+const EMPTY_LINE: Line = { name: "", quantity: "", unit: "g", price: "" };
+const EMPTY: Form = { name: "", notes: "", portions: "4", repeatIntervalDays: "14", tags: "", lines: [EMPTY_LINE] };
 
 const toForm = (d: DishDetail): Form => ({
   name: d.name,
@@ -64,7 +66,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
   const setLine = (index: number, patch: Partial<Line>) => set({ lines: form.lines.map((l, i) => (i === index ? { ...l, ...patch } : l)) });
-  const knownByName = new Map(known.map((k) => [k.name.toLowerCase(), k]));
+  const knownByKey = new Map(known.map((k) => [nameKey(k.name), k]));
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -146,7 +148,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           ))}
         </datalist>
         {form.lines.map((line, index) => {
-          const existing = knownByName.get(line.name.trim().toLowerCase());
+          const existing = knownByKey.get(nameKey(line.name));
           return (
             <div key={index} className="flex flex-wrap items-center gap-2">
               <input className={`${inputClass} min-w-32 flex-1`} list="known-ingredients" placeholder="Ingredient" value={line.name} onChange={(e) => setLine(index, { name: e.target.value })} />
@@ -162,7 +164,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           );
         })}
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => set({ lines: [...form.lines, { name: "", quantity: "", unit: "g", price: "" }] })}>Add ingredient</Button>
+          <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>Add ingredient</Button>
           <Button disabled={busy} onClick={save}>{dish ? "Save" : "Create"}</Button>
         </div>
       </Card>

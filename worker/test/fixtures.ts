@@ -1,7 +1,7 @@
 /** Direct-SQL builders for tests. Worker tests share one D1 per file: call `resetDb` first. */
 
 import type { DishStatus, RestrictionStatus, Unit } from "../../shared/types";
-import { nameKey } from "../lib/names";
+import { nameKey } from "../../shared/names";
 
 export async function resetDb(db: D1Database): Promise<void> {
   const tables = [

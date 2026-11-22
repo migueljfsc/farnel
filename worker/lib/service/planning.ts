@@ -4,11 +4,11 @@ import type { Candidate, CookingStatus, CookingView, FeedbackView, Meal, PlanVie
 import { idList, rows } from "../db";
 import { costPerPortionCents, eligibility, lineCostCents, mealKey, validatePlan, type PlanError, type PlanInput } from "../rules";
 import { addDays } from "../../../shared/time";
+import { MAX_COMMENT, rating as ratingSchema } from "../schemas";
 import { loadDishes, loadDishFacts } from "./catalogue";
 import { getSettings, hardRestrictionIds } from "./people";
 
 const RECENT_COMMENTS = 3;
-const MAX_COMMENT = 1000;
 
 async function planIdForWeek(db: D1Database, weekStart: string): Promise<number | undefined> {
   const row = await db.prepare("SELECT id FROM plans WHERE week_start = ?1").bind(weekStart).first<{ id: number }>();
@@ -238,7 +238,7 @@ export async function setFeedback(
   comment: string,
   now: string,
 ): Promise<"ok" | "not_found" | "invalid"> {
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5 || comment.length > MAX_COMMENT) return "invalid";
+  if (!ratingSchema.safeParse(rating).success || comment.length > MAX_COMMENT) return "invalid";
   const exists = await db.prepare("SELECT 1 FROM cookings WHERE id = ?1").bind(cookingId).first();
   if (!exists) return "not_found";
   await db

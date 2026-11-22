@@ -1,6 +1,12 @@
 import type { PersonView, RestrictionKind, Settings } from "../../../shared/types";
 import { rows } from "../db";
 
+export interface RestrictionChoice {
+  restrictionId: number;
+  kind: RestrictionKind;
+  weight: number;
+}
+
 export interface Person {
   id: number;
   email: string;
@@ -35,21 +41,37 @@ export async function listPeople(db: D1Database): Promise<PersonView[]> {
 export async function setPersonRestrictions(
   db: D1Database,
   personId: number,
-  items: { restrictionId: number; kind: RestrictionKind; weight: number }[],
+  items: RestrictionChoice[],
 ): Promise<void> {
-  await db.batch([
+  await db.batch(restrictionStatements(db, personId, items));
+}
+
+/** Replaces a person's restrictions and preferences in one batch. */
+export async function updatePerson(
+  db: D1Database,
+  personId: number,
+  update: { restrictions: RestrictionChoice[]; preferences: string },
+): Promise<"ok" | "not_found"> {
+  const exists = await db.prepare("SELECT 1 FROM people WHERE id = ?1").bind(personId).first();
+  if (!exists) return "not_found";
+  await db.batch([...restrictionStatements(db, personId, update.restrictions), preferencesStatement(db, personId, update.preferences)]);
+  return "ok";
+}
+
+function restrictionStatements(db: D1Database, personId: number, items: RestrictionChoice[]): D1PreparedStatement[] {
+  return [
     db.prepare("DELETE FROM person_restrictions WHERE person_id = ?1").bind(personId),
     ...items.map((i) =>
       db.prepare("INSERT INTO person_restrictions (person_id, restriction_id, kind, weight) VALUES (?1, ?2, ?3, ?4)").bind(personId, i.restrictionId, i.kind, i.weight),
     ),
-  ]);
+  ];
 }
 
+const preferencesStatement = (db: D1Database, personId: number, text: string): D1PreparedStatement =>
+  db.prepare("INSERT INTO person_preferences (person_id, text) VALUES (?1, ?2) ON CONFLICT (person_id) DO UPDATE SET text = excluded.text").bind(personId, text);
+
 export async function setPreferences(db: D1Database, personId: number, text: string): Promise<void> {
-  await db
-    .prepare("INSERT INTO person_preferences (person_id, text) VALUES (?1, ?2) ON CONFLICT (person_id) DO UPDATE SET text = excluded.text")
-    .bind(personId, text)
-    .run();
+  await preferencesStatement(db, personId, text).run();
 }
 
 /** Restrictions that are hard for anyone: both people eat every planned meal. */

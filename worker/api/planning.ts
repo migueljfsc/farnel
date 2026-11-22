@@ -1,10 +1,8 @@
 import { fail, json } from "../lib/http";
 import { cookingChange, date, feedback } from "../lib/schemas";
 import { getPlan, history, setCookingStatus, setFeedback, shoppingList } from "../lib/service/planning";
-import { addDays, isMonday } from "../../shared/time";
+import { addDays, HISTORY_DAYS, isMonday } from "../../shared/time";
 import { idParam, outcome, route, withBody, type Route } from "./routing";
-
-const HISTORY_DAYS = 60;
 
 export const planningRoutes: Route[] = [
   route("GET", /^\/api\/weeks\/(\d{4}-\d{2}-\d{2})$/, async ({ db, params, today }) => {

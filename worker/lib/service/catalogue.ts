@@ -15,7 +15,7 @@ import type {
   Unit,
 } from "../../../shared/types";
 import { idList, isUniqueViolation, rows } from "../db";
-import { nameKey } from "../names";
+import { nameKey } from "../../../shared/names";
 import { costPerPortionCents, type DishFacts } from "../rules";
 
 export interface IngredientLine {
@@ -228,12 +228,17 @@ async function resolveLines(
     let id = existing.get(keys[i])?.id;
     if (id === undefined) {
       const price = line.priceCents ?? null;
-      const row = await db
-        .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents, price_updated_at) VALUES (?1, ?2, ?3, ?4, ?5) RETURNING id")
-        .bind(line.name.trim(), keys[i], line.unit, price, price === null ? null : now)
-        .first<{ id: number }>();
-      id = row!.id;
-      await db.prepare("INSERT INTO ingredient_restrictions (ingredient_id, restriction_id, status) SELECT ?1, id, 'unknown' FROM restrictions").bind(id).run();
+      // One batch, so an ingredient never exists without its `unknown` statuses.
+      const [, , created] = await db.batch<{ id: number }>([
+        db
+          .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents, price_updated_at) VALUES (?1, ?2, ?3, ?4, ?5)")
+          .bind(line.name.trim(), keys[i], line.unit, price, price === null ? null : now),
+        db
+          .prepare("INSERT INTO ingredient_restrictions (ingredient_id, restriction_id, status) SELECT (SELECT id FROM ingredients WHERE name_key = ?1), id, 'unknown' FROM restrictions")
+          .bind(keys[i]),
+        db.prepare("SELECT id FROM ingredients WHERE name_key = ?1").bind(keys[i]),
+      ]);
+      id = created.results[0].id;
       existing.set(keys[i], { id, key: keys[i], unit: line.unit });
       newIngredients.push(id);
     }
@@ -276,7 +281,7 @@ export async function updateDish(
   db: D1Database,
   id: number,
   input: DishInput,
-  now = new Date().toISOString(),
+  now: string,
 ): Promise<{ ok: true; newIngredients: number[] } | { ok: false; error: "not_found" } | UnitMismatch> {
   const exists = await db.prepare("SELECT 1 FROM dishes WHERE id = ?1").bind(id).first();
   if (!exists) return { ok: false, error: "not_found" };
@@ -294,12 +299,15 @@ export async function updateDish(
 export async function validateDish(
   db: D1Database,
   id: number,
-): Promise<{ ok: true } | { ok: false; error: "not_found" | "not_pending" } | { ok: false; error: "undecided_ingredients"; ingredientIds: number[] }> {
+): Promise<{ ok: true } | { ok: false; error: "not_found" | "not_pending" | "no_ingredients" } | { ok: false; error: "undecided_ingredients"; ingredientIds: number[] }> {
   const dish = await db.prepare("SELECT status FROM dishes WHERE id = ?1").bind(id).first<{ status: DishStatus }>();
   if (!dish) return { ok: false, error: "not_found" };
   if (dish.status !== "pending") return { ok: false, error: "not_pending" };
   const ingredientIds = await undecidedIngredientIds(db, id);
   if (ingredientIds.length) return { ok: false, error: "undecided_ingredients", ingredientIds };
+  // A dish with no ingredients would pass every restriction check unseen.
+  const hasIngredients = await db.prepare("SELECT 1 FROM dish_ingredients WHERE dish_id = ?1").bind(id).first();
+  if (!hasIngredients) return { ok: false, error: "no_ingredients" };
   await db.prepare("UPDATE dishes SET status = 'validated' WHERE id = ?1").bind(id).run();
   return { ok: true };
 }
@@ -336,9 +344,14 @@ export async function updateIngredient(
   id: number,
   patch: { name?: string; unit?: Unit; priceCents?: number | null; statuses?: Record<number, DecidedStatus> },
   now: string,
-): Promise<"ok" | "not_found" | "name_taken"> {
-  const exists = await db.prepare("SELECT 1 FROM ingredients WHERE id = ?1").bind(id).first();
-  if (!exists) return "not_found";
+): Promise<"ok" | "not_found" | "name_taken" | "in_use"> {
+  const current = await db.prepare("SELECT unit FROM ingredients WHERE id = ?1").bind(id).first<{ unit: Unit }>();
+  if (!current) return "not_found";
+  // Dish quantities are in the ingredient's unit; changing it would silently change every dish.
+  if (patch.unit !== undefined && patch.unit !== current.unit) {
+    const used = await db.prepare("SELECT 1 FROM dish_ingredients WHERE ingredient_id = ?1").bind(id).first();
+    if (used) return "in_use";
+  }
   const statements: D1PreparedStatement[] = [];
   if (patch.name !== undefined) {
     statements.push(db.prepare("UPDATE ingredients SET name = ?2, name_key = ?3 WHERE id = ?1").bind(id, patch.name.trim(), nameKey(patch.name)));

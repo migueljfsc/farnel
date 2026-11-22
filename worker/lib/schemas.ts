@@ -1,8 +1,12 @@
 /** Input schemas shared by the JSON API and the MCP tools. */
 
 import { z } from "zod";
+import { isCalendarDate } from "../../shared/time";
 
-export const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+export const date = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD")
+  .refine(isCalendarDate, "not a calendar date");
 export const id = z.number().int().positive();
 export const unit = z.enum(["g", "ml", "un"]);
 export const slot = z.enum(["lunch", "dinner"]);
@@ -51,7 +55,9 @@ export const cookingChange = z.union([
   z.object({ status: z.literal("replaced"), dishId: id.optional(), text: z.string().max(200).optional() }),
 ]);
 
-export const feedback = z.object({ rating: z.number().int().min(1).max(5), comment: z.string().max(1000).default("") });
+export const MAX_COMMENT = 1000;
+export const rating = z.number().int().min(1).max(5);
+export const feedback = z.object({ rating, comment: z.string().max(MAX_COMMENT).default("") });
 
 export const personUpdate = z.object({
   restrictions: z.array(z.object({ restrictionId: id, kind: z.enum(["hard", "soft"]), weight: z.number().int().min(1).max(5) })).max(20),

@@ -10,12 +10,7 @@ import { date, dishInput, id, planInput } from "../lib/schemas";
 import { catalogueCounts, createDish, getDish } from "../lib/service/catalogue";
 import { getSettings, listPeople } from "../lib/service/people";
 import { getPlan, history, listCandidates, savePlan, shoppingList } from "../lib/service/planning";
-import { addDays, weekStartOf } from "../../shared/time";
-
-export interface Clock {
-  today: string;
-  now: string;
-}
+import { addDays, HISTORY_DAYS, weekStartOf, type Clock } from "../../shared/time";
 
 export interface ToolResult {
   summary: string;
@@ -32,7 +27,6 @@ export interface Tool<S extends z.ZodObject = z.ZodObject> {
 
 const tool = <S extends z.ZodObject>(t: Tool<S>): Tool => t as unknown as Tool;
 
-const HISTORY_DAYS = 60;
 const weekArgs = z.object({ weekStart: date.describe("Monday of the week, YYYY-MM-DD") });
 
 export const TOOLS: Tool[] = [

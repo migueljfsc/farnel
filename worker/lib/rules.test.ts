@@ -108,6 +108,11 @@ describe("validatePlan", () => {
     expect(validatePlan(input, facts({ today: "2026-11-24" }))).toEqual([{ code: "in_past", cooking: 0, dishId: 1 }]);
   });
 
+  it("rejects a meal repeated within one cooking", () => {
+    const input = plan([{ dishId: 1, cookDate: "2026-11-23", portions: 4, meals: [lunch("2026-11-24"), lunch("2026-11-24")] }]);
+    expect(validatePlan(input, facts())).toEqual([{ code: "meal_taken", cooking: 0, dishId: 1 }]);
+  });
+
   it("rejects a meal covered twice or by another plan", () => {
     const twice = plan([
       { dishId: 1, cookDate: "2026-11-23", portions: 2, meals: [lunch("2026-11-24")] },

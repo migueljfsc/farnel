@@ -94,10 +94,24 @@ describe("dishes", () => {
     const gluten = await restrictionId(db);
     const rice = await addIngredient(db, "Arroz");
     const dish = await addDish(db, "Arroz de pato", { ingredients: [[rice, 300]] });
-    await updateDish(db, dish, input("Arroz de pato", [{ name: "Arroz", quantity: 300, unit: "g" }, { name: "Chouriço", quantity: 100, unit: "g" }]));
+    await updateDish(db, dish, input("Arroz de pato", [{ name: "Arroz", quantity: 300, unit: "g" }, { name: "Chouriço", quantity: 100, unit: "g" }]), NOW);
     expect((await getDish(db, dish))?.status).toBe("validated");
     const facts = (await loadDishFacts(db)).get(dish)!;
     expect(eligibility(facts, [gluten], "2026-11-23")).toEqual(["restricted"]);
+  });
+
+  it("refuses to validate a dish without ingredients", async () => {
+    const dish = await addDish(db, "Empty", { status: "pending" });
+    expect(await validateDish(db, dish)).toEqual({ ok: false, error: "no_ingredients" });
+  });
+
+  it("refuses to change the unit of an ingredient a dish uses", async () => {
+    const rice = await addIngredient(db, "Arroz", { unit: "g" });
+    const unused = await addIngredient(db, "Sal", { unit: "g" });
+    await addDish(db, "Arroz", { ingredients: [[rice, 400]] });
+    expect(await updateIngredient(db, rice, { unit: "un" }, NOW)).toBe("in_use");
+    expect(await updateIngredient(db, rice, { unit: "g", priceCents: 10 }, NOW)).toBe("ok");
+    expect(await updateIngredient(db, unused, { unit: "un" }, NOW)).toBe("ok");
   });
 
   it("archives and unarchives", async () => {

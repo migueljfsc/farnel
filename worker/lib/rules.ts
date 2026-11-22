@@ -104,11 +104,13 @@ export function validatePlan(input: PlanInput, facts: PlanFacts): PlanError[] {
       if (!inWeek(cooking.cookDate) || cooking.meals.some((m) => !inWeek(m.date))) return "date_out_of_week";
       if (cooking.meals.some((m) => m.date < cooking.cookDate)) return "meal_before_cook";
       if (cooking.cookDate < facts.today) return "in_past";
-      if (cooking.meals.some((m) => seenMeals.has(mealKey(m)))) return "meal_taken";
+      for (const meal of cooking.meals) {
+        if (seenMeals.has(mealKey(meal))) return "meal_taken";
+        seenMeals.add(mealKey(meal));
+      }
       return null;
     })();
     seenDishes.add(cooking.dishId);
-    cooking.meals.forEach((m) => seenMeals.add(mealKey(m)));
 
     if (structural) errors.push({ code: structural, ...at });
     else for (const code of eligibility(dish!, facts.hardRestrictionIds, firstCook)) errors.push({ code, ...at });
