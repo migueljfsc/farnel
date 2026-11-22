@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { formatDay } from "../../shared/format";
 import type { CookingView, FeedbackView, PersonView } from "../../shared/types";
-import { Badge, Card, ErrorText, inputClass, Link, Loaded, Page, Stars } from "../components/ui";
+import { Badge, Card, ErrorText, Link, Loaded, Page, Stars } from "../components/ui";
+import { inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
 

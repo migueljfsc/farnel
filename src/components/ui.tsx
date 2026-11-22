@@ -3,8 +3,8 @@ import type { DecidedStatus, RestrictionStatus } from "../../shared/types";
 import { ApiError } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { href, type Route } from "../lib/router";
+import { buttonClass, cx, type Variant } from "./styles";
 
-const cx = (...classes: (string | false | undefined)[]) => classes.filter(Boolean).join(" ");
 
 export function Link({ to, className, children }: { to: Route; className?: string; children: ReactNode }) {
   const { navigate } = useApp();
@@ -23,13 +23,8 @@ export function Link({ to, className, children }: { to: Route; className?: strin
   );
 }
 
-export function Button({ variant = "primary", className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" }) {
-  const styles = {
-    primary: "bg-emerald-700 text-white hover:bg-emerald-800",
-    secondary: "border border-stone-300 bg-white text-stone-800 hover:bg-stone-100",
-    danger: "border border-red-300 bg-white text-red-700 hover:bg-red-50",
-  }[variant];
-  return <button type="button" className={cx("rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50", styles, className)} {...props} />;
+export function Button({ variant = "primary", className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
+  return <button type="button" className={buttonClass(variant, className)} {...props} />;
 }
 
 export function Page({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
@@ -55,7 +50,6 @@ export const Field = ({ label, children }: { label: string; children: ReactNode 
   </label>
 );
 
-export const inputClass = "w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm";
 
 export const Badge = ({ children, tone = "stone" }: { children: ReactNode; tone?: "stone" | "amber" | "emerald" | "red" }) => (
   <span

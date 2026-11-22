@@ -30,6 +30,13 @@ pre-commit install                    # hooks; commits are Conventional (`cz com
 
 Node >= 22.12, pnpm 11.
 
+## Planning
+
+On the Week page, **Plan with Claude** builds the prompt for the week (plus any notes) and opens it
+in the Claude app (`claude://` deep link) or claude.ai, where the Farnel connector saves the plan;
+**Refresh** shows it. Locally, claude.ai cannot reach `localhost`: use **Copy prompt** and paste it
+into Claude Code connected to the local server (below).
+
 ## Renaming
 
 `farnel` appears only in these places:

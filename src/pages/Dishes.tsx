@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { formatDay, formatMoney } from "../../shared/format";
 import type { DishStatus, DishSummary } from "../../shared/types";
-import { Badge, Button, Card, inputClass, Link, Loaded, Page } from "../components/ui";
+import { Badge, Button, Card, Link, Loaded, Page } from "../components/ui";
+import { inputClass } from "../components/styles";
 import { useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import type { Route } from "../lib/router";

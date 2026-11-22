@@ -3,7 +3,8 @@ import { formatDay, formatMoney, parseMoney } from "../../shared/format";
 import { nameKey } from "../../shared/names";
 import type { DishDetail, IngredientView, Restriction, Unit } from "../../shared/types";
 import { IngredientStatuses } from "../components/IngredientStatuses";
-import { Badge, Button, Card, ErrorText, Field, inputClass, Loaded, Page, Stars } from "../components/ui";
+import { Badge, Button, Card, ErrorText, Field, Loaded, Page, Stars } from "../components/ui";
+import { inputClass } from "../components/styles";
 import { api, ApiError, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
 

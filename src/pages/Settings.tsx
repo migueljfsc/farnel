@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { parseMoney } from "../../shared/format";
 import type { PersonView, Restriction, RestrictionKind, Settings as SettingsData } from "../../shared/types";
-import { Button, Card, ErrorText, Field, inputClass, Loaded, Page } from "../components/ui";
+import { Button, Card, ErrorText, Field, Loaded, Page } from "../components/ui";
+import { inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 
 export function Settings() {

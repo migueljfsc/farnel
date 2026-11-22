@@ -2,7 +2,8 @@ import { useState } from "react";
 import { formatMoney, parseMoney, priceUnit } from "../../shared/format";
 import type { IngredientView, Restriction } from "../../shared/types";
 import { IngredientStatuses } from "../components/IngredientStatuses";
-import { Button, Card, ErrorText, inputClass, Loaded, Page } from "../components/ui";
+import { Button, Card, ErrorText, Loaded, Page } from "../components/ui";
+import { inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
 

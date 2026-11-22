@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { APP_NAME } from "../../shared/app";
 import { formatDay, formatMoney } from "../../shared/format";
 import { addDays, todayLisbon, weekStartOf } from "../../shared/time";
 import type { CookingView, DishSummary, PlanView, ShoppingList } from "../../shared/types";
-import { Badge, Button, Card, ErrorText, inputClass, Link, Loaded, Page } from "../components/ui";
+import { Badge, Button, Card, ErrorText, Field, Link, Loaded, Page } from "../components/ui";
+import { buttonClass, inputClass } from "../components/styles";
+import { claudeLinks, planPrompt } from "../lib/claude";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
 
@@ -10,7 +13,8 @@ const STATUS_TONE = { planned: "emerald", done: "stone", skipped: "amber", repla
 
 export function Week({ weekStart }: { weekStart?: string }) {
   const { navigate } = useApp();
-  const week = weekStart ?? weekStartOf(todayLisbon(new Date()));
+  const thisWeek = weekStartOf(todayLisbon(new Date()));
+  const week = weekStart ?? thisWeek;
   const { data, error, reload } = useApi<{ plan: PlanView | null; shopping: ShoppingList }>(`/api/weeks/${week}`);
   const go = (days: number) => navigate({ page: "week", weekStart: addDays(week, days) });
 
@@ -24,6 +28,7 @@ export function Week({ weekStart }: { weekStart?: string }) {
         </>
       }
     >
+      {week >= thisWeek && <PlanWithClaude weekStart={week} hasPlan={!!data?.plan} onRefresh={reload} />}
       <Loaded data={data} error={error}>
         {({ plan, shopping }) =>
           plan ? (
@@ -41,12 +46,39 @@ export function Week({ weekStart }: { weekStart?: string }) {
             </>
           ) : (
             <Card>
-              <p className="text-sm text-stone-600">No plan for this week yet. Ask Claude to plan it.</p>
+              <p className="text-sm text-stone-600">No plan for this week yet.</p>
             </Card>
           )
         }
       </Loaded>
     </Page>
+  );
+}
+
+function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; hasPlan: boolean; onRefresh: () => void }) {
+  const [notes, setNotes] = useState("");
+  const [copied, setCopied] = useState(false);
+  const prompt = planPrompt({ weekStart, notes });
+  const links = claudeLinks(prompt);
+  const copy = async () => {
+    await navigator.clipboard.writeText(prompt);
+    setCopied(true);
+  };
+
+  return (
+    <Card className="space-y-2">
+      <h2 className="font-medium">{hasPlan ? "Re-plan with Claude" : "Plan with Claude"}</h2>
+      <Field label="Anything special this week?">
+        <input className={inputClass} placeholder="e.g. we eat out Thursday, guests on Saturday" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <a className={buttonClass("primary")} href={links.app}>Open in Claude app</a>
+        <a className={buttonClass("secondary")} href={links.web} target="_blank" rel="noreferrer">Open claude.ai</a>
+        <Button variant="secondary" onClick={copy}>{copied ? "Copied" : "Copy prompt"}</Button>
+        <Button variant="secondary" onClick={onRefresh}>Refresh</Button>
+      </div>
+      <p className="text-xs text-stone-500">Claude saves the plan here through the {APP_NAME} connector; press Refresh when it is done.</p>
+    </Card>
   );
 }
 
