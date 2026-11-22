@@ -3,7 +3,7 @@
 import type { Candidate, CookingStatus, CookingView, FeedbackView, Meal, PlanView, ShoppingList, Unit } from "../../../shared/types";
 import { idList, rows } from "../db";
 import { costPerPortionCents, eligibility, lineCostCents, mealKey, validatePlan, type PlanError, type PlanInput } from "../rules";
-import { addDays } from "../time";
+import { addDays } from "../../../shared/time";
 import { loadDishes, loadDishFacts } from "./catalogue";
 import { getSettings, hardRestrictionIds } from "./people";
 

@@ -18,6 +18,9 @@
   "routes": [{ "pattern": "farnel.migueljfsc.dev", "custom_domain": true }],
   "workers_dev": false,
 
+  // wrangler dev otherwise presents requests as the route's host; DEV_ACCESS_EMAIL needs localhost.
+  "dev": { "host": "localhost" },
+
   // Access values come from `tofu output` after the first apply. AUD tags and the team domain
   // are identifiers, not secrets.
   "vars": {

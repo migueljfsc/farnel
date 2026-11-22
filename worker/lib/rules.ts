@@ -5,7 +5,7 @@
  */
 
 import type { DishStatus, RestrictionStatus, Slot, Unit } from "../../shared/types";
-import { addDays, isMonday } from "./time";
+import { addDays, isMonday } from "../../shared/time";
 
 export interface DishFacts {
   id: number;

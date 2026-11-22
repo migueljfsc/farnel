@@ -1,7 +1,7 @@
 import { fail, json } from "../lib/http";
 import { cookingChange, date, feedback } from "../lib/schemas";
 import { getPlan, history, setCookingStatus, setFeedback, shoppingList } from "../lib/service/planning";
-import { addDays, isMonday } from "../lib/time";
+import { addDays, isMonday } from "../../shared/time";
 import { idParam, outcome, route, withBody, type Route } from "./routing";
 
 const HISTORY_DAYS = 60;

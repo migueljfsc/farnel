@@ -5,7 +5,7 @@ import { planningRoutes } from "./api/planning";
 import { dispatch } from "./api/routing";
 import { authenticate } from "./lib/access";
 import { fail } from "./lib/http";
-import { clockAt } from "./lib/time";
+import { clockAt } from "../shared/time";
 import { createServer } from "./mcp/server";
 
 const API_ROUTES = [...peopleRoutes, ...catalogueRoutes, ...planningRoutes];

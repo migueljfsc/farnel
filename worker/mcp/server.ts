@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { APP_NAME } from "../../shared/app";
-import { clockAt } from "../lib/time";
+import { clockAt } from "../../shared/time";
 import { TOOLS } from "./tools";
 
 export const INSTRUCTIONS = `Farnel plans a two-person household's lunches (and occasional dinners) by cooking: one cooking yields several portions; each meal eats 2 portions. Prefer fewer cookings with more portions.

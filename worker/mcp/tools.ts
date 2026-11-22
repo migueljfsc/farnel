@@ -10,7 +10,7 @@ import { date, dishInput, id, planInput } from "../lib/schemas";
 import { catalogueCounts, createDish, getDish } from "../lib/service/catalogue";
 import { getSettings, listPeople } from "../lib/service/people";
 import { getPlan, history, listCandidates, savePlan, shoppingList } from "../lib/service/planning";
-import { addDays, weekStartOf } from "../lib/time";
+import { addDays, weekStartOf } from "../../shared/time";
 
 export interface Clock {
   today: string;
