@@ -1,6 +1,7 @@
 /** Direct-SQL builders for tests. Worker tests share one D1 per file: call `resetDb` first. */
 
 import type { DishStatus, RestrictionStatus, Unit } from "../../shared/types";
+import { nameKey } from "../lib/names";
 
 export async function resetDb(db: D1Database): Promise<void> {
   const tables = [
@@ -48,10 +49,9 @@ export async function addIngredient(
   name: string,
   opts: { unit?: Unit; priceCents?: number | null; statuses?: Record<string, RestrictionStatus> } = {},
 ): Promise<number> {
-  const key = name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim().replace(/\s+/g, " ");
   const row = await db
     .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents) VALUES (?1, ?2, ?3, ?4) RETURNING id")
-    .bind(name, key, opts.unit ?? "g", opts.priceCents === undefined ? 100 : opts.priceCents)
+    .bind(name, nameKey(name), opts.unit ?? "g", opts.priceCents === undefined ? 100 : opts.priceCents)
     .first<{ id: number }>();
   const id = row!.id;
   const { results } = await db.prepare("SELECT id, name FROM restrictions").all<{ id: number; name: string }>();
