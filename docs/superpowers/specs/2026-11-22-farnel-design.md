@@ -234,11 +234,13 @@ validated. No bulk import in v1.
 
 - **Two Access applications on one hostname.** Access matches the most specific path:
   - `farnel.migueljfsc.dev` — Allow policy, the two emails, one-time PIN login.
-  - `farnel.migueljfsc.dev/mcp` — Service Auth policy with one service token. Strict service
+  - `farnel.migueljfsc.dev/mcp` — the same people policy, with Access **managed OAuth** on, so
+    claude.ai signs in through Access (dynamic client registration, claude.ai's callback allowed);
+    plus a Service Auth policy with one service token for non-interactive clients. Strict service
     token authentication should be on (returns 401/403 instead of redirecting); it is an
     organisation-wide setting, so it is a one-time manual toggle, not part of this stack.
-- The claude.ai connector sends `CF-Access-Client-Id` and `CF-Access-Client-Secret` as custom
-  request headers.
+- The claude.ai connector is added by URL only; claude.ai does not use a connector whose only
+  credential is fixed request headers once its OAuth probe fails.
 - **The Worker checks Access too**, not only the edge: every `/api/*` and `/mcp` request must carry
   a `Cf-Access-Jwt-Assertion` that verifies (RS256, the team's JWKS, issuer = team domain,
   audience = the AUD of the application that path belongs to). `ctx.access` cannot be used: it is

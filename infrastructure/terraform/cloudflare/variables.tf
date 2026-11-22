@@ -67,6 +67,12 @@ variable "access_session_duration" {
   description = "How long a web sign-in lasts."
 }
 
+variable "mcp_oauth_redirect_uris" {
+  type        = list(string)
+  default     = ["https://claude.ai/api/mcp/auth_callback"]
+  description = "Redirect URIs MCP clients may register through managed OAuth on /mcp."
+}
+
 variable "service_token_duration" {
   type        = string
   default     = "8760h"

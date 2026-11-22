@@ -77,11 +77,12 @@ Every push to `main` applies the stack (when it changes) and deploys the Worker.
    ```
 
 6. **Sign in** at `https://farnel.migueljfsc.dev`; in Settings, mark gluten as hard for the right person.
-7. **Connect Claude**: claude.ai → Customize → Connectors → add a custom connector with URL
-   `https://farnel.migueljfsc.dev/mcp` and request headers `CF-Access-Client-Id` /
-   `CF-Access-Client-Secret` from `tofu output -raw mcp_client_id` / `tofu output -raw mcp_client_secret`.
-8. **Check**: without signing in, `/api/me` redirects or answers 401; `/mcp` without the headers
-   answers 401/403, and with them `initialize` answers 200.
+7. **Connect Claude**: claude.ai → Plugins → Add → **Add custom connector**, URL
+   `https://farnel.migueljfsc.dev/mcp`, no headers. **Connect** opens the Access login (your email
+   and a one-time PIN); Access's managed OAuth gives claude.ai a token and forwards your identity to
+   the Worker.
+8. **Check**: without signing in, `/api/me` redirects to the Access login and `/mcp` answers 401 with
+   a `WWW-Authenticate` header pointing at Access's OAuth metadata.
 9. **First conversation**: "propose 15 dishes" → validate them in the web app → "plan next week".
 
 ## Connect Claude to the local server
