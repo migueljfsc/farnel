@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CookingView } from "../../shared/types";
-import { segments, slotsInUse } from "./board";
+import { freeMealsAfter, segments } from "./board";
 
 const cooking = (id: number, meals: [string, "lunch" | "dinner"][], cookDate = meals[0][0]): CookingView => ({
   id,
@@ -18,9 +18,14 @@ const cooking = (id: number, meals: [string, "lunch" | "dinner"][], cookDate = m
 describe("board", () => {
   const week = "2026-11-23";
 
-  it("shows dinner only when some meal is a dinner", () => {
-    expect(slotsInUse([cooking(1, [["2026-11-23", "lunch"]])])).toEqual(["lunch"]);
-    expect(slotsInUse([cooking(1, [["2026-11-23", "lunch"]]), cooking(2, [["2026-11-28", "dinner"]])])).toEqual(["lunch", "dinner"]);
+  it("lists the free meals after one, in order, up to the end of the week", () => {
+    const taken = [cooking(1, [["2026-11-25", "lunch"]])];
+    expect(freeMealsAfter(taken, week, { date: "2026-11-24", slot: "dinner" }).slice(0, 3)).toEqual([
+      { date: "2026-11-25", slot: "dinner" },
+      { date: "2026-11-26", slot: "lunch" },
+      { date: "2026-11-26", slot: "dinner" },
+    ]);
+    expect(freeMealsAfter([], week, { date: "2026-11-29", slot: "dinner" })).toEqual([]);
   });
 
   it("joins consecutive days of one cooking into one segment per slot", () => {

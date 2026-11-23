@@ -1,14 +1,16 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { APP_NAME } from "../../shared/app";
 import { addDays, todayLisbon, weekStartOf } from "../../shared/time";
-import type { CookingView, DishSummary, PersonView, PlanView, ShoppingList } from "../../shared/types";
+import type { CookingView, DishSummary, Meal, PersonView, PlanView, ShoppingList, Slot } from "../../shared/types";
 import { buttonClass, cx, inputClass } from "../components/styles";
 import { Button, Link, Loaded } from "../components/ui";
 import { WeekCalendar } from "../components/WeekCalendar";
 import { useI18n } from "../i18n/context";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
-import { segments, slotsInUse } from "../lib/board";
+import { SLOTS, segments } from "../lib/board";
+import { AddMeal } from "../components/AddMeal";
+import { CloseButton, Sheet } from "../components/Sheet";
 import { byAisle, shoppingText } from "../lib/shopping";
 import { claudeLinks, planPrompt } from "../lib/claude";
 import { errorMessage } from "../lib/errors";
@@ -22,6 +24,7 @@ let lastWeek: string | undefined;
 
 export function Week({ weekStart }: { weekStart?: string }) {
   const { navigate } = useApp();
+  const { t } = useI18n();
   const thisWeek = weekStartOf(todayLisbon(new Date()));
   const week = weekStart ?? thisWeek;
   const [direction] = useState(() => {
@@ -63,8 +66,13 @@ export function Week({ weekStart }: { weekStart?: string }) {
           plan ? (
             <>
               <Budget plan={plan} />
-              <Board plan={plan} onChange={reload} />
+              <Board weekStart={week} cookings={plan.cookings} onChange={reload} />
               <Shopping list={shopping} plan={plan} />
+            </>
+          ) : addDays(week, DAYS - 1) >= todayLisbon(new Date()) ? (
+            <>
+              <p className="text-sm text-cafe-soft">{t("week.emptyFuture")}</p>
+              <Board weekStart={week} cookings={[]} onChange={reload} />
             </>
           ) : (
             <EmptyWeek />
@@ -107,38 +115,85 @@ function PotIcon({ className }: { className?: string }) {
   );
 }
 
-function Board({ plan, onChange }: { plan: PlanView; onChange: () => void }) {
+function Board({ weekStart, cookings, onChange }: { weekStart: string; cookings: CookingView[]; onChange: () => void }) {
   const [selected, setSelected] = useState<number | null>(null);
-  const open = plan.cookings.find((c) => c.id === selected);
-  const close = useCallback(() => setSelected(null), []);
-  const select = (id: number) => setSelected(id === selected ? null : id);
+  const [adding, setAdding] = useState<Meal | null>(null);
+  const open = cookings.find((c) => c.id === selected);
+  const close = useCallback(() => {
+    setSelected(null);
+    setAdding(null);
+  }, []);
+  const props: BoardProps = {
+    weekStart,
+    cookings,
+    selected,
+    adding,
+    onSelect: (id) => {
+      setAdding(null);
+      setSelected(id === selected ? null : id);
+    },
+    onAdd: (meal) => {
+      setSelected(null);
+      setAdding(meal);
+    },
+  };
   return (
     <div className="space-y-3">
-      <MealGrid plan={plan} selected={selected} onSelect={select} />
-      <DayList plan={plan} selected={selected} onSelect={select} />
-      {open && <TinDetail key={open.id} cooking={open} onChange={onChange} onClose={close} />}
+      <MealGrid {...props} />
+      <DayList {...props} />
+      {open && <TinDetail key={open.id} weekStart={weekStart} cooking={open} onChange={onChange} onClose={close} />}
+      {adding && <AddMeal key={`${adding.date}:${adding.slot}`} weekStart={weekStart} cookings={cookings} meal={adding} onAdded={onChange} onClose={close} />}
     </div>
   );
 }
 
 interface BoardProps {
-  plan: PlanView;
+  weekStart: string;
+  cookings: CookingView[];
   selected: number | null;
+  adding: Meal | null;
   onSelect: (id: number) => void;
+  onAdd: (meal: Meal) => void;
+}
+
+const isMeal = (meal: Meal | null, date: string, slot: Slot) => meal?.date === date && meal.slot === slot;
+const feeding = (cookings: CookingView[], date: string, slot: Slot) => cookings.find((c) => c.meals.some((m) => m.date === date && m.slot === slot));
+
+/** A meal no cooking feeds: "+" from today on, a dash before. */
+function FreeMeal({ date, slot, today, adding, onAdd, className, style }: { date: string; slot: Slot; today: string; adding: Meal | null; onAdd: (meal: Meal) => void; className: string; style?: CSSProperties }) {
+  const { t, day } = useI18n();
+  if (date < today)
+    return (
+      <span aria-hidden className={cx(className, "border-linha text-cafe-soft/40")} style={style}>
+        —
+      </span>
+    );
+  const active = isMeal(adding, date, slot);
+  return (
+    <button
+      type="button"
+      aria-label={t("board.add", { meal: `${day(date)} ${t(`slot.${slot}`)}` })}
+      aria-expanded={active}
+      onClick={() => onAdd({ date, slot })}
+      className={cx(className, "text-xl transition", active ? "border-salva bg-salva-soft text-salva" : "border-linha text-cafe-soft/50 hover:border-salva hover:bg-salva-soft/60 hover:text-salva")}
+      style={style}
+    >
+      +
+    </button>
+  );
 }
 
 /** Desktop: a row per meal, a column per day; a cooking covers exactly the meals it feeds. */
-function MealGrid({ plan, selected, onSelect }: BoardProps) {
+function MealGrid({ weekStart, cookings, selected, adding, onSelect, onAdd }: BoardProps) {
   const { t, day } = useI18n();
   const today = todayLisbon(new Date());
-  const days = Array.from({ length: DAYS }, (_, i) => addDays(plan.weekStart, i));
-  const slots = slotsInUse(plan.cookings);
+  const days = Array.from({ length: DAYS }, (_, i) => addDays(weekStart, i));
   return (
     <div className="hidden gap-1.5 sm:grid" style={{ gridTemplateColumns: "4.5rem repeat(7, minmax(0, 1fr))" }}>
       <span />
       {days.map((date) => {
         const [weekday, numbers] = day(date).split(" ");
-        const cooked = plan.cookings.filter((c) => c.cookDate === date && c.status !== "skipped");
+        const cooked = cookings.filter((c) => c.cookDate === date && c.status !== "skipped");
         return (
           <div key={date} className={cx("flex items-center gap-1.5 border-b-2 pb-1", date === today ? "border-salva text-salva" : "border-linha text-cafe-soft")}>
             <span className="flex items-baseline gap-1">
@@ -155,23 +210,27 @@ function MealGrid({ plan, selected, onSelect }: BoardProps) {
           </div>
         );
       })}
-      {slots.map((slot, row) => (
+      {SLOTS.map((slot, row) => (
         <Fragment key={slot}>
           <span className="self-center text-sm font-semibold text-cafe-soft" style={{ gridRow: row + 2, gridColumn: 1 }}>
             {t(`slot.${slot}`)}
           </span>
-          {days.map((date, i) => (
-            <span
-              key={date}
-              aria-hidden
-              className="grid min-h-20 place-items-center rounded-xl border-2 border-dashed border-linha text-cafe-soft/50"
-              style={{ gridRow: row + 2, gridColumn: i + 2 }}
-            >
-              —
-            </span>
-          ))}
-          {segments(plan.cookings, plan.weekStart, slot).map((segment) => {
-            const cooking = plan.cookings[segment.cooking];
+          {days.map((date, i) =>
+            feeding(cookings, date, slot) ? null : (
+              <FreeMeal
+                key={date}
+                date={date}
+                slot={slot}
+                today={today}
+                adding={adding}
+                onAdd={onAdd}
+                className="grid min-h-20 place-items-center rounded-xl border-2 border-dashed"
+                style={{ gridRow: row + 2, gridColumn: i + 2 }}
+              />
+            ),
+          )}
+          {segments(cookings, weekStart, slot).map((segment) => {
+            const cooking = cookings[segment.cooking];
             return (
               <MealBlock
                 key={`${cooking.id}-${slot}-${segment.start}`}
@@ -237,18 +296,17 @@ function MealBlock({
 }
 
 /** Phones: day by day, each meal a chip in its cooking's colour. */
-function DayList({ plan, selected, onSelect }: BoardProps) {
+function DayList({ weekStart, cookings, selected, adding, onSelect, onAdd }: BoardProps) {
   const { t, day } = useI18n();
   const today = todayLisbon(new Date());
-  const slots = slotsInUse(plan.cookings);
-  const days = Array.from({ length: DAYS }, (_, i) => addDays(plan.weekStart, i));
+  const days = Array.from({ length: DAYS }, (_, i) => addDays(weekStart, i));
   return (
     <ol className="space-y-2 sm:hidden">
       {days.map((date) => (
         <li key={date} className={cx("rounded-2xl border bg-louca p-3", date === today ? "border-salva" : "border-linha")}>
           <p className={cx("mb-2 flex items-center gap-2 text-sm font-semibold", date === today ? "text-salva" : "text-cafe-soft")}>
             {day(date)}
-            {plan.cookings.map((c) =>
+            {cookings.map((c) =>
               c.cookDate === date && c.status !== "skipped" ? (
                 <span key={c.id} className="grid size-5 place-items-center rounded-full bg-salva text-louca" title={`${t("board.cookDay")}: ${c.dish}`}>
                   <PotIcon className="size-3.5" />
@@ -257,8 +315,8 @@ function DayList({ plan, selected, onSelect }: BoardProps) {
             )}
           </p>
           <div className="grid gap-1.5">
-            {slots.map((slot) => {
-              const cooking = plan.cookings.find((c) => c.meals.some((m) => m.date === date && m.slot === slot));
+            {SLOTS.map((slot) => {
+              const cooking = feeding(cookings, date, slot);
               return (
                 <div key={slot} className="flex items-center gap-2 text-sm">
                   <span className="w-16 shrink-0 text-xs text-cafe-soft">{t(`slot.${slot}`)}</span>
@@ -272,7 +330,7 @@ function DayList({ plan, selected, onSelect }: BoardProps) {
                       {cooking.dish}
                     </button>
                   ) : (
-                    <span className="flex-1 rounded-lg border-2 border-dashed border-linha px-2.5 py-1.5 text-cafe-soft/60">{t("board.noMeal")}</span>
+                    <FreeMeal date={date} slot={slot} today={today} adding={adding} onAdd={onAdd} className="flex-1 rounded-lg border-2 border-dashed px-2.5 py-1 text-left" />
                   )}
                 </div>
               );
@@ -291,17 +349,32 @@ function currentState(cooking: CookingView): Record<string, unknown> {
   return { status: "planned" };
 }
 
-function TinDetail({ cooking, onChange, onClose }: { cooking: CookingView; onChange: () => void; onClose: () => void }) {
+function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: string; cooking: CookingView; onChange: () => void; onClose: () => void }) {
   const { t, tn, day, money } = useI18n();
   const toast = useToast();
   const [replacing, setReplacing] = useState(false);
   const heading = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    heading.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEffect(() => heading.current?.focus(), []);
+  const removable = cooking.status === "planned" && cooking.cookDate >= todayLisbon(new Date());
+  const remove = async () => {
+    try {
+      await api.delete(`/api/cookings/${cooking.id}`);
+      onClose();
+      onChange();
+      toast({
+        message: t("toast.removed", { dish: cooking.dish }),
+        action: {
+          label: t("common.undo"),
+          run: async () => {
+            await api.post(`/api/weeks/${weekStart}/cookings`, { dishId: cooking.dishId, meals: cooking.meals });
+            onChange();
+          },
+        },
+      });
+    } catch (error) {
+      toast({ message: errorMessage(t, error), tone: "error" });
+    }
+  };
 
   const change = async (body: Record<string, unknown>, message: "toast.skipped" | "toast.replaced" | "toast.restored") => {
     const before = currentState(cooking);
@@ -326,14 +399,7 @@ function TinDetail({ cooking, onChange, onClose }: { cooking: CookingView; onCha
   const undoable = cooking.status === "skipped" || cooking.status === "replaced";
 
   return (
-    <>
-      <button type="button" aria-label={t("common.close")} onClick={onClose} className="fixed inset-0 z-30 bg-cafe/40 sm:hidden" />
-      <div
-        role="dialog"
-        aria-labelledby={`tin-${cooking.id}`}
-        className="animate-sheet fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] space-y-3 overflow-y-auto rounded-t-3xl border-t border-linha bg-louca p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-tin sm:animate-expand sm:static sm:z-auto sm:rounded-2xl sm:border sm:p-4 sm:shadow-none"
-      >
-        <span className="mx-auto block h-1 w-10 rounded-full bg-linha sm:hidden" aria-hidden />
+    <Sheet labelledBy={`tin-${cooking.id}`} onClose={onClose}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <Link to={{ page: "dish", id: cooking.dishId }} className="display text-xl">
             <span id={`tin-${cooking.id}`} ref={heading} tabIndex={-1}>
@@ -342,9 +408,7 @@ function TinDetail({ cooking, onChange, onClose }: { cooking: CookingView; onCha
           </Link>
           <span className="flex items-center gap-2 text-sm font-medium text-cafe-soft">
             {t(`status.${cooking.status}`)}
-            <button type="button" onClick={onClose} aria-label={t("common.close")} className="grid size-7 place-items-center rounded-full hover:bg-aveia">
-              ✕
-            </button>
+            <CloseButton onClose={onClose} />
           </span>
         </div>
         <div className="space-y-0.5 text-sm text-cafe-soft">
@@ -364,12 +428,16 @@ function TinDetail({ cooking, onChange, onClose }: { cooking: CookingView; onCha
               <Button variant="secondary" aria-expanded={replacing} onClick={() => setReplacing(!replacing)}>
                 {t("cooking.replace")}
               </Button>
+              {removable && (
+                <Button variant="danger" onClick={remove}>
+                  {t("cooking.remove")}
+                </Button>
+              )}
             </>
           )}
         </div>
         {replacing && <ReplaceForm onReplace={(by) => change({ status: "replaced", ...by }, "toast.replaced")} />}
-      </div>
-    </>
+    </Sheet>
   );
 }
 

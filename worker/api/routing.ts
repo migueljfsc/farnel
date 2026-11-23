@@ -17,7 +17,7 @@ export interface ApiCtx {
 }
 
 export interface Route {
-  method: "GET" | "POST" | "PUT";
+  method: "GET" | "POST" | "PUT" | "DELETE";
   pattern: RegExp;
   handle: (ctx: ApiCtx) => Promise<Response>;
 }

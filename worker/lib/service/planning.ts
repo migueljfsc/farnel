@@ -1,7 +1,7 @@
 /** Candidates, weekly plans, history, cooking outcomes, feedback and the shopping list. */
 
 import type { Aisle } from "../../../shared/aisles";
-import type { Candidate, CookingStatus, CookingView, FeedbackView, Meal, PlanView, ShoppingList, Unit } from "../../../shared/types";
+import type { Candidate, CookingStatus, CookingView, FeedbackView, Meal, MealOption, PlanView, ShoppingList, Unit } from "../../../shared/types";
 import { idList, rows } from "../db";
 import { costPerPortionCents, eligibility, lineCostCents, mealKey, validatePlan, type PlanError, type PlanInput } from "../rules";
 import { addDays } from "../../../shared/time";
@@ -129,6 +129,101 @@ export async function savePlan(
     ]),
   ]);
   return { ok: true, plan: (await getPlan(db, input.weekStart, today))! };
+}
+
+// ---------------------------------------------------------------- adding one meal
+
+/** Who eats in a week: its plan's people, or everyone when there is no plan yet. */
+async function weekEaters(db: D1Database, weekStart: string): Promise<number[]> {
+  const planned = await rows<{ id: number }>(
+    db.prepare("SELECT pp.person_id AS id FROM plan_people pp JOIN plans p ON p.id = pp.plan_id WHERE p.week_start = ?1").bind(weekStart),
+  );
+  return planned.length ? planned.map((r) => r.id) : ((await resolvePeople(db)) ?? []);
+}
+
+/** Validated dishes every eater of the week can have on `date`, cheapest first; the ones eaten too recently last. */
+export async function mealOptions(db: D1Database, weekStart: string, date: string, today: string): Promise<{ eaters: number; dishes: MealOption[] }> {
+  const eaters = await weekEaters(db, weekStart);
+  const [dishes, hard] = await Promise.all([loadDishes(db, { status: "validated" }), hardRestrictionIds(db, eaters)]);
+  const onDate = date > today ? date : today;
+  const options = dishes.flatMap(({ facts, summary }) => {
+    const codes = eligibility(facts, hard, onDate);
+    if (codes.some((code) => code !== "cooldown")) return [];
+    const { id, name, tags, portions, costPerPortionCents, missingPrice, lastCooked } = summary;
+    return [{ id, name, tags, portions, costPerPortionCents, missingPrice, lastCooked, tooSoon: codes.includes("cooldown") }];
+  });
+  options.sort((a, b) => Number(a.tooSoon) - Number(b.tooSoon) || a.costPerPortionCents - b.costPerPortionCents || a.name.localeCompare(b.name));
+  return { eaters: eaters.length, dishes: options };
+}
+
+export interface CookingInput {
+  weekStart: string;
+  dishId: number;
+  /** Cooked on the first meal's day; the rest are its leftovers. */
+  meals: Meal[];
+}
+
+/**
+ * Adds one cooking to a week, starting its plan (everyone eating, the current budget) when there
+ * is none. Same checks as a whole plan, except a dish eaten recently is allowed: it was chosen by hand.
+ */
+export async function addCooking(db: D1Database, input: CookingInput, today: string, now: string): Promise<{ ok: true; id: number } | { ok: false; errors: PlanError[] }> {
+  const meals = [...input.meals].sort((a, b) => mealKey(a).localeCompare(mealKey(b)));
+  const cookDate = meals[0]?.date ?? input.weekStart;
+  const eaters = await weekEaters(db, input.weekStart);
+  if (eaters.length === 0) return { ok: false, errors: [{ code: "unknown_person" }] };
+  const weekEnd = addDays(input.weekStart, 6);
+  const [dishes, hard, taken, settings] = await Promise.all([
+    loadDishFacts(db, { ids: [input.dishId] }),
+    hardRestrictionIds(db, eaters),
+    rows<Meal>(db.prepare("SELECT date, slot FROM meals WHERE date BETWEEN ?1 AND ?2").bind(input.weekStart, weekEnd)),
+    getSettings(db),
+  ]);
+  const portions = meals.length * eaters.length;
+  const cooking = { dishId: input.dishId, cookDate, portions, meals };
+  const errors = validatePlan(
+    { weekStart: input.weekStart, cookings: [cooking] },
+    { dishes, hardRestrictionIds: hard, eaters: eaters.length, today, takenMeals: new Set(taken.map(mealKey)) },
+  ).filter((e) => e.code !== "cooldown");
+  if (errors.length) return { ok: false, errors };
+
+  const cost = costPerPortionCents(dishes.get(input.dishId)!).cents * portions;
+  const PLAN = "(SELECT id FROM plans WHERE week_start = ?1)";
+  const exists = await planIdForWeek(db, input.weekStart);
+  const start =
+    exists === undefined
+      ? [
+          db
+            .prepare("INSERT INTO plans (week_start, budget_cents, total_cents, notes, created_at) VALUES (?1, ?2, 0, '', ?3)")
+            .bind(input.weekStart, settings.weeklyBudgetCents, now),
+          ...eaters.map((personId) => db.prepare(`INSERT INTO plan_people (plan_id, person_id) VALUES (${PLAN}, ?2)`).bind(input.weekStart, personId)),
+        ]
+      : [];
+  const results = await db.batch([
+    ...start,
+    db
+      .prepare(`INSERT INTO cookings (plan_id, dish_id, cook_date, portions, cost_cents) VALUES (${PLAN}, ?2, ?3, ?4, ?5)`)
+      .bind(input.weekStart, input.dishId, cookDate, portions, cost),
+    ...meals.map((m) =>
+      db.prepare(`INSERT INTO meals (date, slot, cooking_id) SELECT ?2, ?3, MAX(id) FROM cookings WHERE plan_id = ${PLAN}`).bind(input.weekStart, m.date, m.slot),
+    ),
+    db.prepare("UPDATE plans SET total_cents = total_cents + ?2 WHERE week_start = ?1").bind(input.weekStart, cost),
+  ]);
+  return { ok: true, id: results[start.length].meta.last_row_id };
+}
+
+/** Takes a cooking off its plan, with its meals and its cost; only before its cook day. */
+export async function removeCooking(db: D1Database, id: number, today: string): Promise<"ok" | "not_found" | "in_past"> {
+  const cooking = await db.prepare("SELECT cook_date AS cookDate FROM cookings WHERE id = ?1").bind(id).first<{ cookDate: string }>();
+  if (!cooking) return "not_found";
+  if (cooking.cookDate < today) return "in_past";
+  await db.batch([
+    db.prepare("UPDATE plans SET total_cents = total_cents - (SELECT cost_cents FROM cookings WHERE id = ?1) WHERE id = (SELECT plan_id FROM cookings WHERE id = ?1)").bind(id),
+    db.prepare("DELETE FROM meals WHERE cooking_id = ?1").bind(id),
+    db.prepare("DELETE FROM feedback WHERE cooking_id = ?1").bind(id),
+    db.prepare("DELETE FROM cookings WHERE id = ?1").bind(id),
+  ]);
+  return "ok";
 }
 
 // ---------------------------------------------------------------- reading cookings

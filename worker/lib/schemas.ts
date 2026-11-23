@@ -64,6 +64,12 @@ export const ingredientCreate = z.object({
   statuses: decided.default({}),
 });
 
+/** One dish for one or more meals of a week, chosen by hand. */
+export const cookingAdd = z.object({
+  dishId: id,
+  meals: z.array(z.object({ date, slot })).min(1).max(14),
+});
+
 export const cookingChange = z.union([
   z.object({ status: z.enum(["planned", "skipped"]) }),
   z.object({ status: z.literal("replaced"), dishId: id.optional(), text: z.string().max(200).optional() }),

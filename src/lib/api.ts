@@ -29,6 +29,7 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T = void>(path: string, body?: unknown) => request<T>("POST", path, body),
   put: <T = void>(path: string, body: unknown) => request<T>("PUT", path, body),
+  delete: <T = void>(path: string) => request<T>("DELETE", path),
 };
 
 /** GETs `path` (skipped when null) and keeps the result; `reload` fetches again. */

@@ -93,6 +93,23 @@ describe("api", () => {
     expect(await (await call("GET", "/api/plans?from=2026-11-01&to=2026-11-30")).json()).toEqual({ weeks: [] });
   });
 
+  it("offers dishes for one meal and adds one", async () => {
+    const { id } = (await (await call("POST", "/api/dishes", { name: "Sopa", portions: 2, repeatIntervalDays: 7, tags: [], ingredients: [{ name: "Nabo", quantity: 1, unit: "un" }] })).json()) as { id: number };
+    expect((await call("POST", `/api/dishes/${id}/validate`)).status).toBe(204);
+    const options = (await (await call("GET", "/api/weeks/2027-01-04/options?date=2027-01-05")).json()) as { eaters: number; dishes: { id: number }[] };
+    expect(options).toMatchObject({ eaters: 1, dishes: [{ id, tooSoon: false }] });
+    const meal = { dishId: id, meals: [{ date: "2027-01-05", slot: "dinner" }] };
+    const added = await call("POST", "/api/weeks/2027-01-04/cookings", meal);
+    expect(added.status).toBe(201);
+    const { id: cookingId } = (await added.json()) as { id: number };
+    expect((await call("DELETE", `/api/cookings/${cookingId}`)).status).toBe(204);
+    expect((await call("POST", "/api/weeks/2027-01-04/cookings", meal)).status).toBe(201);
+    const again = await call("POST", "/api/weeks/2027-01-04/cookings", meal);
+    expect(again.status).toBe(409);
+    expect(await again.json()).toMatchObject({ error: "invalid_plan", errors: [{ code: "meal_taken" }] });
+    expect((await call("GET", "/api/weeks/2027-01-04/options?date=nope")).status).toBe(400);
+  });
+
   it("archives and deletes dishes and ingredients in bulk", async () => {
     const dish = (await (await call("POST", "/api/dishes", { name: "Sopa", portions: 2, repeatIntervalDays: 7, tags: [], ingredients: [{ name: "Nabo", quantity: 1, unit: "un" }] })).json()) as { id: number; newIngredients: number[] };
     expect((await call("POST", "/api/dishes/archive", { ids: [dish.id] })).status).toBe(204);

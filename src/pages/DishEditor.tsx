@@ -5,7 +5,7 @@ import { ContainsPicker } from "../components/ContainsPicker";
 import { IngredientPicker } from "../components/IngredientPicker";
 import { TagPicker } from "../components/TagPicker";
 import { Badge, Button, Card, ErrorText, Field, Loaded, Page, Stars } from "../components/ui";
-import { inputBase, inputClass } from "../components/styles";
+import { cx, inputBase, inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { useI18n } from "../i18n/context";
@@ -67,7 +67,10 @@ export function DishEditor({ id }: { id: number | "new" }) {
 function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; known: IngredientView[]; restrictions: Restriction[]; reload: () => void }) {
   const { navigate, refreshMe } = useApp();
   const { t, day, money } = useI18n();
-  const [form, setForm] = useState<Form>(dish ? toForm(dish) : EMPTY);
+  const [saved, setSaved] = useState<Form>(dish ? toForm(dish) : EMPTY);
+  const [form, setForm] = useState<Form>(saved);
+  /** Bumped on discard, so pickers holding their own text start over. */
+  const [revision, setRevision] = useState(0);
   const [failure, setFailure] = useState<unknown>();
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
@@ -75,6 +78,8 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
   const [ingredients, setIngredients] = useState(known);
   const byId = new Map(ingredients.map((i) => [i.id, i]));
   const tagsOk = hasProteinAndBase(form.tags);
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved);
+  const missing = !form.name.trim() ? t("dish.missingName") : !tagsOk ? t("tags.missing") : null;
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -93,6 +98,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
     run(async () => {
       if (dish) {
         await api.put(`/api/dishes/${dish.id}`, toBody(form, byId));
+        setSaved(form);
         reload();
       } else {
         const { id } = await api.post<{ id: number }>("/api/dishes", toBody(form, byId));
@@ -135,7 +141,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           <input className={inputClass} type="number" min={0} value={form.repeatIntervalDays} onChange={(e) => set({ repeatIntervalDays: e.target.value })} />
         </Field>
         <div className="sm:col-span-2">
-          <TagPicker tags={form.tags} onChange={(tags) => set({ tags })} />
+          <TagPicker key={revision} tags={form.tags} onChange={(tags) => set({ tags })} />
         </div>
         <div className="sm:col-span-2">
           <Field label={t("dish.notes")}>
@@ -151,6 +157,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           return (
             <div key={index} className="flex flex-wrap items-start gap-2">
               <IngredientPicker
+                key={`${revision}-${index}`}
                 known={ingredients}
                 value={ingredient}
                 onPick={(picked) => setLine(index, { ingredientId: picked.id })}
@@ -169,12 +176,29 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
             </div>
           );
         })}
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>{t("dish.addIngredient")}</Button>
-          <Button disabled={busy || !tagsOk} onClick={save}>{t(dish ? "common.save" : "dish.create")}</Button>
-        </div>
-        {!tagsOk && <p className="text-sm text-rosa">{t("tags.missing")}</p>}
+        <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>{t("dish.addIngredient")}</Button>
       </Card>
+
+      {(dirty || !dish) && (
+        <div className="animate-toast sticky bottom-20 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-linha bg-louca/95 px-4 py-3 shadow-tin backdrop-blur sm:bottom-4">
+          <span className={cx("mr-auto text-sm font-semibold", missing ? "text-rosa" : "text-cafe")}>{missing ?? (dirty ? t("common.unsaved") : "")}</span>
+          {dish && (
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                setForm(saved);
+                setRevision((r) => r + 1);
+              }}
+            >
+              {t("common.discard")}
+            </Button>
+          )}
+          <Button disabled={busy || missing !== null || (dish !== undefined && !dirty)} onClick={save}>
+            {t(dish ? "common.save" : "dish.create")}
+          </Button>
+        </div>
+      )}
 
       {dish && dish.ingredients.length > 0 && (
         <Card className="space-y-2">

@@ -25,6 +25,9 @@ export const en = {
   // ---------------------------------------------------------------- common
   "common.loading": "Loading…",
   "common.save": "Save",
+  "common.discard": "Discard",
+  "common.unsaved": "Unsaved changes",
+  "dish.missingName": "Give the dish a name.",
   "common.saved": "Saved",
   "common.add": "Add",
   "common.remove": "Remove {name}",
@@ -70,7 +73,20 @@ export const en = {
 
   // ----------------------------------------------------------------- board
   "board.cookDay": "cook on this day",
-  "board.noMeal": "no meal",
+  "board.add": "Add a dish for {meal}",
+  "add.search": "Find a dish",
+  "add.choose": "Choose a dish",
+  "add.recent": "Eaten recently",
+  "add.recentNote": "Still inside its repeat interval",
+  "add.none": "No dish fits this meal. Add one in Dishes, or plan with Claude.",
+  "add.leftovers": "Leftovers also for",
+  "add.submit": "Add {dish}",
+  "add.last": "last {day}",
+  "add.meta": "{cost}/portion · {portions}",
+  "cooking.remove": "Remove from plan",
+  "toast.added": "{dish} added",
+  "toast.removed": "{dish} removed",
+  "week.emptyFuture": "Nothing planned yet. Tap a meal to add a dish, or plan the week with Claude.",
 
   // -------------------------------------------------------------- shopping
   "shopping.share": "Share",

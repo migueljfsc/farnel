@@ -160,3 +160,16 @@ export interface Me {
   pendingDishes: number;
   undecided: number;
 }
+
+/** A dish offered for one meal of the week. */
+export interface MealOption {
+  id: number;
+  name: string;
+  tags: string[];
+  portions: number;
+  costPerPortionCents: number;
+  missingPrice: boolean;
+  lastCooked: string | null;
+  /** Eaten more recently than its repeat interval allows; still allowed when chosen by hand. */
+  tooSoon: boolean;
+}

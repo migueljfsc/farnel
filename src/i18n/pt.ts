@@ -25,6 +25,9 @@ export const pt: Dictionary = {
   // ---------------------------------------------------------------- common
   "common.loading": "A carregar…",
   "common.save": "Guardar",
+  "common.discard": "Descartar",
+  "common.unsaved": "Alterações por guardar",
+  "dish.missingName": "Dá um nome ao prato.",
   "common.saved": "Guardado",
   "common.add": "Adicionar",
   "common.remove": "Remover {name}",
@@ -70,7 +73,20 @@ export const pt: Dictionary = {
 
   // ----------------------------------------------------------------- board
   "board.cookDay": "cozinhar neste dia",
-  "board.noMeal": "sem refeição",
+  "board.add": "Adicionar um prato a {meal}",
+  "add.search": "Procurar um prato",
+  "add.choose": "Escolhe um prato",
+  "add.recent": "Comidos há pouco",
+  "add.recentNote": "Ainda dentro do intervalo de repetição",
+  "add.none": "Nenhum prato serve para esta refeição. Junta um em Pratos, ou planeia com o Claude.",
+  "add.leftovers": "As sobras também dão para",
+  "add.submit": "Adicionar {dish}",
+  "add.last": "última {day}",
+  "add.meta": "{cost}/dose · {portions}",
+  "cooking.remove": "Tirar do plano",
+  "toast.added": "{dish} adicionado",
+  "toast.removed": "{dish} retirado",
+  "week.emptyFuture": "Ainda nada planeado. Toca numa refeição para juntar um prato, ou planeia a semana com o Claude.",
 
   // -------------------------------------------------------------- shopping
   "shopping.share": "Partilhar",

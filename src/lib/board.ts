@@ -1,14 +1,18 @@
 /** Where cookings sit on the week board: a row per meal slot, a column per day. */
 
-import { daysBetween } from "../../shared/time";
-import type { CookingView, Slot } from "../../shared/types";
+import { addDays, daysBetween } from "../../shared/time";
+import type { CookingView, Meal, Slot } from "../../shared/types";
 
 const DAYS = 7;
-const SLOTS: Slot[] = ["lunch", "dinner"];
+export const SLOTS: Slot[] = ["lunch", "dinner"];
 
-/** Lunch always; dinner only when some meal is a dinner. */
-export const slotsInUse = (cookings: CookingView[]): Slot[] =>
-  SLOTS.filter((slot) => slot === "lunch" || cookings.some((c) => c.meals.some((m) => m.slot === slot)));
+/** The meals of the week after `meal`, in order, that no cooking feeds yet: where its leftovers can go. */
+export function freeMealsAfter(cookings: CookingView[], weekStart: string, meal: Meal): Meal[] {
+  const taken = new Set(cookings.flatMap((c) => c.meals.map((m) => `${m.date}:${m.slot}`)));
+  const week = Array.from({ length: DAYS }, (_, i) => addDays(weekStart, i)).flatMap((date) => SLOTS.map((slot) => ({ date, slot })));
+  const from = week.findIndex((m) => m.date === meal.date && m.slot === meal.slot);
+  return week.slice(from + 1).filter((m) => !taken.has(`${m.date}:${m.slot}`));
+}
 
 export interface Segment {
   /** Index of the cooking in the plan. */
