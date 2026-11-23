@@ -11,8 +11,12 @@ Stay within the weekly budget. Use ratings and comments: avoid low-rated dishes,
 To suggest something new, call add_dish; it waits for a person to validate it in the web app and cannot be planned until then.
 Dates are YYYY-MM-DD (Europe/Lisbon), weeks start on Monday, money is integer cents. Reply in the language the person writes in.`;
 
-export function createServer(env: Env): McpServer {
-  const server = new McpServer({ name: APP_NAME, version: "1.0.0" }, { instructions: INSTRUCTIONS });
+/** `origin` is where the app is served, so the icon points at its public copy. */
+export function createServer(env: Env, origin: string): McpServer {
+  const server = new McpServer(
+    { name: APP_NAME, version: "1.0.0", icons: [{ src: `${origin}/icons/icon-192.png`, mimeType: "image/png", sizes: ["192x192"] }] },
+    { instructions: INSTRUCTIONS },
+  );
   for (const t of TOOLS) {
     server.registerTool(t.name, { description: t.description, inputSchema: t.input }, async (args: unknown) => {
       const result = await runTool(t.name, env.DB, args, clockAt());

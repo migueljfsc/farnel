@@ -6,4 +6,7 @@ locals {
 
   app_fqdn = "${var.project_name}.${var.domain}"
   mcp_path = "/mcp"
+
+  # Served without sign-in: only the icons.
+  public_paths = ["/favicon.ico", "/icon.svg", "/icons/*"]
 }

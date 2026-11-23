@@ -55,3 +55,20 @@ resource "cloudflare_zero_trust_access_application" "mcp" {
     }
   }
 }
+
+# The app icons are public, so Google's favicon service (which claude.ai uses for connector
+# icons) can fetch them; nothing else on the hostname is.
+resource "cloudflare_zero_trust_access_policy" "public" {
+  account_id = var.cloudflare_account_id
+  name       = "${local.name_prefix}-public"
+  decision   = "bypass"
+  include    = [{ everyone = {} }]
+}
+
+resource "cloudflare_zero_trust_access_application" "icons" {
+  account_id   = var.cloudflare_account_id
+  name         = "${local.name_prefix}-icons"
+  type         = "self_hosted"
+  destinations = [for path in local.public_paths : { type = "public", uri = "${local.app_fqdn}${path}" }]
+  policies     = [{ id = cloudflare_zero_trust_access_policy.public.id, precedence = 1 }]
+}

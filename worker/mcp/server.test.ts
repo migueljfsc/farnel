@@ -37,6 +37,11 @@ describe("mcp endpoint", () => {
     expect(bad).toContain('"isError":true');
   });
 
+  it("names its icon in the server information", async () => {
+    const text = await (await rpc("localhost", INITIALIZE)).text();
+    expect(text).toContain("http://localhost/icons/icon-192.png");
+  });
+
   it("refuses a caller without an Access token", async () => {
     expect((await rpc("farnel.example.com", INITIALIZE)).status).toBe(401);
   });

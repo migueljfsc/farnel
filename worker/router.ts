@@ -18,6 +18,6 @@ export async function route(request: Request, env: Env, ctx: ExecutionContext): 
 
   const caller = await authenticate(request, env, surface);
   if (!caller) return fail("unauthorized", 401);
-  if (caller.kind === "mcp") return createMcpHandler(() => createServer(env), { route: MCP_PATH, corsOptions: false })(request, env, ctx);
+  if (caller.kind === "mcp") return createMcpHandler(() => createServer(env, url.origin), { route: MCP_PATH, corsOptions: false })(request, env, ctx);
   return dispatch(API_ROUTES, { env, db: env.DB, request, url, caller, ...clockAt() });
 }
