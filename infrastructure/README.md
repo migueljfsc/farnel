@@ -2,7 +2,9 @@
 
 One stack: [`terraform/cloudflare/`](terraform/cloudflare/) owns the D1 database (jurisdiction
 `eu`), the two Cloudflare Access applications (web app and `/mcp`), their policies, and the
-service token claude.ai uses. It is applied by `.github/workflows/terraform.yml` on push to
+service token claude.ai uses. A third, bypass-only application makes the app icons
+(`/favicon.ico`, `/icon.svg`, `/icons/*`) public, so Google's favicon service, which claude.ai uses
+for connector icons, can read them; every other path needs a sign-in. It is applied by `.github/workflows/terraform.yml` on push to
 `main`.
 
 ## Outside the stack
