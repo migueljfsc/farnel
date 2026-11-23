@@ -87,7 +87,7 @@ function Budget({ plan }: { plan: PlanView }) {
         {plan.overBudget && <span className="font-semibold text-rosa">{t("week.overBudget")}</span>}
       </p>
       <div className="h-2 overflow-hidden rounded-full bg-linha" role="presentation">
-        <div className={cx("animate-bar h-full rounded-full", plan.overBudget ? "bg-rosa" : "bg-ganga")} style={{ width: `${share * 100}%` }} />
+        <div className={cx("animate-bar h-full rounded-full", plan.overBudget ? "bg-rosa" : "bg-salva")} style={{ width: `${share * 100}%` }} />
       </div>
       {plan.notes && <p className="text-sm italic text-cafe-soft">{plan.notes}</p>}
     </div>
@@ -96,11 +96,8 @@ function Budget({ plan }: { plan: PlanView }) {
 
 // ----------------------------------------------------------------- board
 
-/** Each cooking keeps one look across all the meals it feeds, cycling through the palette. */
-const LOOKS = ["border-ganga bg-ganga-soft", "border-rosa bg-rosa-soft", "border-cafe/50 bg-louca"];
-const DOTS = ["bg-ganga", "bg-rosa", "bg-cafe"];
-const look = (index: number) => LOOKS[index % LOOKS.length];
-const dot = (index: number) => DOTS[index % DOTS.length];
+/** Every cooking looks the same; rose stays for what needs attention. */
+const COOKING = "border-salva bg-salva-soft";
 
 function PotIcon({ className }: { className?: string }) {
   return (
@@ -141,16 +138,16 @@ function MealGrid({ plan, selected, onSelect }: BoardProps) {
       <span />
       {days.map((date) => {
         const [weekday, numbers] = day(date).split(" ");
-        const cooked = plan.cookings.map((c, i) => ({ c, i })).filter(({ c }) => c.cookDate === date && c.status !== "skipped");
+        const cooked = plan.cookings.filter((c) => c.cookDate === date && c.status !== "skipped");
         return (
-          <div key={date} className={cx("flex items-end justify-between border-b-2 pb-1", date === today ? "border-ganga text-ganga" : "border-linha text-cafe-soft")}>
+          <div key={date} className={cx("flex items-center gap-1.5 border-b-2 pb-1", date === today ? "border-salva text-salva" : "border-linha text-cafe-soft")}>
             <span className="flex items-baseline gap-1">
               <span className="display text-2xl">{numbers.split("/")[0]}</span>
               <span className="text-xs font-medium">{weekday}</span>
             </span>
             <span className="flex gap-0.5">
-              {cooked.map(({ c, i }) => (
-                <span key={c.id} title={`${t("board.cookDay")}: ${c.dish}`} className={cx("grid size-5 place-items-center rounded-full text-louca", dot(i))}>
+              {cooked.map((c) => (
+                <span key={c.id} title={`${t("board.cookDay")}: ${c.dish}`} className="grid size-5 place-items-center rounded-full bg-salva text-louca">
                   <PotIcon className="size-3.5" />
                 </span>
               ))}
@@ -179,7 +176,6 @@ function MealGrid({ plan, selected, onSelect }: BoardProps) {
               <MealBlock
                 key={`${cooking.id}-${slot}-${segment.start}`}
                 cooking={cooking}
-                index={segment.cooking}
                 selected={cooking.id === selected}
                 onSelect={() => onSelect(cooking.id)}
                 continued={!segment.first}
@@ -195,14 +191,12 @@ function MealGrid({ plan, selected, onSelect }: BoardProps) {
 
 function MealBlock({
   cooking,
-  index,
   selected,
   onSelect,
   continued,
   style,
 }: {
   cooking: CookingView;
-  index: number;
   selected: boolean;
   onSelect: () => void;
   continued: boolean;
@@ -218,9 +212,9 @@ function MealBlock({
       style={style}
       className={cx(
         "animate-tin relative z-10 flex min-h-20 flex-col justify-between gap-1 rounded-xl border-2 p-2.5 text-left transition",
-        look(index),
+        COOKING,
         cooking.status === "skipped" && "border-dashed opacity-50",
-        selected ? "ring-4 ring-ganga/25" : "hover:-translate-y-0.5",
+        selected ? "ring-4 ring-salva/25" : "hover:-translate-y-0.5",
       )}
     >
       {replacedBy && (
@@ -230,7 +224,7 @@ function MealBlock({
       )}
       <span className={cx("text-sm font-semibold leading-tight", cooking.status === "skipped" && "line-through")}>
         {continued ? `↳ ${cooking.dish}` : cooking.dish}
-        {cooking.status === "done" && <span className="ml-1 text-ganga">✓</span>}
+        {cooking.status === "done" && <span className="ml-1 text-salva">✓</span>}
       </span>
       {!continued && (
         <span className="flex items-center justify-between gap-2 text-[11px] text-cafe-soft">
@@ -251,12 +245,12 @@ function DayList({ plan, selected, onSelect }: BoardProps) {
   return (
     <ol className="space-y-2 sm:hidden">
       {days.map((date) => (
-        <li key={date} className={cx("rounded-2xl border bg-louca p-3", date === today ? "border-ganga" : "border-linha")}>
-          <p className={cx("mb-2 flex items-center gap-2 text-sm font-semibold", date === today ? "text-ganga" : "text-cafe-soft")}>
+        <li key={date} className={cx("rounded-2xl border bg-louca p-3", date === today ? "border-salva" : "border-linha")}>
+          <p className={cx("mb-2 flex items-center gap-2 text-sm font-semibold", date === today ? "text-salva" : "text-cafe-soft")}>
             {day(date)}
-            {plan.cookings.map((c, i) =>
+            {plan.cookings.map((c) =>
               c.cookDate === date && c.status !== "skipped" ? (
-                <span key={c.id} className={cx("grid size-5 place-items-center rounded-full text-louca", dot(i))} title={`${t("board.cookDay")}: ${c.dish}`}>
+                <span key={c.id} className="grid size-5 place-items-center rounded-full bg-salva text-louca" title={`${t("board.cookDay")}: ${c.dish}`}>
                   <PotIcon className="size-3.5" />
                 </span>
               ) : null,
@@ -264,8 +258,7 @@ function DayList({ plan, selected, onSelect }: BoardProps) {
           </p>
           <div className="grid gap-1.5">
             {slots.map((slot) => {
-              const index = plan.cookings.findIndex((c) => c.meals.some((m) => m.date === date && m.slot === slot));
-              const cooking = plan.cookings[index];
+              const cooking = plan.cookings.find((c) => c.meals.some((m) => m.date === date && m.slot === slot));
               return (
                 <div key={slot} className="flex items-center gap-2 text-sm">
                   <span className="w-16 shrink-0 text-xs text-cafe-soft">{t(`slot.${slot}`)}</span>
@@ -274,7 +267,7 @@ function DayList({ plan, selected, onSelect }: BoardProps) {
                       type="button"
                       onClick={() => onSelect(cooking.id)}
                       aria-expanded={cooking.id === selected}
-                      className={cx("flex-1 truncate rounded-lg border-2 px-2.5 py-1.5 text-left font-semibold", look(index), cooking.status === "skipped" && "border-dashed line-through opacity-50")}
+                      className={cx("flex-1 truncate rounded-lg border-2 px-2.5 py-1.5 text-left font-semibold", COOKING, cooking.status === "skipped" && "border-dashed line-through opacity-50")}
                     >
                       {cooking.dish}
                     </button>
@@ -406,7 +399,7 @@ function EmptyWeek() {
   const { t } = useI18n();
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-linha px-6 py-12 text-center">
-      <span className="h-10 w-16 rounded-b-2xl rounded-t-md border-[3px] border-ganga/40" aria-hidden />
+      <span className="h-10 w-16 rounded-b-2xl rounded-t-md border-[3px] border-salva/40" aria-hidden />
       <p className="text-cafe-soft">{t("week.empty")}</p>
     </div>
   );
@@ -441,8 +434,8 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
   }
 
   return (
-    <div className="animate-expand space-y-3 rounded-2xl bg-ganga-soft p-4 sm:p-5">
-      <h2 className="display text-xl text-ganga">{t(hasPlan ? "week.plan.retitle" : "week.plan.title")}</h2>
+    <div className="animate-expand space-y-3 rounded-2xl bg-salva-soft p-4 sm:p-5">
+      <h2 className="display text-xl text-salva">{t(hasPlan ? "week.plan.retitle" : "week.plan.title")}</h2>
       {people.length > 1 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-medium text-cafe-soft">{t("week.plan.who")}</span>
@@ -454,7 +447,7 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
                 type="button"
                 aria-pressed={on}
                 onClick={() => toggle(p.id)}
-                className={cx("rounded-full px-3 py-1 font-semibold transition", on ? "bg-ganga text-louca" : "bg-louca text-cafe-soft ring-1 ring-linha")}
+                className={cx("rounded-full px-3 py-1 font-semibold transition", on ? "bg-salva text-louca" : "bg-louca text-cafe-soft ring-1 ring-linha")}
               >
                 {p.name}
               </button>
@@ -544,7 +537,7 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold tabular-nums text-ganga">{t("shopping.bought", { count: bought, total: list.items.length })}</span>
+          <span className="text-sm font-semibold tabular-nums text-salva">{t("shopping.bought", { count: bought, total: list.items.length })}</span>
           <Button variant="secondary" onClick={share}>
             {t("shopping.share")}
           </Button>
@@ -564,8 +557,8 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
                       <span
                         aria-hidden
                         className={cx(
-                          "grid size-5 shrink-0 place-items-center rounded-full border-2 text-[11px] font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-ganga",
-                          done ? "animate-pop border-ganga bg-ganga text-louca" : "border-linha",
+                          "grid size-5 shrink-0 place-items-center rounded-full border-2 text-[11px] font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-salva",
+                          done ? "animate-pop border-salva bg-salva text-louca" : "border-linha",
                         )}
                       >
                         {done && "✓"}

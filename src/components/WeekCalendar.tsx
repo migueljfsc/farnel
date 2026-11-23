@@ -51,7 +51,7 @@ export function WeekCalendar({ week, onPick }: { week: string; onPick: (weekStar
         className="group flex items-end gap-2 text-left"
       >
         <h1 className="display text-4xl sm:text-5xl">{t("week.title", { day: day(week) })}</h1>
-        <svg viewBox="0 0 24 24" aria-hidden className={cx("mb-2 size-6 text-ganga transition group-hover:translate-y-0.5", open && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg viewBox="0 0 24 24" aria-hidden className={cx("mb-2 size-6 text-salva transition group-hover:translate-y-0.5", open && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="m6 9 6 6 6-6" />
         </svg>
         <span className="sr-only">{t("calendar.choose")}</span>
@@ -83,7 +83,7 @@ export function WeekCalendar({ week, onPick }: { week: string; onPick: (weekStar
                   aria-current={current ? "date" : undefined}
                   aria-label={`${t("week.title", { day: day(weekStart) })}${planned.has(weekStart) ? `, ${t("calendar.hasPlan")}` : ""}`}
                   onClick={() => pick(weekStart)}
-                  className={cx("relative grid w-full grid-cols-7 rounded-full py-1 text-sm transition", current ? "bg-ganga text-louca" : "hover:bg-ganga-soft")}
+                  className={cx("relative grid w-full grid-cols-7 rounded-full py-1 text-sm transition", current ? "bg-salva text-louca" : "hover:bg-salva-soft")}
                 >
                   {Array.from({ length: 7 }, (_, i) => {
                     const date = addDays(weekStart, i);
@@ -101,12 +101,12 @@ export function WeekCalendar({ week, onPick }: { week: string; onPick: (weekStar
                       </span>
                     );
                   })}
-                  {planned.has(weekStart) && <span className={cx("absolute -right-1 top-1/2 size-2 -translate-y-1/2 rounded-full", current ? "bg-rosa" : "bg-ganga")} aria-hidden />}
+                  {planned.has(weekStart) && <span className={cx("absolute -right-1 top-1/2 size-2 -translate-y-1/2 rounded-full", current ? "bg-rosa" : "bg-salva")} aria-hidden />}
                 </button>
               );
             })}
           </div>
-          <button type="button" onClick={() => pick(weekStartOf(today))} className="mt-3 w-full rounded-full bg-aveia py-1.5 text-sm font-semibold text-ganga hover:bg-ganga-soft">
+          <button type="button" onClick={() => pick(weekStartOf(today))} className="mt-3 w-full rounded-full bg-aveia py-1.5 text-sm font-semibold text-salva hover:bg-salva-soft">
             {t("calendar.thisWeek")}
           </button>
         </div>

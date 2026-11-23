@@ -14,7 +14,7 @@ export function Link({ to, className, children, ...rest }: { to: Route; classNam
     <a
       {...rest}
       href={href(to)}
-      className={cx("text-ganga underline-offset-4 hover:underline", className)}
+      className={cx("text-salva underline-offset-4 hover:underline", className)}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey) return;
         e.preventDefault();
@@ -81,7 +81,7 @@ export function SaveStatus({ state }: { state: SaveState }) {
   if (state === "idle") return null;
   if (state === "error") return <span className="text-sm font-medium text-rosa">{t("error.generic")}</span>;
   return (
-    <span role="status" className={cx("text-sm font-medium", state === "saving" ? "text-cafe-soft" : "animate-pop text-ganga")}>
+    <span role="status" className={cx("text-sm font-medium", state === "saving" ? "text-cafe-soft" : "animate-pop text-salva")}>
       {state === "saving" ? t("common.saving") : `✓ ${t("common.saved")}`}
     </span>
   );

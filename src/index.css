@@ -23,7 +23,7 @@
 }
 
 /*
- * "Bica com natas": oat beige, denim blue and rose, with espresso text. Denim is the main colour,
+ * "Bica com natas": oat beige, sage green and rose, with espresso text. Sage is the main colour,
  * rose marks what needs attention (forbidden, over budget, counts).
  * Each colour carries its light and dark value; the active colour scheme picks one.
  */
@@ -34,8 +34,8 @@
   --cafe: light-dark(#2a211c, #f0e7db);
   --cafe-soft: light-dark(#6e625a, #b3a698);
   --linha: light-dark(rgb(42 33 28 / 0.12), rgb(240 231 219 / 0.12));
-  --ganga: light-dark(#2e4c8c, #93aee8);
-  --ganga-soft: light-dark(#dde3f0, #26304a);
+  --salva: light-dark(#3e6b4f, #93c4a2);
+  --salva-soft: light-dark(#dfeadf, #22392b);
   --rosa: light-dark(#d9577b, #f293ad);
   --rosa-soft: light-dark(#f8dfe6, #4a2530);
   --sombra: 0 1px 2px light-dark(rgb(42 33 28 / 0.06), rgb(0 0 0 / 0.3)), 0 10px 28px -12px light-dark(rgb(42 33 28 / 0.22), rgb(0 0 0 / 0.6));
@@ -56,8 +56,8 @@
   --color-cafe: var(--cafe);
   --color-cafe-soft: var(--cafe-soft);
   --color-linha: var(--linha);
-  --color-ganga: var(--ganga);
-  --color-ganga-soft: var(--ganga-soft);
+  --color-salva: var(--salva);
+  --color-salva-soft: var(--salva-soft);
   --color-rosa: var(--rosa);
   --color-rosa-soft: var(--rosa-soft);
   --shadow-tin: var(--sombra);
@@ -78,13 +78,13 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--ganga);
+    outline: 2px solid var(--salva);
     outline-offset: 2px;
     border-radius: 4px;
   }
 
   ::selection {
-    background: var(--ganga-soft);
+    background: var(--salva-soft);
   }
 }
 

@@ -72,11 +72,11 @@ export function ContainsPicker({
         </button>
       ))}
       {pending ? (
-        <button type="button" disabled={busy} onClick={() => save(contains)} className="rounded-full bg-ganga px-3 py-0.5 font-semibold text-louca transition hover:brightness-110">
+        <button type="button" disabled={busy} onClick={() => save(contains)} className="rounded-full bg-salva px-3 py-0.5 font-semibold text-louca transition hover:brightness-110">
           {t(contains.size === 0 ? "contains.none" : "contains.confirm")}
         </button>
       ) : (
-        <span className="font-semibold text-ganga" aria-label={t("contains.decided")}>
+        <span className="font-semibold text-salva" aria-label={t("contains.decided")}>
           ✓
         </span>
       )}

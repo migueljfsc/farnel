@@ -99,7 +99,7 @@ export function IngredientPicker({
                 e.preventDefault();
                 choose(ingredient);
               }}
-              className={cx("flex cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-sm", index === active && "bg-ganga-soft text-ganga")}
+              className={cx("flex cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-sm", index === active && "bg-salva-soft text-salva")}
             >
               <span>{ingredient.name}</span>
               <span className="text-xs text-cafe-soft">{t(`unit.${ingredient.unit}`)}</span>

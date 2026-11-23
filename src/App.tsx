@@ -81,7 +81,7 @@ function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Ro
         <div className="min-h-dvh pb-24 sm:pb-0">
           <header className="sticky top-0 z-20 border-b border-linha bg-aveia/85 backdrop-blur">
             <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-              <span className="display text-2xl text-ganga">{APP_NAME}</span>
+              <span className="display text-2xl text-salva">{APP_NAME}</span>
               <nav className="hidden flex-1 gap-1 text-sm sm:flex">
                 {items.map((item) => (
                   <Link
@@ -90,7 +90,7 @@ function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Ro
                     aria-current={item.active(route) ? "page" : undefined}
                     className={cx(
                       "flex items-center gap-1.5 rounded-full px-3 py-1 font-medium no-underline transition hover:no-underline",
-                      item.active(route) ? "bg-ganga text-louca!" : "text-cafe-soft! hover:bg-ganga-soft hover:text-ganga!",
+                      item.active(route) ? "bg-salva text-louca!" : "text-cafe-soft! hover:bg-salva-soft hover:text-salva!",
                     )}
                   >
                     {t(item.label)}
@@ -115,10 +115,10 @@ function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Ro
                   aria-current={item.active(route) ? "page" : undefined}
                   className={cx(
                     "relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold no-underline hover:no-underline",
-                    item.active(route) ? "text-ganga!" : "text-cafe-soft!",
+                    item.active(route) ? "text-salva!" : "text-cafe-soft!",
                   )}
                 >
-                  <span className={cx("grid h-7 w-12 place-items-center rounded-full transition", item.active(route) && "bg-ganga-soft")}>
+                  <span className={cx("grid h-7 w-12 place-items-center rounded-full transition", item.active(route) && "bg-salva-soft")}>
                     <Icon name={item.icon} />
                   </span>
                   {t(item.label)}

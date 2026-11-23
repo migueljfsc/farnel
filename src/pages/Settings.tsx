@@ -41,7 +41,7 @@ function useSave(): [(action: () => Promise<unknown>) => Promise<void>, React.Re
       setState({ failure });
     }
   };
-  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-ganga">{t("common.saved")}</span> : null;
+  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-salva">{t("common.saved")}</span> : null;
   return [save, feedback];
 }
 

@@ -193,7 +193,7 @@ function AllReviewed() {
   const { t } = useI18n();
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-linha px-6 py-14 text-center">
-      <span className="grid size-14 place-items-center rounded-full bg-ganga-soft text-2xl text-ganga" aria-hidden>
+      <span className="grid size-14 place-items-center rounded-full bg-salva-soft text-2xl text-salva" aria-hidden>
         ✓
       </span>
       <p className="max-w-sm text-cafe-soft">{t("review.empty")}</p>

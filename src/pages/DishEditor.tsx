@@ -111,7 +111,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
       actions={
         dish && (
           <>
-            <Badge tone={dish.status === "validated" ? "ganga" : dish.status === "pending" ? "rosa" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
+            <Badge tone={dish.status === "validated" ? "salva" : dish.status === "pending" ? "rosa" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
             {dish.status === "pending" && <Button disabled={busy} onClick={() => action("validate")}>{t("dish.validate")}</Button>}
             {dish.status === "archived" ? (
               <Button variant="secondary" disabled={busy} onClick={() => action("unarchive")}>{t("dish.unarchive")}</Button>
