@@ -14,6 +14,7 @@ import type {
   UndecidedItem,
   Unit,
 } from "../../../shared/types";
+import type { Aisle } from "../../../shared/aisles";
 import { idList, isUniqueViolation, rows } from "../db";
 import { nameKey } from "../../../shared/names";
 import { costPerPortionCents, type DishFacts } from "../rules";
@@ -23,6 +24,7 @@ export interface IngredientLine {
   quantity: number;
   unit: Unit;
   priceCents?: number | null;
+  aisle?: Aisle;
 }
 
 export interface DishInput {
@@ -230,24 +232,52 @@ async function resolveLines(
   for (const [i, line] of lines.entries()) {
     let id = existing.get(keys[i])?.id;
     if (id === undefined) {
-      const price = line.priceCents ?? null;
-      // One batch, so an ingredient never exists without its `unknown` statuses.
-      const [, , created] = await db.batch<{ id: number }>([
-        db
-          .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents, price_updated_at) VALUES (?1, ?2, ?3, ?4, ?5)")
-          .bind(line.name.trim(), keys[i], line.unit, price, price === null ? null : now),
-        db
-          .prepare("INSERT INTO ingredient_restrictions (ingredient_id, restriction_id, status) SELECT (SELECT id FROM ingredients WHERE name_key = ?1), id, 'unknown' FROM restrictions")
-          .bind(keys[i]),
-        db.prepare("SELECT id FROM ingredients WHERE name_key = ?1").bind(keys[i]),
-      ]);
-      id = created.results[0].id;
+      id = await insertIngredient(db, { name: line.name, unit: line.unit, priceCents: line.priceCents ?? null, aisle: line.aisle ?? "misc" }, {}, now);
       existing.set(keys[i], { id, key: keys[i], unit: line.unit });
       newIngredients.push(id);
     }
     quantities.set(id, (quantities.get(id) ?? 0) + line.quantity);
   }
   return { ok: true, lines: [...quantities].map(([ingredientId, quantity]) => ({ ingredientId, quantity })), newIngredients };
+}
+
+/**
+ * Inserts an ingredient and its restriction statuses in one batch, so it never exists without
+ * them: `decided` ones as given, every other restriction `unknown`.
+ */
+async function insertIngredient(
+  db: D1Database,
+  input: { name: string; unit: Unit; priceCents: number | null; aisle: Aisle },
+  decided: Record<number, DecidedStatus>,
+  now: string,
+): Promise<number> {
+  const key = nameKey(input.name);
+  const [, , created] = await db.batch<{ id: number }>([
+    db
+      .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents, price_updated_at, aisle) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+      .bind(input.name.trim(), key, input.unit, input.priceCents, input.priceCents === null ? null : now, input.aisle),
+    db
+      .prepare(
+        `INSERT INTO ingredient_restrictions (ingredient_id, restriction_id, status)
+         SELECT (SELECT id FROM ingredients WHERE name_key = ?1), r.id, COALESCE(json_extract(?2, '$."' || r.id || '"'), 'unknown') FROM restrictions r`,
+      )
+      .bind(key, JSON.stringify(decided)),
+    db.prepare("SELECT id FROM ingredients WHERE name_key = ?1").bind(key),
+  ]);
+  return created.results[0].id;
+}
+
+export async function createIngredient(
+  db: D1Database,
+  input: { name: string; unit: Unit; priceCents?: number | null; aisle: Aisle; statuses?: Record<number, DecidedStatus> },
+  now: string,
+): Promise<{ id: number } | "name_taken"> {
+  try {
+    return { id: await insertIngredient(db, { name: input.name, unit: input.unit, priceCents: input.priceCents ?? null, aisle: input.aisle }, input.statuses ?? {}, now) };
+  } catch (error) {
+    if (isUniqueViolation(error)) return "name_taken";
+    throw error;
+  }
 }
 
 const cleanTags = (tags: string[]): string[] => [...new Set(tags.map((t) => t.trim().toLowerCase()).filter(Boolean))];
@@ -333,7 +363,7 @@ export async function listIngredients(db: D1Database): Promise<IngredientView[]>
   const [ingredients, statuses] = await Promise.all([
     rows<Omit<IngredientView, "statuses">>(
       db.prepare(
-        `SELECT id, name, unit, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt
+        `SELECT id, name, unit, aisle, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt
          FROM ingredients ORDER BY name COLLATE NOCASE`,
       ),
     ),
@@ -345,7 +375,7 @@ export async function listIngredients(db: D1Database): Promise<IngredientView[]>
 export async function updateIngredient(
   db: D1Database,
   id: number,
-  patch: { name?: string; unit?: Unit; priceCents?: number | null; statuses?: Record<number, DecidedStatus> },
+  patch: { name?: string; unit?: Unit; priceCents?: number | null; aisle?: Aisle; statuses?: Record<number, DecidedStatus> },
   now: string,
 ): Promise<"ok" | "not_found" | "name_taken" | "in_use"> {
   const current = await db.prepare("SELECT unit FROM ingredients WHERE id = ?1").bind(id).first<{ unit: Unit }>();
@@ -360,6 +390,7 @@ export async function updateIngredient(
     statements.push(db.prepare("UPDATE ingredients SET name = ?2, name_key = ?3 WHERE id = ?1").bind(id, patch.name.trim(), nameKey(patch.name)));
   }
   if (patch.unit !== undefined) statements.push(db.prepare("UPDATE ingredients SET unit = ?2 WHERE id = ?1").bind(id, patch.unit));
+  if (patch.aisle !== undefined) statements.push(db.prepare("UPDATE ingredients SET aisle = ?2 WHERE id = ?1").bind(id, patch.aisle));
   if (patch.priceCents !== undefined) {
     statements.push(
       db.prepare("UPDATE ingredients SET price_cents = ?2, price_source = 'estimated', price_updated_at = ?3 WHERE id = ?1").bind(id, patch.priceCents, now),

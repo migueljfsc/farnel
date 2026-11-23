@@ -1,6 +1,7 @@
 /** Input schemas shared by the JSON API and the MCP tools. */
 
 import { z } from "zod";
+import { AISLES } from "../../shared/aisles";
 import { isCalendarDate } from "../../shared/time";
 
 export const date = z
@@ -11,12 +12,15 @@ export const id = z.number().int().positive();
 export const unit = z.enum(["g", "ml", "un"]);
 export const slot = z.enum(["lunch", "dinner"]);
 export const cents = z.number().int().nonnegative();
+export const aisle = z.enum(AISLES);
+const decided = z.record(z.string().regex(/^\d+$/), z.enum(["safe", "forbidden"]));
 
 export const ingredientLine = z.object({
   name: z.string().trim().min(1).max(100),
   quantity: z.number().positive(),
   unit,
   priceCents: cents.nullable().optional().describe("Estimated price of 1000 g, 1000 ml or 1 un, for a new ingredient"),
+  aisle: aisle.optional().describe("Supermarket aisle, for a new ingredient"),
 });
 
 export const dishInput = z.object({
@@ -48,7 +52,16 @@ export const ingredientPatch = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   unit: unit.optional(),
   priceCents: cents.nullable().optional(),
-  statuses: z.record(z.string().regex(/^\d+$/), z.enum(["safe", "forbidden"])).optional(),
+  aisle: aisle.optional(),
+  statuses: decided.optional(),
+});
+
+export const ingredientCreate = z.object({
+  name: z.string().trim().min(1).max(100),
+  unit,
+  priceCents: cents.nullable().optional(),
+  aisle,
+  statuses: decided.default({}),
 });
 
 export const cookingChange = z.union([

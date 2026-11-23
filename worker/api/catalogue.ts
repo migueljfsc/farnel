@@ -1,8 +1,9 @@
 import type { DishStatus } from "../../shared/types";
-import { json, noContent } from "../lib/http";
-import { dishInput, ingredientPatch } from "../lib/schemas";
+import { fail, json, noContent } from "../lib/http";
+import { dishInput, ingredientCreate, ingredientPatch } from "../lib/schemas";
 import {
   archiveDish,
+  createIngredient,
   createDish,
   getDish,
   listDishes,
@@ -55,6 +56,15 @@ export const catalogueRoutes: Route[] = [
     withBody(ingredientPatch, async (ctx, { statuses, ...patch }) => {
       const byId = statuses && Object.fromEntries(Object.entries(statuses).map(([k, v]) => [Number(k), v]));
       return outcome(await updateIngredient(ctx.db, idParam(ctx), { ...patch, statuses: byId }, ctx.now));
+    }),
+  ),
+  route(
+    "POST",
+    /^\/api\/ingredients$/,
+    withBody(ingredientCreate, async ({ db, now }, { statuses, ...input }) => {
+      const byId = Object.fromEntries(Object.entries(statuses).map(([k, v]) => [Number(k), v]));
+      const result = await createIngredient(db, { ...input, statuses: byId }, now);
+      return result === "name_taken" ? fail(result, 409) : json(result, 201);
     }),
   ),
   route("GET", /^\/api\/undecided$/, async ({ db }) => json({ items: await listUndecided(db) })),

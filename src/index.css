@@ -23,24 +23,22 @@
 }
 
 /*
- * "Horta": the kitchen garden. Basil as the main colour, tomato for warnings and forbidden
- * ingredients, saffron for highlights and what is done, on a fresh sage white.
+ * "Bica com natas": oat beige, denim blue and rose, with espresso text. Denim is the main colour,
+ * rose marks what needs attention (forbidden, over budget, counts).
  * Each colour carries its light and dark value; the active colour scheme picks one.
  */
 :root {
   color-scheme: light dark;
-  --folha: light-dark(#f3f6f1, #0f1612);
-  --louca: light-dark(#ffffff, #18221c);
-  --terra: light-dark(#18211c, #e6eee8);
-  --terra-soft: light-dark(#5b6b60, #9aaea1);
-  --linha: light-dark(rgb(24 33 28 / 0.11), rgb(230 238 232 / 0.11));
-  --manjericao: light-dark(#2f6b4f, #6fc49a);
-  --manjericao-soft: light-dark(#dcebe2, #1d3a2b);
-  --tomate: light-dark(#e5533d, #ff7a63);
-  --tomate-soft: light-dark(#fbe3de, #3d211c);
-  --acafrao: light-dark(#f2b33d, #f5c560);
-  --acafrao-soft: light-dark(#fcefd2, #3a2f14);
-  --sombra: 0 1px 2px light-dark(rgb(24 33 28 / 0.06), rgb(0 0 0 / 0.3)), 0 10px 28px -12px light-dark(rgb(24 33 28 / 0.2), rgb(0 0 0 / 0.6));
+  --aveia: light-dark(#f2ebdf, #1b1714);
+  --louca: light-dark(#fbf8f3, #252019);
+  --cafe: light-dark(#2a211c, #f0e7db);
+  --cafe-soft: light-dark(#6e625a, #b3a698);
+  --linha: light-dark(rgb(42 33 28 / 0.12), rgb(240 231 219 / 0.12));
+  --ganga: light-dark(#2e4c8c, #93aee8);
+  --ganga-soft: light-dark(#dde3f0, #26304a);
+  --rosa: light-dark(#d9577b, #f293ad);
+  --rosa-soft: light-dark(#f8dfe6, #4a2530);
+  --sombra: 0 1px 2px light-dark(rgb(42 33 28 / 0.06), rgb(0 0 0 / 0.3)), 0 10px 28px -12px light-dark(rgb(42 33 28 / 0.22), rgb(0 0 0 / 0.6));
 }
 
 /* The theme button pins one scheme; without it the system decides. */
@@ -53,25 +51,23 @@
 }
 
 @theme inline {
-  --color-folha: var(--folha);
+  --color-aveia: var(--aveia);
   --color-louca: var(--louca);
-  --color-terra: var(--terra);
-  --color-terra-soft: var(--terra-soft);
+  --color-cafe: var(--cafe);
+  --color-cafe-soft: var(--cafe-soft);
   --color-linha: var(--linha);
-  --color-manjericao: var(--manjericao);
-  --color-manjericao-soft: var(--manjericao-soft);
-  --color-tomate: var(--tomate);
-  --color-tomate-soft: var(--tomate-soft);
-  --color-acafrao: var(--acafrao);
-  --color-acafrao-soft: var(--acafrao-soft);
+  --color-ganga: var(--ganga);
+  --color-ganga-soft: var(--ganga-soft);
+  --color-rosa: var(--rosa);
+  --color-rosa-soft: var(--rosa-soft);
   --shadow-tin: var(--sombra);
   --font-sans: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 @layer base {
   html {
-    background: var(--folha);
-    color: var(--terra);
+    background: var(--aveia);
+    color: var(--cafe);
     font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
   }
@@ -82,13 +78,13 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--manjericao);
+    outline: 2px solid var(--ganga);
     outline-offset: 2px;
     border-radius: 4px;
   }
 
   ::selection {
-    background: var(--manjericao-soft);
+    background: var(--ganga-soft);
   }
 }
 
@@ -205,7 +201,7 @@
 /* Placeholder blocks while data loads. */
 .skeleton {
   border-radius: 0.75rem;
-  background: linear-gradient(90deg, var(--linha) 25%, var(--folha) 50%, var(--linha) 75%);
+  background: linear-gradient(90deg, var(--linha) 25%, var(--aveia) 50%, var(--linha) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }

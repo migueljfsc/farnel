@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { APP_NAME } from "../../shared/app";
-import { addDays, daysBetween, todayLisbon, weekStartOf } from "../../shared/time";
+import { addDays, todayLisbon, weekStartOf } from "../../shared/time";
 import type { CookingView, DishSummary, PersonView, PlanView, ShoppingList } from "../../shared/types";
 import { buttonClass, cx, inputClass } from "../components/styles";
 import { Button, Link, Loaded } from "../components/ui";
+import { WeekCalendar } from "../components/WeekCalendar";
 import { useI18n } from "../i18n/context";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
+import { segments, slotsInUse } from "../lib/board";
+import { byAisle, shoppingText } from "../lib/shopping";
 import { claudeLinks, planPrompt } from "../lib/claude";
 import { errorMessage } from "../lib/errors";
 import { useToast } from "../lib/toast";
@@ -19,7 +22,6 @@ let lastWeek: string | undefined;
 
 export function Week({ weekStart }: { weekStart?: string }) {
   const { navigate } = useApp();
-  const { t, day } = useI18n();
   const thisWeek = weekStartOf(todayLisbon(new Date()));
   const week = weekStart ?? thisWeek;
   const [direction] = useState(() => {
@@ -28,7 +30,8 @@ export function Week({ weekStart }: { weekStart?: string }) {
     return from && week < from ? "previous" : from && week > from ? "next" : null;
   });
   const { data, error, reload } = useApi<{ plan: PlanView | null; shopping: ShoppingList }>(`/api/weeks/${week}`);
-  const go = useCallback((days: number) => navigate({ page: "week", weekStart: addDays(week, days) }), [navigate, week]);
+  const open = useCallback((weekStart: string) => navigate({ page: "week", weekStart }), [navigate]);
+  const go = useCallback((days: number) => open(addDays(week, days)), [open, week]);
   const touch = useRef<number | null>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -51,17 +54,7 @@ export function Week({ weekStart }: { weekStart?: string }) {
         if (Math.abs(dx) > SWIPE_PX) go(dx < 0 ? DAYS : -DAYS);
       }}
     >
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="display text-4xl sm:text-5xl">{t("week.title", { day: day(week) })}</h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => go(-DAYS)}>
-            {t("week.previous")}
-          </Button>
-          <Button variant="secondary" onClick={() => go(DAYS)}>
-            {t("week.next")}
-          </Button>
-        </div>
-      </header>
+      <WeekCalendar week={week} onPick={open} />
 
       {week >= thisWeek && data && <PlanWithClaude weekStart={week} hasPlan={!!data.plan} onRefresh={reload} />}
 
@@ -71,7 +64,7 @@ export function Week({ weekStart }: { weekStart?: string }) {
             <>
               <Budget plan={plan} />
               <Board plan={plan} onChange={reload} />
-              <Shopping list={shopping} />
+              <Shopping list={shopping} plan={plan} />
             </>
           ) : (
             <EmptyWeek />
@@ -89,82 +82,134 @@ function Budget({ plan }: { plan: PlanView }) {
   const share = plan.budgetCents > 0 ? Math.min(plan.totalCents / plan.budgetCents, 1) : 1;
   return (
     <div className="space-y-2">
-      <p className="flex flex-wrap items-baseline justify-between gap-2 text-sm text-terra-soft">
+      <p className="flex flex-wrap items-baseline justify-between gap-2 text-sm text-cafe-soft">
         <span>{t("week.summary", { people: plan.people.map((p) => p.name).join(", "), total: money(plan.totalCents), budget: money(plan.budgetCents) })}</span>
-        {plan.overBudget && <span className="font-semibold text-tomate">{t("week.overBudget")}</span>}
+        {plan.overBudget && <span className="font-semibold text-rosa">{t("week.overBudget")}</span>}
       </p>
       <div className="h-2 overflow-hidden rounded-full bg-linha" role="presentation">
-        <div className={cx("animate-bar h-full rounded-full", plan.overBudget ? "bg-tomate" : "bg-manjericao")} style={{ width: `${share * 100}%` }} />
+        <div className={cx("animate-bar h-full rounded-full", plan.overBudget ? "bg-rosa" : "bg-ganga")} style={{ width: `${share * 100}%` }} />
       </div>
-      {plan.notes && <p className="text-sm italic text-terra-soft">{plan.notes}</p>}
+      {plan.notes && <p className="text-sm italic text-cafe-soft">{plan.notes}</p>}
     </div>
   );
 }
 
 // ----------------------------------------------------------------- board
 
-/** The days a cooking feeds, as a column span on the 7-day board (1-based, end exclusive). */
-function span(cooking: CookingView, weekStart: string): { start: number; end: number; first: string; last: string } {
-  const dates = cooking.meals.map((m) => m.date).sort();
-  const first = dates[0] ?? cooking.cookDate;
-  const last = dates[dates.length - 1] ?? cooking.cookDate;
-  const start = Math.max(daysBetween(weekStart, first), 0) + 1;
-  const end = Math.min(daysBetween(weekStart, last), DAYS - 1) + 2;
-  return { start, end, first, last };
+/** Each cooking keeps one look across all the meals it feeds, cycling through the palette. */
+const LOOKS = ["border-ganga bg-ganga-soft", "border-rosa bg-rosa-soft", "border-cafe/50 bg-louca"];
+const DOTS = ["bg-ganga", "bg-rosa", "bg-cafe"];
+const look = (index: number) => LOOKS[index % LOOKS.length];
+const dot = (index: number) => DOTS[index % DOTS.length];
+
+function PotIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={cx("size-4", className)} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 11h16v3a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6ZM2 11h2M20 11h2M9 7c0-1 1-1 1-2M14 7c0-1 1-1 1-2" />
+    </svg>
+  );
 }
 
 function Board({ plan, onChange }: { plan: PlanView; onChange: () => void }) {
-  const { day } = useI18n();
   const [selected, setSelected] = useState<number | null>(null);
-  const today = todayLisbon(new Date());
-  const days = Array.from({ length: DAYS }, (_, i) => addDays(plan.weekStart, i));
   const open = plan.cookings.find((c) => c.id === selected);
   const close = useCallback(() => setSelected(null), []);
-
+  const select = (id: number) => setSelected(id === selected ? null : id);
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 [grid-auto-flow:dense] sm:grid-cols-7">
-        {days.map((date) => {
-          const [weekday, numbers] = day(date).split(" ");
-          return (
-            <div
-              key={date}
-              className={cx("hidden items-baseline gap-1.5 border-b-2 pb-1 sm:flex", date === today ? "border-manjericao text-manjericao" : "border-linha text-terra-soft")}
-            >
-              <span className="display text-2xl">{numbers.split("/")[0]}</span>
-              <span className="text-xs font-medium">{weekday}</span>
-            </div>
-          );
-        })}
-        {plan.cookings.map((cooking, index) => (
-          <Tin
-            key={cooking.id}
-            cooking={cooking}
-            weekStart={plan.weekStart}
-            index={index}
-            selected={cooking.id === selected}
-            onSelect={() => setSelected(cooking.id === selected ? null : cooking.id)}
-          />
-        ))}
-      </div>
+      <MealGrid plan={plan} selected={selected} onSelect={select} />
+      <DayList plan={plan} selected={selected} onSelect={select} />
       {open && <TinDetail key={open.id} cooking={open} onChange={onChange} onClose={close} />}
     </div>
   );
 }
 
-const RIM: Record<CookingView["status"], string> = {
-  planned: "border-manjericao",
-  done: "border-acafrao",
-  skipped: "border-dashed border-linha opacity-60",
-  replaced: "border-manjericao/40",
-};
+interface BoardProps {
+  plan: PlanView;
+  selected: number | null;
+  onSelect: (id: number) => void;
+}
 
-function Tin({ cooking, weekStart, index, selected, onSelect }: { cooking: CookingView; weekStart: string; index: number; selected: boolean; onSelect: () => void }) {
-  const { t, tn, day, money } = useI18n();
-  const { start, end, first, last } = span(cooking, weekStart);
+/** Desktop: a row per meal, a column per day; a cooking covers exactly the meals it feeds. */
+function MealGrid({ plan, selected, onSelect }: BoardProps) {
+  const { t, day } = useI18n();
+  const today = todayLisbon(new Date());
+  const days = Array.from({ length: DAYS }, (_, i) => addDays(plan.weekStart, i));
+  const slots = slotsInUse(plan.cookings);
+  return (
+    <div className="hidden gap-1.5 sm:grid" style={{ gridTemplateColumns: "4.5rem repeat(7, minmax(0, 1fr))" }}>
+      <span />
+      {days.map((date) => {
+        const [weekday, numbers] = day(date).split(" ");
+        const cooked = plan.cookings.map((c, i) => ({ c, i })).filter(({ c }) => c.cookDate === date && c.status !== "skipped");
+        return (
+          <div key={date} className={cx("flex items-end justify-between border-b-2 pb-1", date === today ? "border-ganga text-ganga" : "border-linha text-cafe-soft")}>
+            <span className="flex items-baseline gap-1">
+              <span className="display text-2xl">{numbers.split("/")[0]}</span>
+              <span className="text-xs font-medium">{weekday}</span>
+            </span>
+            <span className="flex gap-0.5">
+              {cooked.map(({ c, i }) => (
+                <span key={c.id} title={`${t("board.cookDay")}: ${c.dish}`} className={cx("grid size-5 place-items-center rounded-full text-louca", dot(i))}>
+                  <PotIcon className="size-3.5" />
+                </span>
+              ))}
+            </span>
+          </div>
+        );
+      })}
+      {slots.map((slot, row) => (
+        <Fragment key={slot}>
+          <span className="self-center text-sm font-semibold text-cafe-soft" style={{ gridRow: row + 2, gridColumn: 1 }}>
+            {t(`slot.${slot}`)}
+          </span>
+          {days.map((date, i) => (
+            <span
+              key={date}
+              aria-hidden
+              className="grid min-h-20 place-items-center rounded-xl border-2 border-dashed border-linha text-cafe-soft/50"
+              style={{ gridRow: row + 2, gridColumn: i + 2 }}
+            >
+              —
+            </span>
+          ))}
+          {segments(plan.cookings, plan.weekStart, slot).map((segment) => {
+            const cooking = plan.cookings[segment.cooking];
+            return (
+              <MealBlock
+                key={`${cooking.id}-${slot}-${segment.start}`}
+                cooking={cooking}
+                index={segment.cooking}
+                selected={cooking.id === selected}
+                onSelect={() => onSelect(cooking.id)}
+                continued={!segment.first}
+                style={{ gridRow: row + 2, gridColumn: `${segment.start + 1} / ${segment.end + 1}`, "--i": segment.cooking } as CSSProperties}
+              />
+            );
+          })}
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+function MealBlock({
+  cooking,
+  index,
+  selected,
+  onSelect,
+  continued,
+  style,
+}: {
+  cooking: CookingView;
+  index: number;
+  selected: boolean;
+  onSelect: () => void;
+  continued: boolean;
+  style: CSSProperties;
+}) {
+  const { t, tn, money } = useI18n();
   const replacedBy = cooking.replacedBy && ("dish" in cooking.replacedBy ? cooking.replacedBy.dish : cooking.replacedBy.text);
-  const style = { "--i": index, "--col": `${start} / ${end}` } as CSSProperties;
-
   return (
     <button
       type="button"
@@ -172,35 +217,77 @@ function Tin({ cooking, weekStart, index, selected, onSelect }: { cooking: Cooki
       aria-expanded={selected}
       style={style}
       className={cx(
-        "animate-tin relative flex min-h-28 flex-col justify-between gap-2 rounded-2xl border-[3px] bg-louca p-3 text-left transition sm:[grid-column:var(--col)]",
-        RIM[cooking.status],
-        selected ? "ring-4 ring-manjericao/25" : "hover:-translate-y-0.5",
+        "animate-tin relative z-10 flex min-h-20 flex-col justify-between gap-1 rounded-xl border-2 p-2.5 text-left transition",
+        look(index),
+        cooking.status === "skipped" && "border-dashed opacity-50",
+        selected ? "ring-4 ring-ganga/25" : "hover:-translate-y-0.5",
       )}
     >
       {replacedBy && (
-        <span
-          title={t("cooking.replacedBy", { dish: replacedBy })}
-          className="absolute -right-1.5 -top-2.5 max-w-[80%] truncate rounded-full bg-tomate px-2 py-0.5 text-[11px] font-bold text-louca shadow-sm"
-        >
+        <span title={t("cooking.replacedBy", { dish: replacedBy })} className="absolute -right-1.5 -top-2.5 max-w-[85%] truncate rounded-full bg-rosa px-2 py-0.5 text-[11px] font-bold text-louca shadow-sm">
           {t("cooking.replacedBy", { dish: replacedBy })}
         </span>
       )}
-      <span>
-        <span className="block text-xs font-medium text-terra-soft sm:hidden">{first === last ? day(first) : `${day(first)} – ${day(last)}`}</span>
-        <span className={cx("block font-semibold leading-tight", cooking.status === "skipped" && "line-through")}>{cooking.dish}</span>
-        {cooking.meals.some((m) => m.slot === "dinner") && (
-          <span className="mt-1 inline-block rounded-full bg-manjericao-soft px-2 py-0.5 text-[11px] font-semibold text-manjericao">{t("slot.dinner")}</span>
-        )}
+      <span className={cx("text-sm font-semibold leading-tight", cooking.status === "skipped" && "line-through")}>
+        {continued ? `↳ ${cooking.dish}` : cooking.dish}
+        {cooking.status === "done" && <span className="ml-1 text-ganga">✓</span>}
       </span>
-      <span className="flex items-end justify-between gap-2">
-        <span className="flex flex-wrap gap-1" aria-label={tn("dish.portions", cooking.portions)}>
-          {Array.from({ length: cooking.portions }, (_, i) => (
-            <span key={i} className={cx("size-2.5 rounded-full", cooking.status === "done" ? "bg-acafrao" : "bg-manjericao")} />
-          ))}
+      {!continued && (
+        <span className="flex items-center justify-between gap-2 text-[11px] text-cafe-soft">
+          <span>{tn("dish.portions", cooking.portions)}</span>
+          <span className="tabular-nums">{money(cooking.costCents)}</span>
         </span>
-        <span className="text-xs tabular-nums text-terra-soft">{money(cooking.costCents)}</span>
-      </span>
+      )}
     </button>
+  );
+}
+
+/** Phones: day by day, each meal a chip in its cooking's colour. */
+function DayList({ plan, selected, onSelect }: BoardProps) {
+  const { t, day } = useI18n();
+  const today = todayLisbon(new Date());
+  const slots = slotsInUse(plan.cookings);
+  const days = Array.from({ length: DAYS }, (_, i) => addDays(plan.weekStart, i));
+  return (
+    <ol className="space-y-2 sm:hidden">
+      {days.map((date) => (
+        <li key={date} className={cx("rounded-2xl border bg-louca p-3", date === today ? "border-ganga" : "border-linha")}>
+          <p className={cx("mb-2 flex items-center gap-2 text-sm font-semibold", date === today ? "text-ganga" : "text-cafe-soft")}>
+            {day(date)}
+            {plan.cookings.map((c, i) =>
+              c.cookDate === date && c.status !== "skipped" ? (
+                <span key={c.id} className={cx("grid size-5 place-items-center rounded-full text-louca", dot(i))} title={`${t("board.cookDay")}: ${c.dish}`}>
+                  <PotIcon className="size-3.5" />
+                </span>
+              ) : null,
+            )}
+          </p>
+          <div className="grid gap-1.5">
+            {slots.map((slot) => {
+              const index = plan.cookings.findIndex((c) => c.meals.some((m) => m.date === date && m.slot === slot));
+              const cooking = plan.cookings[index];
+              return (
+                <div key={slot} className="flex items-center gap-2 text-sm">
+                  <span className="w-16 shrink-0 text-xs text-cafe-soft">{t(`slot.${slot}`)}</span>
+                  {cooking ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelect(cooking.id)}
+                      aria-expanded={cooking.id === selected}
+                      className={cx("flex-1 truncate rounded-lg border-2 px-2.5 py-1.5 text-left font-semibold", look(index), cooking.status === "skipped" && "border-dashed line-through opacity-50")}
+                    >
+                      {cooking.dish}
+                    </button>
+                  ) : (
+                    <span className="flex-1 rounded-lg border-2 border-dashed border-linha px-2.5 py-1.5 text-cafe-soft/60">{t("board.noMeal")}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -247,7 +334,7 @@ function TinDetail({ cooking, onChange, onClose }: { cooking: CookingView; onCha
 
   return (
     <>
-      <button type="button" aria-label={t("common.close")} onClick={onClose} className="fixed inset-0 z-30 bg-terra/40 sm:hidden" />
+      <button type="button" aria-label={t("common.close")} onClick={onClose} className="fixed inset-0 z-30 bg-cafe/40 sm:hidden" />
       <div
         role="dialog"
         aria-labelledby={`tin-${cooking.id}`}
@@ -260,14 +347,14 @@ function TinDetail({ cooking, onChange, onClose }: { cooking: CookingView; onCha
               {cooking.dish}
             </span>
           </Link>
-          <span className="flex items-center gap-2 text-sm font-medium text-terra-soft">
+          <span className="flex items-center gap-2 text-sm font-medium text-cafe-soft">
             {t(`status.${cooking.status}`)}
-            <button type="button" onClick={onClose} aria-label={t("common.close")} className="grid size-7 place-items-center rounded-full hover:bg-folha">
+            <button type="button" onClick={onClose} aria-label={t("common.close")} className="grid size-7 place-items-center rounded-full hover:bg-aveia">
               ✕
             </button>
           </span>
         </div>
-        <div className="space-y-0.5 text-sm text-terra-soft">
+        <div className="space-y-0.5 text-sm text-cafe-soft">
           <p>{t("cooking.cook", { day: day(cooking.cookDate), portions: tn("dish.portions", cooking.portions), cost: money(cooking.costCents) })}</p>
           <p>{t("cooking.eat", { meals: cooking.meals.map((m) => `${day(m.date)} ${t(`slot.${m.slot}`)}`).join(", ") })}</p>
         </div>
@@ -319,8 +406,8 @@ function EmptyWeek() {
   const { t } = useI18n();
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-linha px-6 py-12 text-center">
-      <span className="h-10 w-16 rounded-b-2xl rounded-t-md border-[3px] border-manjericao/40" aria-hidden />
-      <p className="text-terra-soft">{t("week.empty")}</p>
+      <span className="h-10 w-16 rounded-b-2xl rounded-t-md border-[3px] border-ganga/40" aria-hidden />
+      <p className="text-cafe-soft">{t("week.empty")}</p>
     </div>
   );
 }
@@ -354,11 +441,11 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
   }
 
   return (
-    <div className="animate-expand space-y-3 rounded-2xl bg-manjericao-soft p-4 sm:p-5">
-      <h2 className="display text-xl text-manjericao">{t(hasPlan ? "week.plan.retitle" : "week.plan.title")}</h2>
+    <div className="animate-expand space-y-3 rounded-2xl bg-ganga-soft p-4 sm:p-5">
+      <h2 className="display text-xl text-ganga">{t(hasPlan ? "week.plan.retitle" : "week.plan.title")}</h2>
       {people.length > 1 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium text-terra-soft">{t("week.plan.who")}</span>
+          <span className="font-medium text-cafe-soft">{t("week.plan.who")}</span>
           {people.map((p) => {
             const on = !skipped.has(p.id);
             return (
@@ -367,7 +454,7 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
                 type="button"
                 aria-pressed={on}
                 onClick={() => toggle(p.id)}
-                className={cx("rounded-full px-3 py-1 font-semibold transition", on ? "bg-manjericao text-louca" : "bg-louca text-terra-soft ring-1 ring-linha")}
+                className={cx("rounded-full px-3 py-1 font-semibold transition", on ? "bg-ganga text-louca" : "bg-louca text-cafe-soft ring-1 ring-linha")}
               >
                 {p.name}
               </button>
@@ -376,7 +463,7 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
         </div>
       )}
       <label className="block space-y-1 text-sm">
-        <span className="font-medium text-terra-soft">{t("week.plan.notes")}</span>
+        <span className="font-medium text-cafe-soft">{t("week.plan.notes")}</span>
         <input className={inputClass} placeholder={t("week.plan.notesHint")} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       <div className={cx("flex flex-wrap gap-2", eating.length === 0 && "pointer-events-none opacity-40")}>
@@ -393,33 +480,107 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
           {t("common.refresh")}
         </Button>
       </div>
-      <p className="text-xs text-terra-soft">{t("week.plan.help", { app: APP_NAME })}</p>
+      <p className="text-xs text-cafe-soft">{t("week.plan.help", { app: APP_NAME })}</p>
     </div>
   );
 }
 
 // -------------------------------------------------------------- shopping
 
-function Shopping({ list }: { list: ShoppingList }) {
-  const { t, tn, money } = useI18n();
+/** Ticks live in this browser only, per week: a convenience while shopping, not shared state. */
+function useTicks(weekStart: string): [Set<number>, (id: number) => void] {
+  const key = `shopping:${weekStart}`;
+  const [ticked, setTicked] = useState<Set<number>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(key) ?? "[]") as number[]);
+    } catch {
+      return new Set();
+    }
+  });
+  const toggle = (id: number) => {
+    const next = new Set(ticked);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setTicked(next);
+    try {
+      localStorage.setItem(key, JSON.stringify([...next]));
+    } catch {
+      // Storage blocked: ticks last until the page closes.
+    }
+  };
+  return [ticked, toggle];
+}
+
+function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
+  const { t, tn, day, money, quantity } = useI18n();
+  const toast = useToast();
+  const [ticked, toggle] = useTicks(plan.weekStart);
   if (list.items.length === 0) return null;
+  const groups = byAisle(list.items);
+  const bought = list.items.filter((i) => ticked.has(i.ingredientId)).length;
+
+  const share = async () => {
+    const heading = t("shopping.heading", { day: day(plan.weekStart) });
+    const text = shoppingText(heading, groups, { aisle: (a) => t(`aisle.${a}`), quantity });
+    try {
+      if (navigator.share) await navigator.share({ title: heading, text });
+      else {
+        await navigator.clipboard.writeText(text);
+        toast({ message: t("shopping.copied") });
+      }
+    } catch {
+      // The person closed the share sheet.
+    }
+  };
+
   return (
-    <section className="space-y-2">
-      <h2 className="display text-2xl">{t("shopping.title")}</h2>
-      <ul className="grid gap-x-8 sm:grid-cols-2">
-        {list.items.map((i) => (
-          <li key={i.ingredientId} className="flex items-baseline justify-between gap-3 border-b border-linha py-1.5 text-sm">
-            <span>{i.name}</span>
-            <span className="tabular-nums text-terra-soft">
-              {i.quantity} {t(`unit.${i.unit}`)} · {i.costCents === null ? t("shopping.noPrice") : money(i.costCents)}
-            </span>
-          </li>
+    <section className="space-y-4 rounded-2xl border border-linha bg-louca p-4 sm:p-5">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="display text-2xl">{t("shopping.title")}</h2>
+          <p className="text-sm text-cafe-soft">
+            {t("shopping.estimate", { total: money(list.totalCents), budget: money(plan.budgetCents) })}
+            {list.missingPrices > 0 && <> · {tn("shopping.missing", list.missingPrices)}</>}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold tabular-nums text-ganga">{t("shopping.bought", { count: bought, total: list.items.length })}</span>
+          <Button variant="secondary" onClick={share}>
+            {t("shopping.share")}
+          </Button>
+        </div>
+      </header>
+      <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+        {groups.map((group) => (
+          <div key={group.aisle} className="space-y-1">
+            <h3 className="text-sm font-semibold text-rosa">{t(`aisle.${group.aisle}`)}</h3>
+            <ul>
+              {group.items.map((i) => {
+                const done = ticked.has(i.ingredientId);
+                return (
+                  <li key={i.ingredientId}>
+                    <label className="flex cursor-pointer items-center gap-3 border-b border-linha py-2 text-sm">
+                      <input type="checkbox" checked={done} onChange={() => toggle(i.ingredientId)} className="peer sr-only" />
+                      <span
+                        aria-hidden
+                        className={cx(
+                          "grid size-5 shrink-0 place-items-center rounded-full border-2 text-[11px] font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-ganga",
+                          done ? "animate-pop border-ganga bg-ganga text-louca" : "border-linha",
+                        )}
+                      >
+                        {done && "✓"}
+                      </span>
+                      <span className={cx("flex-1 transition", done && "text-cafe-soft line-through")}>{i.name}</span>
+                      <span className="tabular-nums text-cafe-soft">{quantity(i.quantity, i.unit)}</span>
+                      <span className="w-14 text-right tabular-nums text-cafe-soft">{i.costCents === null ? "–" : money(i.costCents)}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         ))}
-      </ul>
-      <p className="text-sm font-semibold">
-        {t("shopping.total", { amount: money(list.totalCents) })}
-        {list.missingPrices > 0 && <span className="font-normal text-terra-soft"> · {tn("shopping.missing", list.missingPrices)}</span>}
-      </p>
+      </div>
     </section>
   );
 }

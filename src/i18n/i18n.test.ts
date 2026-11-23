@@ -20,8 +20,8 @@ describe("the dictionaries", () => {
 
   it("keep both halves of every plural", () => {
     for (const key of keys) {
-      const other = key.replace(/\.one$/, ".other").replace(/\.other$/, ".one");
-      if (other !== key) expect(keys).toContain(other);
+      const partner = key.endsWith(".one") ? key.replace(/\.one$/, ".other") : key.endsWith(".other") ? key.replace(/\.other$/, ".one") : null;
+      if (partner) expect(keys).toContain(partner);
     }
   });
 

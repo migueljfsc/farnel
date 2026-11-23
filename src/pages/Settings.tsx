@@ -41,7 +41,7 @@ function useSave(): [(action: () => Promise<unknown>) => Promise<void>, React.Re
       setState({ failure });
     }
   };
-  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-manjericao">{t("common.saved")}</span> : null;
+  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-ganga">{t("common.saved")}</span> : null;
   return [save, feedback];
 }
 
@@ -92,11 +92,11 @@ function PersonForm({ person }: { person: PersonView }) {
   return (
     <Card className="space-y-3">
       <h2 className="flex flex-wrap items-baseline gap-2">
-        <span className="display text-2xl">{person.name}</span> <span className="text-sm text-terra-soft">{person.email}</span>
+        <span className="display text-2xl">{person.name}</span> <span className="text-sm text-cafe-soft">{person.email}</span>
       </h2>
       <div className="space-y-2">
-        <p className="text-sm font-medium text-terra-soft">{t("dish.restrictions")}</p>
-        {rows.length === 0 && <p className="text-sm text-terra-soft">{t("settings.none")}</p>}
+        <p className="text-sm font-medium text-cafe-soft">{t("dish.restrictions")}</p>
+        {rows.length === 0 && <p className="text-sm text-cafe-soft">{t("settings.none")}</p>}
         {rows.map((r, index) => (
           <div key={r.name} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-24">{r.name}</span>
@@ -156,7 +156,7 @@ function NewPerson({ onCreated }: { onCreated: () => void }) {
         <Button disabled={!name.trim() || !email.trim()} onClick={add}>{t("common.add")}</Button>
         {status}
       </div>
-      <p className="text-xs text-terra-soft">{t("settings.accessNote")}</p>
+      <p className="text-xs text-cafe-soft">{t("settings.accessNote")}</p>
     </Card>
   );
 }

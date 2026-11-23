@@ -38,7 +38,7 @@ export function Dishes({ filter }: { filter: Filter }) {
       <Loaded data={data} error={error}>
         {({ dishes }) =>
           dishes.length === 0 ? (
-            <p className="text-sm text-terra-soft">{t("dishes.empty")}</p>
+            <p className="text-sm text-cafe-soft">{t("dishes.empty")}</p>
           ) : (
             <List>
               {dishes.map((d) => (
@@ -47,7 +47,7 @@ export function Dishes({ filter }: { filter: Filter }) {
                     <Link to={{ page: "dish", id: d.id }} className="font-medium">
                       {d.name}
                     </Link>
-                    <p className="text-xs text-terra-soft">
+                    <p className="text-xs text-cafe-soft">
                       {t("dishes.summary", {
                         portions: tn("dish.portions", d.portions),
                         cost: money(d.costPerPortionCents),

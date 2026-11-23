@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { formatDay, formatMoney } from "../../shared/format";
+import { formatDay, formatMoney, formatMonth, formatQuantity } from "../../shared/format";
 import { plural, translator, type Dictionary, type Locale } from "./core";
 import { I18nContext, type I18n } from "./context";
 import { en } from "./en";
@@ -30,6 +30,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       tn: (key, count, vars) => plural(dict, key, count, vars),
       day: (date) => formatDay(date, locale),
       money: (cents) => formatMoney(cents, locale),
+      quantity: (quantity, unit) => formatQuantity(quantity, unit, locale),
+      month: (date) => formatMonth(date, locale),
     };
   }, [locale, setLocale]);
 

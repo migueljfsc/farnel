@@ -1,5 +1,7 @@
 /** Shapes shared by the Worker (API and MCP) and the web UI. Types only. */
 
+import type { Aisle } from "./aisles";
+
 export type Unit = "g" | "ml" | "un";
 export type RestrictionStatus = "safe" | "forbidden" | "unknown";
 export type DecidedStatus = Exclude<RestrictionStatus, "unknown">;
@@ -19,6 +21,7 @@ export interface IngredientView {
   id: number;
   name: string;
   unit: Unit;
+  aisle: Aisle;
   priceCents: number | null;
   priceSource: string;
   priceUpdatedAt: string | null;
@@ -99,6 +102,7 @@ export interface ShoppingItem {
   ingredientId: number;
   name: string;
   unit: Unit;
+  aisle: Aisle;
   quantity: number;
   costCents: number | null;
 }

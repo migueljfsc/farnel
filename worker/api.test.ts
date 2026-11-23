@@ -85,6 +85,14 @@ describe("api", () => {
     expect(people.map((p) => p.name)).toEqual(["Ana", "Bea"]);
   });
 
+  it("creates an ingredient and lists the weeks with plans", async () => {
+    const created = await call("POST", "/api/ingredients", { name: "Massa", unit: "g", priceCents: 120, aisle: "pantry", statuses: {} });
+    expect(created.status).toBe(201);
+    expect((await call("POST", "/api/ingredients", { name: "massa", unit: "g", aisle: "pantry" })).status).toBe(409);
+    expect((await call("POST", "/api/ingredients", { name: "X", unit: "g", aisle: "nowhere" })).status).toBe(400);
+    expect(await (await call("GET", "/api/plans?from=2026-11-01&to=2026-11-30")).json()).toEqual({ weeks: [] });
+  });
+
   it("reads and writes settings", async () => {
     expect((await call("PUT", "/api/settings", { weeklyBudgetCents: 5000, lunchesPerWeek: 6 })).status).toBe(204);
     expect(await (await call("GET", "/api/settings")).json()).toEqual({ settings: { weeklyBudgetCents: 5000, lunchesPerWeek: 6 } });

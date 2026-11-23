@@ -31,7 +31,7 @@ export function ThemeSwitch() {
       }}
       aria-label={`${t("theme.label")}: ${t(LABEL[theme])}. ${t(LABEL[next])}`}
       title={t(LABEL[next])}
-      className="grid size-8 shrink-0 place-items-center rounded-full text-terra-soft ring-1 ring-linha transition hover:text-manjericao hover:ring-manjericao/50"
+      className="grid size-8 shrink-0 place-items-center rounded-full text-cafe-soft ring-1 ring-linha transition hover:text-ganga hover:ring-ganga/50"
     >
       <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         {ICON[theme]}

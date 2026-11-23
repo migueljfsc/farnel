@@ -14,6 +14,10 @@ export interface I18n {
   day: (date: string) => string;
   /** Cents as the reader's language writes money. */
   money: (cents: number) => string;
+  /** A quantity in the unit people would say, e.g. `1,2 kg`. */
+  quantity: (quantity: number, unit: "g" | "ml" | "un") => string;
+  /** The month a date falls in. */
+  month: (date: string) => string;
 }
 
 export const I18nContext = createContext<I18n | null>(null);

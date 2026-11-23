@@ -12,6 +12,33 @@ const WEEKDAYS: Record<Locale, string[]> = {
   pt: ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
 };
 
+const decimal = (value: number, locale: Locale, places = 1): string => {
+  const text = String(Math.round(value * 10 ** places) / 10 ** places);
+  return locale === "pt" ? text.replace(".", ",") : text;
+};
+
+/** A quantity in the unit people would say: 1200 g → `1,2 kg`, 1500 ml → `1,5 L`. */
+export function formatQuantity(quantity: number, unit: "g" | "ml" | "un", locale: Locale = "en"): string {
+  if (unit === "un") return `${decimal(quantity, locale)} un`;
+  if (quantity >= 1000) return `${decimal(quantity / 1000, locale, 2)} ${unit === "g" ? "kg" : "L"}`;
+  return `${Math.round(quantity)} ${unit}`;
+}
+
+const MONTHS: Record<Locale, string[]> = {
+  en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  pt: ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"],
+};
+
+/** The month a date falls in: `November 2026` / `novembro de 2026`. */
+export function formatMonth(date: string, locale: Locale = "en"): string {
+  const [year, month] = date.split("-");
+  const name = MONTHS[locale][Number(month) - 1];
+  return locale === "pt" ? `${name} de ${year}` : `${name} ${year}`;
+}
+
+/** The short weekday names, Monday first. */
+export const weekdayNames = (locale: Locale): string[] => [...WEEKDAYS[locale].slice(1), WEEKDAYS[locale][0]];
+
 /** `2026-11-17` → `Tue 17/11` / `ter 17/11`. */
 export function formatDay(date: string, locale: Locale = "en"): string {
   const [, month, day] = date.split("-");

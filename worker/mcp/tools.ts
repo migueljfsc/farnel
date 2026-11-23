@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 import { formatMoney } from "../../shared/format";
+import { BASE_TAGS, hasProteinAndBase, PROTEIN_TAGS } from "../../shared/tags";
 import { date, dishInput, id, planInput } from "../lib/schemas";
 import { catalogueCounts, createDish, getDish } from "../lib/service/catalogue";
 import { getSettings, listPeople } from "../lib/service/people";
@@ -109,9 +110,12 @@ export const TOOLS: Tool[] = [
   tool({
     name: "add_dish",
     description:
-      "Proposes a new dish. It is saved as pending and cannot be planned until a person validates it in the web app. New ingredients start undecided for every restriction; give them an estimated priceCents (per 1000 g, 1000 ml or 1 un).",
+      `Proposes a new dish. It is saved as pending and cannot be planned until a person validates it in the web app. Tags must include one protein (${PROTEIN_TAGS.join(", ")}) and one base (${BASE_TAGS.join(", ")}); add others freely. Ingredients that do not exist yet are created: give each an estimated priceCents (per 1000 g, 1000 ml or 1 un) and its supermarket aisle. New ingredients start undecided for every restriction.`,
     input: dishInput,
     async run(db, input, { now }) {
+      if (!hasProteinAndBase(input.tags)) {
+        return { summary: `Tags need one protein (${PROTEIN_TAGS.join(", ")}) and one base (${BASE_TAGS.join(", ")}).`, data: { error: "tags" }, isError: true };
+      }
       const result = await createDish(db, input, "claude", now);
       if (!result.ok) return { summary: `Unit mismatch for ${result.ingredient}; use the existing ingredient's unit.`, data: result, isError: true };
       const dish = await getDish(db, result.id);

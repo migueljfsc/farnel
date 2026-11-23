@@ -51,6 +51,66 @@ export const pt: Dictionary = {
   "toast.skipped": "{dish} marcado como não feito",
   "toast.replaced": "{dish} marcado como trocado",
   "toast.restored": "{dish} de volta ao plano",
+  // ---------------------------------------------------------------- aisles
+  "aisle.produce": "Frutas e legumes",
+  "aisle.bakery": "Padaria",
+  "aisle.butcher": "Talho",
+  "aisle.fish": "Peixaria",
+  "aisle.dairy": "Laticínios e ovos",
+  "aisle.pantry": "Mercearia",
+  "aisle.frozen": "Congelados",
+  "aisle.misc": "Outros",
+
+  // -------------------------------------------------------------- calendar
+  "calendar.choose": "Escolher semana",
+  "calendar.thisWeek": "Esta semana",
+  "calendar.previousMonth": "Mês anterior",
+  "calendar.nextMonth": "Mês seguinte",
+  "calendar.hasPlan": "tem plano",
+
+  // ----------------------------------------------------------------- board
+  "board.cookDay": "cozinhar neste dia",
+  "board.noMeal": "sem refeição",
+
+  // -------------------------------------------------------------- shopping
+  "shopping.share": "Partilhar",
+  "shopping.copy": "Copiar",
+  "shopping.copied": "Copiada",
+  "shopping.bought": "{count} de {total} comprados",
+  "shopping.estimate": "Estimativa {total} de {budget}",
+  "shopping.heading": "Lista de compras, semana de {day}",
+
+  // ---------------------------------------------------------- restrictions
+  "contains.label": "Contém",
+  "contains.confirm": "Confirmar",
+  "contains.none": "Nada disto",
+  "contains.decided": "Decidido",
+
+  // ------------------------------------------------------------------ tags
+  "tags.protein": "Proteína",
+  "tags.base": "Base do prato",
+  "tags.extra": "Outras etiquetas (separadas por vírgulas)",
+  "tags.missing": "Escolha uma proteína e uma base.",
+  "tag.carne": "carne",
+  "tag.peixe": "peixe",
+  "tag.marisco": "marisco",
+  "tag.ovos": "ovos",
+  "tag.vegetariano": "vegetariano",
+  "tag.arroz": "arroz",
+  "tag.massa": "massa",
+  "tag.batata": "batata",
+  "tag.leguminosas": "leguminosas",
+  "tag.pão": "pão",
+  "tag.sopa": "sopa",
+
+  // ----------------------------------------------------- ingredient picker
+  "ingredients.new": "Novo ingrediente",
+  "ingredients.unit": "Unidade",
+  "ingredients.price": "Preço",
+  "ingredients.aisle": "Secção",
+  "picker.search": "Procurar ingrediente…",
+  "picker.create": "Criar «{name}»",
+  "picker.noMatch": "Ainda não há ingrediente com esse nome.",
 
   // ---------------------------------------------------------------- errors
   "error.generic": "Algo correu mal.",

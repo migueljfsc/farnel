@@ -8,6 +8,7 @@ import {
   createDish,
   listRestrictions,
   restrictionByName,
+  createIngredient,
   getDish,
   listDishes,
   listIngredients,
@@ -73,6 +74,25 @@ describe("ingredients", () => {
     expect((await listIngredients(db)).find((i) => i.id === rice)).toMatchObject({ priceCents: 300, priceUpdatedAt: NOW, statuses: { [await restrictionId(db)]: "forbidden" } });
     expect(await updateIngredient(db, rice, { name: "massa" }, NOW)).toBe("name_taken");
     expect(await updateIngredient(db, 999, { name: "x" }, NOW)).toBe("not_found");
+  });
+});
+
+describe("creating ingredients", () => {
+  it("creates an ingredient with its aisle and decisions, undecided for the rest", async () => {
+    const lactose = await restrictionByName(db, "lactose");
+    const created = await createIngredient(db, { name: "Pão", unit: "un", priceCents: 40, aisle: "bakery", statuses: { [await restrictionId(db)]: "forbidden" } }, NOW);
+    expect(created).toEqual({ id: expect.any(Number) });
+    const [bread] = await listIngredients(db);
+    expect(bread).toMatchObject({ name: "Pão", unit: "un", priceCents: 40, aisle: "bakery", statuses: { [await restrictionId(db)]: "forbidden", [lactose]: "unknown" } });
+    expect(await createIngredient(db, { name: " pao ", unit: "g", aisle: "misc" }, NOW)).toBe("name_taken");
+  });
+
+  it("keeps the aisle Claude gives a new ingredient, and lets a person change it", async () => {
+    await createDish(db, input("Peixe", [{ name: "Dourada", quantity: 400, unit: "g", aisle: "fish" }]), "claude", NOW);
+    const [fish] = await listIngredients(db);
+    expect(fish.aisle).toBe("fish");
+    expect(await updateIngredient(db, fish.id, { aisle: "frozen" }, NOW)).toBe("ok");
+    expect((await listIngredients(db))[0].aisle).toBe("frozen");
   });
 });
 

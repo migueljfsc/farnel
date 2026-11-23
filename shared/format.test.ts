@@ -42,3 +42,22 @@ describe("formatting per language", () => {
     expect(formatMoney(1234, "en")).toBe("€12.34");
   });
 });
+
+describe("quantities and months", () => {
+  it("writes quantities in the unit people would say", async () => {
+    const { formatQuantity } = await import("./format");
+    expect(formatQuantity(400, "g", "pt")).toBe("400 g");
+    expect(formatQuantity(1200, "g", "pt")).toBe("1,2 kg");
+    expect(formatQuantity(1000, "g", "en")).toBe("1 kg");
+    expect(formatQuantity(500, "ml", "en")).toBe("500 ml");
+    expect(formatQuantity(1500, "ml", "pt")).toBe("1,5 L");
+    expect(formatQuantity(2.5, "un", "pt")).toBe("2,5 un");
+    expect(formatQuantity(333.333, "g", "en")).toBe("333 g");
+  });
+
+  it("names a month", async () => {
+    const { formatMonth } = await import("./format");
+    expect(formatMonth("2026-11-23", "pt")).toBe("novembro de 2026");
+    expect(formatMonth("2026-11-23", "en")).toBe("November 2026");
+  });
+});

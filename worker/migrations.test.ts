@@ -9,7 +9,12 @@ describe("initial schema", () => {
 
   it("seeds the settings row", async () => {
     const row = await env.DB.prepare("SELECT * FROM settings").first();
-    expect(row).toEqual({ id: 1, weekly_budget_cents: 6000, lunches_per_week: 5 });
+    expect(row).toEqual({ id: 1, weekly_budget_cents: 3000, lunches_per_week: 5 });
+  });
+
+  it("puts new ingredients in the 'misc' aisle unless told otherwise", async () => {
+    await env.DB.prepare("INSERT INTO ingredients (name, name_key, unit) VALUES ('Sal', 'sal-aisle-test', 'g')").run();
+    expect(await env.DB.prepare("SELECT aisle FROM ingredients WHERE name_key = 'sal-aisle-test'").first("aisle")).toBe("misc");
   });
 
   it("records who eats each plan", async () => {

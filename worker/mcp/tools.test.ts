@@ -26,7 +26,7 @@ describe("mcp tools", () => {
     const result = await runTool("get_context", db, {}, clock);
     expect(result.data).toMatchObject({
       today: "2026-11-22",
-      settings: { weeklyBudgetCents: 6000, lunchesPerWeek: 5 },
+      settings: { weeklyBudgetCents: 3000, lunchesPerWeek: 5 },
       people: [{ name: "Ana", hard: ["gluten"], soft: [], preferences: "" }],
       weeks: { current: { weekStart: "2026-11-16", hasPlan: false }, next: { weekStart: "2026-11-23", hasPlan: false } },
     });
@@ -47,7 +47,7 @@ describe("mcp tools", () => {
     const result = await runTool(
       "add_dish",
       db,
-      { name: "Caril", portions: 4, repeatIntervalDays: 21, tags: ["vegetariano"], ingredients: [{ name: "Grão", quantity: 400, unit: "g", priceCents: 300 }] },
+      { name: "Caril", portions: 4, repeatIntervalDays: 21, tags: ["vegetariano", "leguminosas"], ingredients: [{ name: "Grão", quantity: 400, unit: "g", priceCents: 300 }] },
       clock,
     );
     const data = result.data as { dish: { status: string; createdBy: string }; ingredientsToReview: number[] };
@@ -63,6 +63,12 @@ describe("mcp tools", () => {
     const result = await runTool("save_plan", db, plan, clock);
     expect(result.isError).toBeUndefined();
     expect((result.data as { plan: { people: { name: string }[] } }).plan.people).toEqual([{ id: ana, name: "Ana" }]);
+  });
+
+  it("refuses a new dish without one protein and one base tag", async () => {
+    const dish = { name: "Arroz de pato", portions: 4, repeatIntervalDays: 21, ingredients: [{ name: "Pato", quantity: 1000, unit: "g" }] };
+    expect((await runTool("add_dish", db, { ...dish, tags: ["carne"] }, clock)).isError).toBe(true);
+    expect((await runTool("add_dish", db, { ...dish, tags: ["Carne", "arroz", "forno"] }, clock)).isError).toBeUndefined();
   });
 
   it("rejects arguments that do not match the tool's schema", async () => {

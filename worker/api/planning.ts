@@ -1,6 +1,6 @@
 import { fail, json } from "../lib/http";
 import { cookingChange, date, feedback } from "../lib/schemas";
-import { getPlan, history, setCookingStatus, setFeedback, shoppingList } from "../lib/service/planning";
+import { getPlan, history, plannedWeeks, setCookingStatus, setFeedback, shoppingList } from "../lib/service/planning";
 import { addDays, HISTORY_DAYS, isMonday } from "../../shared/time";
 import { idParam, outcome, route, withBody, type Route } from "./routing";
 
@@ -10,6 +10,12 @@ export const planningRoutes: Route[] = [
     if (!isMonday(weekStart)) return fail("week_start_not_monday", 400);
     const [plan, shopping] = await Promise.all([getPlan(db, weekStart, today), shoppingList(db, weekStart)]);
     return json({ plan, shopping });
+  }),
+  route("GET", /^\/api\/plans$/, async ({ db, url }) => {
+    const from = date.safeParse(url.searchParams.get("from"));
+    const to = date.safeParse(url.searchParams.get("to"));
+    if (!from.success || !to.success) return fail("invalid", 400);
+    return json({ weeks: await plannedWeeks(db, from.data, to.data) });
   }),
   route("GET", /^\/api\/history$/, async ({ db, url, today }) => {
     const from = date.safeParse(url.searchParams.get("from")).data ?? addDays(today, -HISTORY_DAYS);

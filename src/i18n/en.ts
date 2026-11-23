@@ -51,6 +51,66 @@ export const en = {
   "toast.skipped": "{dish} marked as not made",
   "toast.replaced": "{dish} marked as replaced",
   "toast.restored": "{dish} back in the plan",
+  // ---------------------------------------------------------------- aisles
+  "aisle.produce": "Fruit and veg",
+  "aisle.bakery": "Bakery",
+  "aisle.butcher": "Butcher",
+  "aisle.fish": "Fish",
+  "aisle.dairy": "Dairy and eggs",
+  "aisle.pantry": "Pantry",
+  "aisle.frozen": "Frozen",
+  "aisle.misc": "Other",
+
+  // -------------------------------------------------------------- calendar
+  "calendar.choose": "Choose a week",
+  "calendar.thisWeek": "This week",
+  "calendar.previousMonth": "Previous month",
+  "calendar.nextMonth": "Next month",
+  "calendar.hasPlan": "has a plan",
+
+  // ----------------------------------------------------------------- board
+  "board.cookDay": "cook on this day",
+  "board.noMeal": "no meal",
+
+  // -------------------------------------------------------------- shopping
+  "shopping.share": "Share",
+  "shopping.copy": "Copy",
+  "shopping.copied": "Copied",
+  "shopping.bought": "{count} of {total} bought",
+  "shopping.estimate": "Estimated {total} of {budget}",
+  "shopping.heading": "Shopping list, week of {day}",
+
+  // ---------------------------------------------------------- restrictions
+  "contains.label": "Contains",
+  "contains.confirm": "Confirm",
+  "contains.none": "None of these",
+  "contains.decided": "Decided",
+
+  // ------------------------------------------------------------------ tags
+  "tags.protein": "Protein",
+  "tags.base": "Base of the dish",
+  "tags.extra": "Other tags (comma separated)",
+  "tags.missing": "Pick a protein and a base.",
+  "tag.carne": "meat",
+  "tag.peixe": "fish",
+  "tag.marisco": "seafood",
+  "tag.ovos": "eggs",
+  "tag.vegetariano": "vegetarian",
+  "tag.arroz": "rice",
+  "tag.massa": "pasta",
+  "tag.batata": "potato",
+  "tag.leguminosas": "pulses",
+  "tag.pão": "bread",
+  "tag.sopa": "soup",
+
+  // ----------------------------------------------------- ingredient picker
+  "ingredients.new": "New ingredient",
+  "ingredients.unit": "Unit",
+  "ingredients.price": "Price",
+  "ingredients.aisle": "Aisle",
+  "picker.search": "Find an ingredient…",
+  "picker.create": "Create “{name}”",
+  "picker.noMatch": "No ingredient with that name yet.",
 
   // ---------------------------------------------------------------- errors
   "error.generic": "Something went wrong.",

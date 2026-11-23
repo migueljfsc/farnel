@@ -1,5 +1,6 @@
 /** Candidates, weekly plans, history, cooking outcomes, feedback and the shopping list. */
 
+import type { Aisle } from "../../../shared/aisles";
 import type { Candidate, CookingStatus, CookingView, FeedbackView, Meal, PlanView, ShoppingList, Unit } from "../../../shared/types";
 import { idList, rows } from "../db";
 import { costPerPortionCents, eligibility, lineCostCents, mealKey, validatePlan, type PlanError, type PlanInput } from "../rules";
@@ -270,13 +271,21 @@ export async function setFeedback(
   return "ok";
 }
 
+/** Monday of every week with a plan between `from` and `to`. */
+export async function plannedWeeks(db: D1Database, from: string, to: string): Promise<string[]> {
+  const result = await rows<{ weekStart: string }>(
+    db.prepare("SELECT week_start AS weekStart FROM plans WHERE week_start BETWEEN ?1 AND ?2 ORDER BY week_start").bind(from, to),
+  );
+  return result.map((r) => r.weekStart);
+}
+
 // ---------------------------------------------------------------- shopping list
 
 export async function shoppingList(db: D1Database, weekStart: string): Promise<ShoppingList> {
-  const lines = await rows<{ ingredientId: number; name: string; unit: Unit; priceCents: number | null; quantity: number }>(
+  const lines = await rows<{ ingredientId: number; name: string; unit: Unit; aisle: Aisle; priceCents: number | null; quantity: number }>(
     db
       .prepare(
-        `SELECT i.id AS ingredientId, i.name, i.unit, i.price_cents AS priceCents, SUM(di.quantity * c.portions / d.portions) AS quantity
+        `SELECT i.id AS ingredientId, i.name, i.unit, i.aisle, i.price_cents AS priceCents, SUM(di.quantity * c.portions / d.portions) AS quantity
          FROM cookings c JOIN plans p ON p.id = c.plan_id JOIN dishes d ON d.id = c.dish_id
          JOIN dish_ingredients di ON di.dish_id = c.dish_id JOIN ingredients i ON i.id = di.ingredient_id
          WHERE p.week_start = ?1 AND c.status = 'planned'
@@ -286,7 +295,7 @@ export async function shoppingList(db: D1Database, weekStart: string): Promise<S
   );
   const items = lines.map((l) => {
     const quantity = Math.round(l.quantity * 100) / 100;
-    return { ingredientId: l.ingredientId, name: l.name, unit: l.unit, quantity, costCents: lineCostCents(quantity, l.unit, l.priceCents) };
+    return { ingredientId: l.ingredientId, name: l.name, unit: l.unit, aisle: l.aisle, quantity, costCents: lineCostCents(quantity, l.unit, l.priceCents) };
   });
   return {
     items,

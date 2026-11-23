@@ -1,5 +1,4 @@
 import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
-import type { DecidedStatus, RestrictionStatus } from "../../shared/types";
 import type { SaveState } from "../lib/autosave";
 import { errorMessage } from "../lib/errors";
 import { useI18n } from "../i18n/context";
@@ -15,7 +14,7 @@ export function Link({ to, className, children, ...rest }: { to: Route; classNam
     <a
       {...rest}
       href={href(to)}
-      className={cx("text-manjericao underline-offset-4 hover:underline", className)}
+      className={cx("text-ganga underline-offset-4 hover:underline", className)}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey) return;
         e.preventDefault();
@@ -53,7 +52,7 @@ export const List = ({ children }: { children: ReactNode }) => (
 );
 
 export const Row = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <li className={cx("px-4 py-3 transition-colors hover:bg-folha/60", className)}>{children}</li>
+  <li className={cx("px-4 py-3 transition-colors hover:bg-aveia/60", className)}>{children}</li>
 );
 
 /** Switches between the two halves of the catalogue: dishes and their ingredients. */
@@ -63,7 +62,7 @@ export function CatalogueTabs({ current }: { current: "dishes" | "ingredients" }
     <Link
       to={{ page }}
       aria-current={current === page ? "page" : undefined}
-      className={cx("rounded-full px-4 py-1.5 text-sm font-semibold no-underline transition hover:no-underline", current === page ? "bg-louca text-terra! shadow-tin" : "text-terra-soft! hover:text-terra!")}
+      className={cx("rounded-full px-4 py-1.5 text-sm font-semibold no-underline transition hover:no-underline", current === page ? "bg-louca text-cafe! shadow-tin" : "text-cafe-soft! hover:text-cafe!")}
     >
       {t(label)}
     </Link>
@@ -80,9 +79,9 @@ export function CatalogueTabs({ current }: { current: "dishes" | "ingredients" }
 export function SaveStatus({ state }: { state: SaveState }) {
   const { t } = useI18n();
   if (state === "idle") return null;
-  if (state === "error") return <span className="text-sm font-medium text-tomate">{t("error.generic")}</span>;
+  if (state === "error") return <span className="text-sm font-medium text-rosa">{t("error.generic")}</span>;
   return (
-    <span role="status" className={cx("text-sm font-medium", state === "saving" ? "text-terra-soft" : "animate-pop text-manjericao")}>
+    <span role="status" className={cx("text-sm font-medium", state === "saving" ? "text-cafe-soft" : "animate-pop text-ganga")}>
       {state === "saving" ? t("common.saving") : `✓ ${t("common.saved")}`}
     </span>
   );
@@ -90,7 +89,7 @@ export function SaveStatus({ state }: { state: SaveState }) {
 
 export const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <label className="block space-y-1 text-sm">
-    <span className="font-medium text-terra-soft">{label}</span>
+    <span className="font-medium text-cafe-soft">{label}</span>
     {children}
   </label>
 );
@@ -121,7 +120,7 @@ function LoadingText() {
 
 export function ErrorText({ error }: { error: unknown }) {
   const { t } = useI18n();
-  return <p className="text-sm font-medium text-tomate">{errorMessage(t, error)}</p>;
+  return <p className="text-sm font-medium text-rosa">{errorMessage(t, error)}</p>;
 }
 
 export function Stars({ value, onChange }: { value: number | undefined; onChange?: (rating: number) => void }) {
@@ -141,39 +140,14 @@ export function Stars({ value, onChange }: { value: number | undefined; onChange
           }}
           className={cx(
             "px-0.5 text-xl leading-none transition-colors",
-            n <= (value ?? 0) ? "text-tomate" : "text-terra-soft/35",
-            onChange ? "hover:text-tomate/70" : "cursor-default",
+            n <= (value ?? 0) ? "text-rosa" : "text-cafe-soft/35",
+            onChange ? "hover:text-rosa/70" : "cursor-default",
             popped === n && "animate-pop",
           )}
         >
           ★
         </button>
       ))}
-    </span>
-  );
-}
-
-/** Safe / forbidden for one ingredient and restriction; undecided stands out until someone chooses. */
-export function StatusToggle({ label, status, onChange }: { label: string; status: RestrictionStatus | undefined; onChange: (status: DecidedStatus) => void }) {
-  const { t } = useI18n();
-  const undecided = status !== "safe" && status !== "forbidden";
-  const option = (value: DecidedStatus, text: string, on: string) => (
-    <button
-      type="button"
-      aria-pressed={status === value}
-      onClick={() => onChange(value)}
-      className={cx("rounded-full px-2.5 py-0.5 text-xs font-semibold transition", status === value ? on : "text-terra-soft hover:text-terra")}
-    >
-      {text}
-    </button>
-  );
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs">
-      <span className={cx(undecided ? "font-bold text-tomate" : "text-terra-soft")}>{label}</span>
-      <span className={cx("inline-flex rounded-full bg-folha p-0.5 ring-1", undecided ? "ring-tomate/50" : "ring-linha")}>
-        {option("safe", t("restriction.safe"), "bg-manjericao text-louca")}
-        {option("forbidden", t("restriction.forbidden"), "bg-tomate text-louca")}
-      </span>
     </span>
   );
 }

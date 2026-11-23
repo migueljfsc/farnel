@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { parseMoney } from "../../shared/format";
-import { nameKey } from "../../shared/names";
-import type { DishDetail, IngredientView, Restriction, Unit } from "../../shared/types";
-import { IngredientStatuses } from "../components/IngredientStatuses";
+import { hasProteinAndBase } from "../../shared/tags";
+import type { DishDetail, IngredientView, Restriction } from "../../shared/types";
+import { ContainsPicker } from "../components/ContainsPicker";
+import { IngredientPicker } from "../components/IngredientPicker";
+import { TagPicker } from "../components/TagPicker";
 import { Badge, Button, Card, ErrorText, Field, Loaded, Page, Stars } from "../components/ui";
 import { inputBase, inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
@@ -10,10 +11,8 @@ import { useApp } from "../lib/app-context";
 import { useI18n } from "../i18n/context";
 
 interface Line {
-  name: string;
+  ingredientId: number | null;
   quantity: string;
-  unit: Unit;
-  price: string;
 }
 
 interface Form {
@@ -21,29 +20,33 @@ interface Form {
   notes: string;
   portions: string;
   repeatIntervalDays: string;
-  tags: string;
+  tags: string[];
   lines: Line[];
 }
 
-const EMPTY_LINE: Line = { name: "", quantity: "", unit: "g", price: "" };
-const EMPTY: Form = { name: "", notes: "", portions: "4", repeatIntervalDays: "14", tags: "", lines: [EMPTY_LINE] };
+const EMPTY_LINE: Line = { ingredientId: null, quantity: "" };
+const EMPTY: Form = { name: "", notes: "", portions: "4", repeatIntervalDays: "14", tags: [], lines: [EMPTY_LINE] };
 
 const toForm = (d: DishDetail): Form => ({
   name: d.name,
   notes: d.notes,
   portions: String(d.portions),
   repeatIntervalDays: String(d.repeatIntervalDays),
-  tags: d.tags.join(", "),
-  lines: d.ingredients.map((i) => ({ name: i.name, quantity: String(i.quantity), unit: i.unit, price: "" })),
+  tags: d.tags,
+  lines: d.ingredients.map((i) => ({ ingredientId: i.ingredientId, quantity: String(i.quantity) })),
 });
 
-const toBody = (f: Form) => ({
+/** Lines refer to existing ingredients only; the API matches them by name and unit. */
+const toBody = (f: Form, known: Map<number, IngredientView>) => ({
   name: f.name,
   notes: f.notes,
   portions: Number(f.portions),
   repeatIntervalDays: Number(f.repeatIntervalDays),
-  tags: f.tags.split(",").map((t) => t.trim()).filter(Boolean),
-  ingredients: f.lines.filter((l) => l.name.trim()).map((l) => ({ name: l.name, quantity: Number(l.quantity), unit: l.unit, priceCents: parseMoney(l.price) })),
+  tags: f.tags,
+  ingredients: f.lines.flatMap((l) => {
+    const ingredient = l.ingredientId === null ? undefined : known.get(l.ingredientId);
+    return ingredient ? [{ name: ingredient.name, quantity: Number(l.quantity), unit: ingredient.unit }] : [];
+  }),
 });
 
 export function DishEditor({ id }: { id: number | "new" }) {
@@ -69,7 +72,9 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
   const setLine = (index: number, patch: Partial<Line>) => set({ lines: form.lines.map((l, i) => (i === index ? { ...l, ...patch } : l)) });
-  const knownByKey = new Map(known.map((k) => [nameKey(k.name), k]));
+  const [ingredients, setIngredients] = useState(known);
+  const byId = new Map(ingredients.map((i) => [i.id, i]));
+  const tagsOk = hasProteinAndBase(form.tags);
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -87,10 +92,10 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
   const save = () =>
     run(async () => {
       if (dish) {
-        await api.put(`/api/dishes/${dish.id}`, toBody(form));
+        await api.put(`/api/dishes/${dish.id}`, toBody(form, byId));
         reload();
       } else {
-        const { id } = await api.post<{ id: number }>("/api/dishes", toBody(form));
+        const { id } = await api.post<{ id: number }>("/api/dishes", toBody(form, byId));
         navigate({ page: "dish", id });
       }
     });
@@ -106,7 +111,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
       actions={
         dish && (
           <>
-            <Badge tone={dish.status === "validated" ? "manjericao" : dish.status === "pending" ? "acafrao" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
+            <Badge tone={dish.status === "validated" ? "ganga" : dish.status === "pending" ? "rosa" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
             {dish.status === "pending" && <Button disabled={busy} onClick={() => action("validate")}>{t("dish.validate")}</Button>}
             {dish.status === "archived" ? (
               <Button variant="secondary" disabled={busy} onClick={() => action("unarchive")}>{t("dish.unarchive")}</Button>
@@ -123,15 +128,15 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
         <Field label={t("dish.name")}>
           <input className={inputClass} value={form.name} onChange={(e) => set({ name: e.target.value })} />
         </Field>
-        <Field label={t("dish.tags")}>
-          <input className={inputClass} value={form.tags} onChange={(e) => set({ tags: e.target.value })} />
-        </Field>
         <Field label={t("dish.portionsField")}>
           <input className={inputClass} type="number" min={1} value={form.portions} onChange={(e) => set({ portions: e.target.value })} />
         </Field>
         <Field label={t("dish.interval")}>
           <input className={inputClass} type="number" min={0} value={form.repeatIntervalDays} onChange={(e) => set({ repeatIntervalDays: e.target.value })} />
         </Field>
+        <div className="sm:col-span-2">
+          <TagPicker tags={form.tags} onChange={(tags) => set({ tags })} />
+        </div>
         <div className="sm:col-span-2">
           <Field label={t("dish.notes")}>
             <textarea className={inputClass} rows={3} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
@@ -141,33 +146,34 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
 
       <Card className="space-y-2">
         <h2 className="font-medium">{t("nav.ingredients")}</h2>
-        <datalist id="known-ingredients">
-          {known.map((k) => (
-            <option key={k.id} value={k.name} />
-          ))}
-        </datalist>
         {form.lines.map((line, index) => {
-          const existing = knownByKey.get(nameKey(line.name));
+          const ingredient = line.ingredientId === null ? undefined : byId.get(line.ingredientId);
           return (
-            <div key={index} className="flex flex-wrap items-center gap-2">
-              <input className={`${inputClass} min-w-32 flex-1`} list="known-ingredients" placeholder={t("dish.ingredient")} value={line.name} onChange={(e) => setLine(index, { name: e.target.value })} />
-              <input className={`${inputBase} w-20`} inputMode="decimal" placeholder={t("dish.quantity")} value={line.quantity} onChange={(e) => setLine(index, { quantity: e.target.value })} />
-              <select className={`${inputBase} w-16`} value={existing?.unit ?? line.unit} disabled={!!existing} onChange={(e) => setLine(index, { unit: e.target.value as Unit })}>
-                {(["g", "ml", "un"] as const).map((u) => (
-                  <option key={u} value={u}>
-                    {t(`unit.${u}`)}
-                  </option>
-                ))}
-              </select>
-              {!existing && <input className={`${inputBase} w-24`} inputMode="decimal" placeholder={t("dish.newPrice")} value={line.price} onChange={(e) => setLine(index, { price: e.target.value })} />}
-              <Button variant="secondary" aria-label={t("common.remove", { name: line.name })} onClick={() => set({ lines: form.lines.filter((_, i) => i !== index) })}>✕</Button>
+            <div key={index} className="flex flex-wrap items-start gap-2">
+              <IngredientPicker
+                known={ingredients}
+                value={ingredient}
+                onPick={(picked) => setLine(index, { ingredientId: picked.id })}
+                onCreated={(created) => {
+                  setIngredients((all) => [...all, created]);
+                  setLine(index, { ingredientId: created.id });
+                }}
+              />
+              <span className="flex items-center gap-1.5">
+                <input className={`${inputBase} w-24`} inputMode="decimal" placeholder={t("dish.quantity")} value={line.quantity} onChange={(e) => setLine(index, { quantity: e.target.value })} />
+                <span className="w-6 text-sm text-cafe-soft">{ingredient && t(`unit.${ingredient.unit}`)}</span>
+              </span>
+              <Button variant="secondary" aria-label={t("common.remove", { name: ingredient?.name ?? "" })} onClick={() => set({ lines: form.lines.filter((_, i) => i !== index) })}>
+                ✕
+              </Button>
             </div>
           );
         })}
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>{t("dish.addIngredient")}</Button>
-          <Button disabled={busy} onClick={save}>{t(dish ? "common.save" : "dish.create")}</Button>
+          <Button disabled={busy || !tagsOk} onClick={save}>{t(dish ? "common.save" : "dish.create")}</Button>
         </div>
+        {!tagsOk && <p className="text-sm text-rosa">{t("tags.missing")}</p>}
       </Card>
 
       {dish && dish.ingredients.length > 0 && (
@@ -176,10 +182,10 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           {dish.ingredients.map((i) => (
             <div key={i.ingredientId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>{i.name}</span>
-              <IngredientStatuses ingredientId={i.ingredientId} statuses={i.statuses} restrictions={restrictions} onChange={reload} />
+              <ContainsPicker ingredientId={i.ingredientId} statuses={i.statuses} restrictions={restrictions} onChange={reload} />
             </div>
           ))}
-          <p className="text-xs text-terra-soft">
+          <p className="text-xs text-cafe-soft">
             {t("dish.costPerPortion", { cost: money(dish.costPerPortionCents) })}
             {dish.missingPrice && ` ${t("dish.someMissing")}`}
           </p>
@@ -191,7 +197,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           <h2 className="font-medium">{t("dish.feedback")}</h2>
           {dish.feedback.map((f) => (
             <p key={`${f.cookingId}-${f.personId}`} className="text-sm">
-              <span className="text-terra-soft">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
+              <span className="text-cafe-soft">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
             </p>
           ))}
         </Card>

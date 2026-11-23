@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DishDetail, DishSummary, IngredientView, Restriction } from "../../shared/types";
-import { IngredientStatuses } from "../components/IngredientStatuses";
+import { ContainsPicker } from "../components/ContainsPicker";
 import { Badge, Button, Link, List, Loaded, Page, Row } from "../components/ui";
 import { useI18n } from "../i18n/context";
 import { api, useApi } from "../lib/api";
@@ -17,6 +17,7 @@ export function Review() {
   const restrictions = useApi<{ restrictions: Restriction[] }>("/api/restrictions");
   /** Ingredients of the dish on screen; they are decided in its card, not listed again below. */
   const [inCard, setInCard] = useState<number[]>([]);
+  const seen = useRef(new Set<number>());
   const reload = () => {
     pending.reload();
     ingredients.reload();
@@ -30,21 +31,24 @@ export function Review() {
       >
         {(data) => {
           const undecided = data.ingredients.filter((i) => isUndecided(i, data.restrictions) && (data.dishes.length === 0 || !inCard.includes(i.id)));
-          if (data.dishes.length === 0 && undecided.length === 0) return <AllReviewed />;
+          // Rows decided on this visit stay, marked done, so nothing moves under the pointer.
+          seen.current = new Set([...seen.current, ...undecided.map((i) => i.id)]);
+          const rows = data.ingredients.filter((i) => seen.current.has(i.id) && !(data.dishes.length > 0 && inCard.includes(i.id)));
+          if (data.dishes.length === 0 && rows.length === 0) return <AllReviewed />;
           return (
             <div className="space-y-8">
               {data.dishes.length > 0 && <DishQueue dishes={data.dishes} restrictions={data.restrictions} onChange={reload} onShow={setInCard} />}
-              {undecided.length > 0 && (
+              {rows.length > 0 && (
                 <section className="space-y-3">
                   <div>
                     <h2 className="display text-2xl">{t("review.ingredients")}</h2>
-                    <p className="text-sm text-terra-soft">{t("review.ingredientsHint")}</p>
+                    <p className="text-sm text-cafe-soft">{t("review.ingredientsHint")}</p>
                   </div>
                   <List>
-                    {undecided.map((i) => (
+                    {rows.map((i) => (
                       <Row key={i.id} className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-medium">{i.name}</span>
-                        <IngredientStatuses ingredientId={i.id} statuses={i.statuses} restrictions={data.restrictions} onChange={reload} />
+                        <ContainsPicker ingredientId={i.id} statuses={i.statuses} restrictions={data.restrictions} onChange={reload} />
                       </Row>
                     ))}
                   </List>
@@ -77,7 +81,7 @@ function DishQueue({
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="display text-2xl">{t("review.dishes")}</h2>
-        <span className="text-sm text-terra-soft">{t("review.position", { index: index + 1, total: dishes.length })}</span>
+        <span className="text-sm text-cafe-soft">{t("review.position", { index: index + 1, total: dishes.length })}</span>
       </div>
       <DishReview
         key={current.id}
@@ -133,16 +137,16 @@ function DishReview({
   if (!data) return <div className="skeleton h-64" />;
   const { dish } = data;
   return (
-    <article className="animate-tin space-y-4 rounded-2xl border-[3px] border-acafrao bg-louca p-5">
+    <article className="animate-tin space-y-4 rounded-2xl border-[3px] border-rosa bg-louca p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h3 className="display text-3xl">{dish.name}</h3>
-          <p className="text-sm text-terra-soft">
+          <p className="text-sm text-cafe-soft">
             {t("dishes.summary", { portions: tn("dish.portions", dish.portions), cost: money(dish.costPerPortionCents), days: dish.repeatIntervalDays, last: t("dishes.never") })}
           </p>
         </div>
         <span className="flex flex-wrap gap-1">
-          {dish.createdBy === "claude" && <Badge tone="acafrao">{t("dishes.byClaude")}</Badge>}
+          {dish.createdBy === "claude" && <Badge>{t("dishes.byClaude")}</Badge>}
           {dish.tags.map((tag) => (
             <Badge key={tag}>{tag}</Badge>
           ))}
@@ -154,11 +158,11 @@ function DishReview({
           <li key={i.ingredientId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span>
               <span className="font-medium">{i.name}</span>{" "}
-              <span className="text-terra-soft">
+              <span className="text-cafe-soft">
                 {i.quantity} {t(`unit.${i.unit}`)}
               </span>
             </span>
-            <IngredientStatuses ingredientId={i.ingredientId} statuses={i.statuses} restrictions={restrictions} onChange={() => {
+            <ContainsPicker ingredientId={i.ingredientId} statuses={i.statuses} restrictions={restrictions} onChange={() => {
               reload();
               onDone();
             }} />
@@ -189,10 +193,10 @@ function AllReviewed() {
   const { t } = useI18n();
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-linha px-6 py-14 text-center">
-      <span className="grid size-14 place-items-center rounded-full bg-manjericao-soft text-2xl text-manjericao" aria-hidden>
+      <span className="grid size-14 place-items-center rounded-full bg-ganga-soft text-2xl text-ganga" aria-hidden>
         ✓
       </span>
-      <p className="max-w-sm text-terra-soft">{t("review.empty")}</p>
+      <p className="max-w-sm text-cafe-soft">{t("review.empty")}</p>
       <Link to={{ page: "week" }} className="font-semibold">
         {t("nav.week")}
       </Link>

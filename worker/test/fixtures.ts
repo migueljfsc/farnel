@@ -21,7 +21,7 @@ export async function resetDb(db: D1Database): Promise<void> {
   await db.batch([
     ...tables.map((t) => db.prepare(`DELETE FROM ${t}`)),
     db.prepare("DELETE FROM restrictions WHERE name <> 'gluten'"),
-    db.prepare("UPDATE settings SET weekly_budget_cents = 6000, lunches_per_week = 5"),
+    db.prepare("UPDATE settings SET weekly_budget_cents = 3000, lunches_per_week = 5"),
   ]);
 }
 

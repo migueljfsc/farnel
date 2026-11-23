@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addDish, addHousehold, addIngredient, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId } from "../../test/fixtures";
 import type { PlanInput } from "../rules";
-import { getPlan, history, listCandidates, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
+import { getPlan, history, listCandidates, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
 
 const db = env.DB;
 const NOW = "2026-11-22T10:00:00Z";
@@ -28,7 +28,7 @@ describe("savePlan", () => {
     const result = await savePlan(db, input, TODAY, NOW);
     expect(result.ok).toBe(true);
     const plan = await getPlan(db, "2026-11-23", TODAY);
-    expect(plan).toMatchObject({ weekStart: "2026-11-23", budgetCents: 6000, totalCents: 100, overBudget: false });
+    expect(plan).toMatchObject({ weekStart: "2026-11-23", budgetCents: 3000, totalCents: 100, overBudget: false });
     expect(plan!.cookings.map((c) => [c.dish, c.costCents, c.status, c.meals])).toEqual([
       ["A", 80, "planned", [lunch("2026-11-23"), lunch("2026-11-24")]],
       ["B", 20, "planned", [lunch("2026-11-25")]],
@@ -204,6 +204,16 @@ describe("history and cookings", () => {
   });
 });
 
+describe("plannedWeeks", () => {
+  it("lists the weeks with a plan between two dates", async () => {
+    const a = await addDish(db, "A");
+    await addPlan(db, "2026-11-16", [{ dishId: a, cookDate: "2026-11-16" }]);
+    await addPlan(db, "2026-12-07", [{ dishId: a, cookDate: "2026-12-07", meals: ["2026-12-08"] }]);
+    expect(await plannedWeeks(db, "2026-11-01", "2026-11-30")).toEqual(["2026-11-16"]);
+    expect(await plannedWeeks(db, "2026-11-01", "2026-12-31")).toEqual(["2026-11-16", "2026-12-07"]);
+  });
+});
+
 describe("shoppingList", () => {
   it("scales dish quantities to the cooking's portions and skips skipped cookings", async () => {
     const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
@@ -214,7 +224,7 @@ describe("shoppingList", () => {
       { dishId: b, cookDate: "2026-11-24", portions: 2, status: "skipped" },
     ]);
     expect(await shoppingList(db, "2026-11-23")).toEqual({
-      items: [{ ingredientId: rice, name: "Arroz", unit: "g", quantity: 200, costCents: 40 }],
+      items: [{ ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 200, costCents: 40 }],
       totalCents: 40,
       missingPrices: 0,
     });
