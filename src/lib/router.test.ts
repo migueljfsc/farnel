@@ -11,6 +11,7 @@ describe("router", () => {
     expect(parseRoute("/dishes/new", "")).toEqual({ page: "dish", id: "new" });
     expect(parseRoute("/ingredients", "?filter=to-decide")).toEqual({ page: "ingredients", filter: "to-decide" });
     expect(parseRoute("/settings", "")).toEqual({ page: "settings" });
+    expect(parseRoute("/review", "")).toEqual({ page: "review" });
   });
 
   it("falls back to the week for unknown paths and filters", () => {
@@ -31,6 +32,7 @@ describe("router", () => {
       { page: "ingredients" },
       { page: "ingredients", filter: "to-decide" },
       { page: "settings" },
+      { page: "review" },
     ];
     for (const route of routes) {
       const url = new URL(href(route), "http://x");

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 
 export type Route =
   | { page: "week"; weekStart?: string }
@@ -6,7 +7,8 @@ export type Route =
   | { page: "dishes"; filter?: "to-validate" | "archived" }
   | { page: "dish"; id: number | "new" }
   | { page: "ingredients"; filter?: "to-decide" }
-  | { page: "settings" };
+  | { page: "settings" }
+  | { page: "review" };
 
 const DISH_FILTERS = ["to-validate", "archived"] as const;
 
@@ -26,6 +28,8 @@ export function parseRoute(pathname: string, search: string): Route {
       return filter === "to-decide" ? { page: "ingredients", filter } : { page: "ingredients" };
     case "settings":
       return { page: "settings" };
+    case "review":
+      return { page: "review" };
     default:
       return { page: "week" };
   }
@@ -45,6 +49,8 @@ export function href(route: Route): string {
       return route.filter ? `/ingredients?filter=${route.filter}` : "/ingredients";
     case "settings":
       return "/settings";
+    case "review":
+      return "/review";
   }
 }
 
@@ -59,9 +65,13 @@ export function useRoute(): [Route, (route: Route) => void] {
     return () => removeEventListener("popstate", onPop);
   }, []);
   const navigate = useCallback((next: Route) => {
-    history.pushState(null, "", href(next));
-    setRoute(next);
-    scrollTo(0, 0);
+    const change = () => {
+      history.pushState(null, "", href(next));
+      flushSync(() => setRoute(next));
+      scrollTo(0, 0);
+    };
+    if (document.startViewTransition) document.startViewTransition(change);
+    else change();
   }, []);
   return [route, navigate];
 }

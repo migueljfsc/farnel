@@ -1,6 +1,7 @@
 import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import type { DecidedStatus, RestrictionStatus } from "../../shared/types";
-import { isMessageKey } from "../i18n/core";
+import type { SaveState } from "../lib/autosave";
+import { errorMessage } from "../lib/errors";
 import { useI18n } from "../i18n/context";
 import { ApiError } from "../lib/api";
 import { useApp } from "../lib/app-context";
@@ -8,12 +9,13 @@ import { href, type Route } from "../lib/router";
 import { buttonClass, cx, TONES, type Tone, type Variant } from "./styles";
 
 
-export function Link({ to, className, children }: { to: Route; className?: string; children: ReactNode }) {
+export function Link({ to, className, children, ...rest }: { to: Route; className?: string; children: ReactNode; "aria-current"?: "page" }) {
   const { navigate } = useApp();
   return (
     <a
+      {...rest}
       href={href(to)}
-      className={cx("text-cobalto underline-offset-4 hover:underline", className)}
+      className={cx("text-manjericao underline-offset-4 hover:underline", className)}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey) return;
         e.preventDefault();
@@ -51,12 +53,44 @@ export const List = ({ children }: { children: ReactNode }) => (
 );
 
 export const Row = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <li className={cx("px-4 py-3 transition-colors hover:bg-esmalte/60", className)}>{children}</li>
+  <li className={cx("px-4 py-3 transition-colors hover:bg-folha/60", className)}>{children}</li>
 );
+
+/** Switches between the two halves of the catalogue: dishes and their ingredients. */
+export function CatalogueTabs({ current }: { current: "dishes" | "ingredients" }) {
+  const { t } = useI18n();
+  const tab = (page: "dishes" | "ingredients", label: "nav.dishes" | "nav.ingredients") => (
+    <Link
+      to={{ page }}
+      aria-current={current === page ? "page" : undefined}
+      className={cx("rounded-full px-4 py-1.5 text-sm font-semibold no-underline transition hover:no-underline", current === page ? "bg-louca text-terra! shadow-tin" : "text-terra-soft! hover:text-terra!")}
+    >
+      {t(label)}
+    </Link>
+  );
+  return (
+    <div className="inline-flex rounded-full bg-linha/60 p-1">
+      {tab("dishes", "nav.dishes")}
+      {tab("ingredients", "nav.ingredients")}
+    </div>
+  );
+}
+
+/** How the last autosave went, next to what was saved. */
+export function SaveStatus({ state }: { state: SaveState }) {
+  const { t } = useI18n();
+  if (state === "idle") return null;
+  if (state === "error") return <span className="text-sm font-medium text-tomate">{t("error.generic")}</span>;
+  return (
+    <span role="status" className={cx("text-sm font-medium", state === "saving" ? "text-terra-soft" : "animate-pop text-manjericao")}>
+      {state === "saving" ? t("common.saving") : `✓ ${t("common.saved")}`}
+    </span>
+  );
+}
 
 export const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <label className="block space-y-1 text-sm">
-    <span className="font-medium text-tinta-soft">{label}</span>
+    <span className="font-medium text-terra-soft">{label}</span>
     {children}
   </label>
 );
@@ -73,17 +107,21 @@ export function Loaded<T>({ data, error, children }: { data: T | undefined; erro
   return <>{children(data)}</>;
 }
 
+/** Shimmering placeholders in the rough shape of a page while its data loads. */
 function LoadingText() {
   const { t } = useI18n();
-  return <p className="animate-pulse text-sm text-tinta-soft">{t("common.loading")}</p>;
+  return (
+    <div role="status" aria-label={t("common.loading")} className="space-y-3">
+      <div className="skeleton h-5 w-2/5" />
+      <div className="skeleton h-24" />
+      <div className="skeleton h-24" />
+    </div>
+  );
 }
 
-/** An API error as a sentence in the reader's language; unknown codes get the generic one. */
 export function ErrorText({ error }: { error: unknown }) {
   const { t } = useI18n();
-  const key = error instanceof ApiError ? `error.${error.code}` : "";
-  const vars = error instanceof ApiError ? (error.details as Record<string, string>) : undefined;
-  return <p className="text-sm font-medium text-colorau">{isMessageKey(key) ? t(key, vars) : t("error.generic")}</p>;
+  return <p className="text-sm font-medium text-tomate">{errorMessage(t, error)}</p>;
 }
 
 export function Stars({ value, onChange }: { value: number | undefined; onChange?: (rating: number) => void }) {
@@ -103,8 +141,8 @@ export function Stars({ value, onChange }: { value: number | undefined; onChange
           }}
           className={cx(
             "px-0.5 text-xl leading-none transition-colors",
-            n <= (value ?? 0) ? "text-colorau" : "text-tinta-soft/35",
-            onChange ? "hover:text-colorau/70" : "cursor-default",
+            n <= (value ?? 0) ? "text-tomate" : "text-terra-soft/35",
+            onChange ? "hover:text-tomate/70" : "cursor-default",
             popped === n && "animate-pop",
           )}
         >
@@ -124,17 +162,17 @@ export function StatusToggle({ label, status, onChange }: { label: string; statu
       type="button"
       aria-pressed={status === value}
       onClick={() => onChange(value)}
-      className={cx("rounded-full px-2.5 py-0.5 text-xs font-semibold transition", status === value ? on : "text-tinta-soft hover:text-tinta")}
+      className={cx("rounded-full px-2.5 py-0.5 text-xs font-semibold transition", status === value ? on : "text-terra-soft hover:text-terra")}
     >
       {text}
     </button>
   );
   return (
     <span className="inline-flex items-center gap-1.5 text-xs">
-      <span className={cx(undecided ? "font-bold text-colorau" : "text-tinta-soft")}>{label}</span>
-      <span className={cx("inline-flex rounded-full bg-esmalte p-0.5 ring-1", undecided ? "ring-colorau/50" : "ring-linha")}>
-        {option("safe", t("restriction.safe"), "bg-azeite text-louca")}
-        {option("forbidden", t("restriction.forbidden"), "bg-colorau text-louca")}
+      <span className={cx(undecided ? "font-bold text-tomate" : "text-terra-soft")}>{label}</span>
+      <span className={cx("inline-flex rounded-full bg-folha p-0.5 ring-1", undecided ? "ring-tomate/50" : "ring-linha")}>
+        {option("safe", t("restriction.safe"), "bg-manjericao text-louca")}
+        {option("forbidden", t("restriction.forbidden"), "bg-tomate text-louca")}
       </span>
     </span>
   );

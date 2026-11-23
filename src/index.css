@@ -23,60 +23,55 @@
 }
 
 /*
- * "Esmalte": the enamel lunch tin. Enamel white, a cobalt rim, paprika and olive oil.
- * Every colour is a variable so dark mode swaps the whole set at once.
+ * "Horta": the kitchen garden. Basil as the main colour, tomato for warnings and forbidden
+ * ingredients, saffron for highlights and what is done, on a fresh sage white.
+ * Each colour carries its light and dark value; the active colour scheme picks one.
  */
 :root {
-  --esmalte: #eef2f1;
-  --louca: #ffffff;
-  --cobalto: #2343a6;
-  --cobalto-soft: #dde4f6;
-  --tinta: #17203a;
-  --tinta-soft: #5a6480;
-  --linha: rgb(23 32 58 / 0.12);
-  --colorau: #d2462a;
-  --colorau-soft: #fbe4de;
-  --azeite: #6d7d22;
-  --azeite-soft: #ebefd6;
+  color-scheme: light dark;
+  --folha: light-dark(#f3f6f1, #0f1612);
+  --louca: light-dark(#ffffff, #18221c);
+  --terra: light-dark(#18211c, #e6eee8);
+  --terra-soft: light-dark(#5b6b60, #9aaea1);
+  --linha: light-dark(rgb(24 33 28 / 0.11), rgb(230 238 232 / 0.11));
+  --manjericao: light-dark(#2f6b4f, #6fc49a);
+  --manjericao-soft: light-dark(#dcebe2, #1d3a2b);
+  --tomate: light-dark(#e5533d, #ff7a63);
+  --tomate-soft: light-dark(#fbe3de, #3d211c);
+  --acafrao: light-dark(#f2b33d, #f5c560);
+  --acafrao-soft: light-dark(#fcefd2, #3a2f14);
+  --sombra: 0 1px 2px light-dark(rgb(24 33 28 / 0.06), rgb(0 0 0 / 0.3)), 0 10px 28px -12px light-dark(rgb(24 33 28 / 0.2), rgb(0 0 0 / 0.6));
+}
+
+/* The theme button pins one scheme; without it the system decides. */
+:root[data-theme="light"] {
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --esmalte: #0e1424;
-    --louca: #172038;
-    --cobalto: #7d97f0;
-    --cobalto-soft: #22305a;
-    --tinta: #e7ecf7;
-    --tinta-soft: #98a3c0;
-    --linha: rgb(231 236 247 / 0.12);
-    --colorau: #f2795e;
-    --colorau-soft: #3d2220;
-    --azeite: #b3c45f;
-    --azeite-soft: #283018;
-    color-scheme: dark;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-esmalte: var(--esmalte);
+  --color-folha: var(--folha);
   --color-louca: var(--louca);
-  --color-cobalto: var(--cobalto);
-  --color-cobalto-soft: var(--cobalto-soft);
-  --color-tinta: var(--tinta);
-  --color-tinta-soft: var(--tinta-soft);
+  --color-terra: var(--terra);
+  --color-terra-soft: var(--terra-soft);
   --color-linha: var(--linha);
-  --color-colorau: var(--colorau);
-  --color-colorau-soft: var(--colorau-soft);
-  --color-azeite: var(--azeite);
-  --color-azeite-soft: var(--azeite-soft);
+  --color-manjericao: var(--manjericao);
+  --color-manjericao-soft: var(--manjericao-soft);
+  --color-tomate: var(--tomate);
+  --color-tomate-soft: var(--tomate-soft);
+  --color-acafrao: var(--acafrao);
+  --color-acafrao-soft: var(--acafrao-soft);
+  --shadow-tin: var(--sombra);
   --font-sans: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 @layer base {
   html {
-    background: var(--esmalte);
-    color: var(--tinta);
+    background: var(--folha);
+    color: var(--terra);
     font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
   }
@@ -87,13 +82,13 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--cobalto);
+    outline: 2px solid var(--manjericao);
     outline-offset: 2px;
     border-radius: 4px;
   }
 
   ::selection {
-    background: var(--cobalto-soft);
+    background: var(--manjericao-soft);
   }
 }
 
@@ -151,6 +146,25 @@
   }
 }
 
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
 @keyframes expand {
   from {
     opacity: 0;
@@ -180,11 +194,38 @@
   animation: pop 260ms ease-out;
 }
 
+.animate-toast {
+  animation: toast-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+.animate-sheet {
+  animation: sheet-up 260ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* Placeholder blocks while data loads. */
+.skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, var(--linha) 25%, var(--folha) 50%, var(--linha) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
 .animate-expand {
   animation: expand 180ms ease-out both;
 }
 
+/* Page changes cross-fade where the browser supports view transitions. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {

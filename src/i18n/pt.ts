@@ -9,6 +9,10 @@ import type { Dictionary } from "./core";
 export const pt: Dictionary = {
   // ------------------------------------------------------------------- app
   "app.locale": "Idioma",
+  "theme.label": "Tema",
+  "theme.system": "Seguir o sistema",
+  "theme.light": "Claro",
+  "theme.dark": "Escuro",
   "nav.week": "Semana",
   "nav.history": "Histórico",
   "nav.dishes": "Pratos",
@@ -16,6 +20,7 @@ export const pt: Dictionary = {
   "nav.toDecide": "Por decidir",
   "nav.ingredients": "Ingredientes",
   "nav.settings": "Definições",
+  "nav.review": "A rever",
 
   // ---------------------------------------------------------------- common
   "common.loading": "A carregar…",
@@ -27,6 +32,25 @@ export const pt: Dictionary = {
   "common.undo": "Anular",
   "common.rating": "{value} de 5",
   "common.notRated": "sem avaliação",
+  "common.close": "Fechar",
+  "common.saving": "A guardar…",
+
+  // ---------------------------------------------------------------- review
+  "review.empty": "Nada para rever. Os pratos novos do Claude e os ingredientes por decidir aparecem aqui.",
+  "review.dishes": "Pratos novos",
+  "review.position": "Prato {index} de {total}",
+  "review.validate": "Validar",
+  "review.skip": "Seguinte",
+  "review.edit": "Editar",
+  "review.validated": "{dish} validado",
+  "review.archived": "{dish} arquivado",
+  "review.ingredients": "Ingredientes por decidir",
+  "review.ingredientsHint": "Diga se cada um é seguro para as restrições do agregado.",
+
+  // ---------------------------------------------------------------- toasts
+  "toast.skipped": "{dish} marcado como não feito",
+  "toast.replaced": "{dish} marcado como trocado",
+  "toast.restored": "{dish} de volta ao plano",
 
   // ---------------------------------------------------------------- errors
   "error.generic": "Algo correu mal.",

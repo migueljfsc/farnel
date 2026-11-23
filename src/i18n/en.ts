@@ -9,6 +9,10 @@
 export const en = {
   // ------------------------------------------------------------------- app
   "app.locale": "Language",
+  "theme.label": "Theme",
+  "theme.system": "Follow the system",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
   "nav.week": "Week",
   "nav.history": "History",
   "nav.dishes": "Dishes",
@@ -16,6 +20,7 @@ export const en = {
   "nav.toDecide": "To decide",
   "nav.ingredients": "Ingredients",
   "nav.settings": "Settings",
+  "nav.review": "To review",
 
   // ---------------------------------------------------------------- common
   "common.loading": "Loading…",
@@ -27,6 +32,25 @@ export const en = {
   "common.undo": "Undo",
   "common.rating": "{value} of 5",
   "common.notRated": "not rated",
+  "common.close": "Close",
+  "common.saving": "Saving…",
+
+  // ---------------------------------------------------------------- review
+  "review.empty": "Nothing to review. New dishes from Claude and undecided ingredients show up here.",
+  "review.dishes": "New dishes",
+  "review.position": "Dish {index} of {total}",
+  "review.validate": "Validate",
+  "review.skip": "Next",
+  "review.edit": "Edit",
+  "review.validated": "{dish} validated",
+  "review.archived": "{dish} archived",
+  "review.ingredients": "Ingredients to decide",
+  "review.ingredientsHint": "Say whether each one is safe for the restrictions in the household.",
+
+  // ---------------------------------------------------------------- toasts
+  "toast.skipped": "{dish} marked as not made",
+  "toast.replaced": "{dish} marked as replaced",
+  "toast.restored": "{dish} back in the plan",
 
   // ---------------------------------------------------------------- errors
   "error.generic": "Something went wrong.",

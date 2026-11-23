@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DishStatus, DishSummary } from "../../shared/types";
-import { Badge, Button, Link, Loaded, Page, List, Row } from "../components/ui";
+import { Badge, Button, CatalogueTabs, Link, Loaded, Page, List, Row } from "../components/ui";
 import { inputClass } from "../components/styles";
 import { useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
@@ -25,6 +25,7 @@ export function Dishes({ filter }: { filter: Filter }) {
 
   return (
     <Page title={t("nav.dishes")} actions={<Button onClick={() => navigate({ page: "dish", id: "new" })}>{t("dishes.new")}</Button>}>
+      <CatalogueTabs current="dishes" />
       <div className="flex flex-wrap items-center gap-2">
         {TABS.map((option) => (
           <Button key={option.label} variant={option === tab ? "primary" : "secondary"} onClick={() => navigate({ page: "dishes", filter: option.filter })}>
@@ -37,7 +38,7 @@ export function Dishes({ filter }: { filter: Filter }) {
       <Loaded data={data} error={error}>
         {({ dishes }) =>
           dishes.length === 0 ? (
-            <p className="text-sm text-tinta-soft">{t("dishes.empty")}</p>
+            <p className="text-sm text-terra-soft">{t("dishes.empty")}</p>
           ) : (
             <List>
               {dishes.map((d) => (
@@ -46,7 +47,7 @@ export function Dishes({ filter }: { filter: Filter }) {
                     <Link to={{ page: "dish", id: d.id }} className="font-medium">
                       {d.name}
                     </Link>
-                    <p className="text-xs text-tinta-soft">
+                    <p className="text-xs text-terra-soft">
                       {t("dishes.summary", {
                         portions: tn("dish.portions", d.portions),
                         cost: money(d.costPerPortionCents),

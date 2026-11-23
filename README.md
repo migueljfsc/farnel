@@ -52,7 +52,8 @@ The "Plan with Claude" prompt is written in the chosen language, so Claude repli
 - `wrangler.jsonc` `name`, route and D1 `database_name`
 - `infrastructure/terraform/cloudflare/variables.tf` `project_name` default, and `backend.tf` state key
 - `.github/workflows/deploy-worker.yml` environment URL and D1 migrations command
-- `shared/app.ts` `APP_NAME` (page title and MCP server name)
+- `shared/app.ts` `APP_NAME` (in-app wordmark and MCP server name)
+- `index.html` `<title>` and `apple-mobile-web-app-title`, and `public/manifest.webmanifest` `name` / `short_name`
 - this README's commands
 
 ## Go live

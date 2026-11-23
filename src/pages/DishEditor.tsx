@@ -4,7 +4,7 @@ import { nameKey } from "../../shared/names";
 import type { DishDetail, IngredientView, Restriction, Unit } from "../../shared/types";
 import { IngredientStatuses } from "../components/IngredientStatuses";
 import { Badge, Button, Card, ErrorText, Field, Loaded, Page, Stars } from "../components/ui";
-import { inputClass } from "../components/styles";
+import { inputBase, inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { useI18n } from "../i18n/context";
@@ -106,7 +106,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
       actions={
         dish && (
           <>
-            <Badge tone={dish.status === "validated" ? "azeite" : dish.status === "pending" ? "cobalto" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
+            <Badge tone={dish.status === "validated" ? "manjericao" : dish.status === "pending" ? "acafrao" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
             {dish.status === "pending" && <Button disabled={busy} onClick={() => action("validate")}>{t("dish.validate")}</Button>}
             {dish.status === "archived" ? (
               <Button variant="secondary" disabled={busy} onClick={() => action("unarchive")}>{t("dish.unarchive")}</Button>
@@ -151,15 +151,15 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           return (
             <div key={index} className="flex flex-wrap items-center gap-2">
               <input className={`${inputClass} min-w-32 flex-1`} list="known-ingredients" placeholder={t("dish.ingredient")} value={line.name} onChange={(e) => setLine(index, { name: e.target.value })} />
-              <input className={`${inputClass} w-20`} inputMode="decimal" placeholder={t("dish.quantity")} value={line.quantity} onChange={(e) => setLine(index, { quantity: e.target.value })} />
-              <select className={`${inputClass} w-16`} value={existing?.unit ?? line.unit} disabled={!!existing} onChange={(e) => setLine(index, { unit: e.target.value as Unit })}>
+              <input className={`${inputBase} w-20`} inputMode="decimal" placeholder={t("dish.quantity")} value={line.quantity} onChange={(e) => setLine(index, { quantity: e.target.value })} />
+              <select className={`${inputBase} w-16`} value={existing?.unit ?? line.unit} disabled={!!existing} onChange={(e) => setLine(index, { unit: e.target.value as Unit })}>
                 {(["g", "ml", "un"] as const).map((u) => (
                   <option key={u} value={u}>
                     {t(`unit.${u}`)}
                   </option>
                 ))}
               </select>
-              {!existing && <input className={`${inputClass} w-24`} inputMode="decimal" placeholder={t("dish.newPrice")} value={line.price} onChange={(e) => setLine(index, { price: e.target.value })} />}
+              {!existing && <input className={`${inputBase} w-24`} inputMode="decimal" placeholder={t("dish.newPrice")} value={line.price} onChange={(e) => setLine(index, { price: e.target.value })} />}
               <Button variant="secondary" aria-label={t("common.remove", { name: line.name })} onClick={() => set({ lines: form.lines.filter((_, i) => i !== index) })}>✕</Button>
             </div>
           );
@@ -179,7 +179,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
               <IngredientStatuses ingredientId={i.ingredientId} statuses={i.statuses} restrictions={restrictions} onChange={reload} />
             </div>
           ))}
-          <p className="text-xs text-tinta-soft">
+          <p className="text-xs text-terra-soft">
             {t("dish.costPerPortion", { cost: money(dish.costPerPortionCents) })}
             {dish.missingPrice && ` ${t("dish.someMissing")}`}
           </p>
@@ -191,7 +191,7 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           <h2 className="font-medium">{t("dish.feedback")}</h2>
           {dish.feedback.map((f) => (
             <p key={`${f.cookingId}-${f.personId}`} className="text-sm">
-              <span className="text-tinta-soft">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
+              <span className="text-terra-soft">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
             </p>
           ))}
         </Card>
