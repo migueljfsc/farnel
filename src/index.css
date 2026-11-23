@@ -98,6 +98,19 @@
   }
 }
 
+/* Selects draw their own chevron in the theme colour, inset like the text. Unlayered, so the
+   right padding wins over the `px-*` utilities on the shared input classes. */
+select {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--cafe-soft) 50%), linear-gradient(135deg, var(--cafe-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.125rem) 55%,
+    calc(100% - 0.8rem) 55%;
+  background-size: 0.33rem 0.33rem;
+  background-repeat: no-repeat;
+}
+
 /* ----------------------------------------------------------------- motion */
 
 /* The one orchestrated moment: tins settle into their days when a week opens. */
