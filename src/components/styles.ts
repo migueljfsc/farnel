@@ -1,17 +1,31 @@
-/** Class names shared by components and pages. */
+/** Class names shared by components and pages, on the "esmalte" tokens in index.css. */
 
 export const cx = (...classes: (string | false | undefined)[]): string => classes.filter(Boolean).join(" ");
 
-export const inputClass = "w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm";
+export const inputClass =
+  "w-full rounded-lg border border-linha bg-louca px-3 py-2 text-sm text-tinta placeholder:text-tinta-soft/70 transition focus:border-cobalto focus:outline-none focus:ring-2 focus:ring-cobalto/25 disabled:opacity-50";
 
 export type Variant = "primary" | "secondary" | "danger";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-emerald-700 text-white hover:bg-emerald-800",
-  secondary: "border border-stone-300 bg-white text-stone-800 hover:bg-stone-100",
-  danger: "border border-red-300 bg-white text-red-700 hover:bg-red-50",
+  primary: "bg-cobalto text-louca hover:brightness-110",
+  secondary: "border border-linha bg-louca text-tinta hover:border-cobalto/50 hover:bg-cobalto-soft",
+  danger: "border border-colorau/40 bg-louca text-colorau hover:bg-colorau-soft",
 };
 
 /** Button styling, also for links that look like buttons. */
 export const buttonClass = (variant: Variant = "primary", className?: string): string =>
-  cx("inline-block rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50", VARIANTS[variant], className);
+  cx(
+    "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40",
+    VARIANTS[variant],
+    className,
+  );
+
+export type Tone = "neutral" | "cobalto" | "azeite" | "colorau";
+
+export const TONES: Record<Tone, string> = {
+  neutral: "bg-esmalte text-tinta-soft ring-1 ring-linha",
+  cobalto: "bg-cobalto-soft text-cobalto",
+  azeite: "bg-azeite-soft text-azeite",
+  colorau: "bg-colorau-soft text-colorau",
+};

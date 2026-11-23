@@ -2,7 +2,7 @@ import { useState } from "react";
 import { parseMoney, priceUnit } from "../../shared/format";
 import type { IngredientView, Restriction } from "../../shared/types";
 import { IngredientStatuses } from "../components/IngredientStatuses";
-import { Button, Card, ErrorText, Loaded, Page } from "../components/ui";
+import { Button, ErrorText, Loaded, Page, List, Row } from "../components/ui";
 import { inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
@@ -33,19 +33,19 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
           const undecided = (i: IngredientView) => data.restrictions.some((r) => (i.statuses[r.id] ?? "unknown") === "unknown");
           const shown = toDecide ? data.ingredients.filter(undecided) : data.ingredients;
           return shown.length === 0 ? (
-            <p className="text-sm text-stone-500">{t(toDecide ? "ingredients.nothingToDecide" : "ingredients.empty")}</p>
+            <p className="text-sm text-tinta-soft">{t(toDecide ? "ingredients.nothingToDecide" : "ingredients.empty")}</p>
           ) : (
-            <div className="space-y-2">
+            <List>
               {shown.map((i) => (
-                <Card key={i.id} className="space-y-2">
+                <Row key={i.id} className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">{i.name}</span>
                     <PriceEditor ingredient={i} onChange={ingredients.reload} />
                   </div>
                   <IngredientStatuses ingredientId={i.id} statuses={i.statuses} restrictions={data.restrictions} onChange={ingredients.reload} />
-                </Card>
+                </Row>
               ))}
-            </div>
+            </List>
           );
         }}
       </Loaded>
@@ -70,8 +70,8 @@ function PriceEditor({ ingredient, onChange }: { ingredient: IngredientView; onC
   return (
     <span className="inline-flex items-center gap-1 text-sm">
       <input className={`${inputClass} w-20`} inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} onBlur={save} />
-      <span className="text-stone-500">{priceUnit(ingredient.unit)}</span>
-      {ingredient.priceCents !== null && <span className="text-xs text-stone-400">({money(ingredient.priceCents)})</span>}
+      <span className="text-tinta-soft">{priceUnit(ingredient.unit)}</span>
+      {ingredient.priceCents !== null && <span className="text-xs text-tinta-soft">({money(ingredient.priceCents)})</span>}
       {failure !== undefined && <ErrorText error={failure} />}
     </span>
   );

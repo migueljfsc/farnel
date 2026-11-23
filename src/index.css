@@ -1,1 +1,195 @@
 @import "tailwindcss";
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url("/fonts/bricolage-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url("/fonts/bricolage-latin-ext-var.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/*
+ * "Esmalte": the enamel lunch tin. Enamel white, a cobalt rim, paprika and olive oil.
+ * Every colour is a variable so dark mode swaps the whole set at once.
+ */
+:root {
+  --esmalte: #eef2f1;
+  --louca: #ffffff;
+  --cobalto: #2343a6;
+  --cobalto-soft: #dde4f6;
+  --tinta: #17203a;
+  --tinta-soft: #5a6480;
+  --linha: rgb(23 32 58 / 0.12);
+  --colorau: #d2462a;
+  --colorau-soft: #fbe4de;
+  --azeite: #6d7d22;
+  --azeite-soft: #ebefd6;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --esmalte: #0e1424;
+    --louca: #172038;
+    --cobalto: #7d97f0;
+    --cobalto-soft: #22305a;
+    --tinta: #e7ecf7;
+    --tinta-soft: #98a3c0;
+    --linha: rgb(231 236 247 / 0.12);
+    --colorau: #f2795e;
+    --colorau-soft: #3d2220;
+    --azeite: #b3c45f;
+    --azeite-soft: #283018;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-esmalte: var(--esmalte);
+  --color-louca: var(--louca);
+  --color-cobalto: var(--cobalto);
+  --color-cobalto-soft: var(--cobalto-soft);
+  --color-tinta: var(--tinta);
+  --color-tinta-soft: var(--tinta-soft);
+  --color-linha: var(--linha);
+  --color-colorau: var(--colorau);
+  --color-colorau-soft: var(--colorau-soft);
+  --color-azeite: var(--azeite);
+  --color-azeite-soft: var(--azeite-soft);
+  --font-sans: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@layer base {
+  html {
+    background: var(--esmalte);
+    color: var(--tinta);
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100dvh;
+    line-height: 1.5;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--cobalto);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--cobalto-soft);
+  }
+}
+
+@layer components {
+  /* Headlines: condensed and heavy, the only place the type gets loud. */
+  .display {
+    font-stretch: 75%;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+}
+
+/* ----------------------------------------------------------------- motion */
+
+/* The one orchestrated moment: tins settle into their days when a week opens. */
+@keyframes tin-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(2px) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bar-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes week-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes week-in-previous {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+@keyframes expand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.animate-tin {
+  animation: tin-drop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.animate-bar {
+  transform-origin: left;
+  animation: bar-fill 700ms cubic-bezier(0.3, 0.8, 0.3, 1) 200ms both;
+}
+
+.animate-week-next {
+  animation: week-in-next 260ms ease-out both;
+}
+
+.animate-week-previous {
+  animation: week-in-previous 260ms ease-out both;
+}
+
+.animate-pop {
+  animation: pop 260ms ease-out;
+}
+
+.animate-expand {
+  animation: expand 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}

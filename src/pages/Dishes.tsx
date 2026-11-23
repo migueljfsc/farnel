@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DishStatus, DishSummary } from "../../shared/types";
-import { Badge, Button, Card, Link, Loaded, Page } from "../components/ui";
+import { Badge, Button, Link, Loaded, Page, List, Row } from "../components/ui";
 import { inputClass } from "../components/styles";
 import { useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
@@ -37,16 +37,16 @@ export function Dishes({ filter }: { filter: Filter }) {
       <Loaded data={data} error={error}>
         {({ dishes }) =>
           dishes.length === 0 ? (
-            <p className="text-sm text-stone-500">{t("dishes.empty")}</p>
+            <p className="text-sm text-tinta-soft">{t("dishes.empty")}</p>
           ) : (
-            <div className="space-y-2">
+            <List>
               {dishes.map((d) => (
-                <Card key={d.id} className="flex flex-wrap items-center justify-between gap-2">
+                <Row key={d.id} className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <Link to={{ page: "dish", id: d.id }} className="font-medium">
                       {d.name}
                     </Link>
-                    <p className="text-xs text-stone-500">
+                    <p className="text-xs text-tinta-soft">
                       {t("dishes.summary", {
                         portions: tn("dish.portions", d.portions),
                         cost: money(d.costPerPortionCents),
@@ -62,9 +62,9 @@ export function Dishes({ filter }: { filter: Filter }) {
                       <Badge key={label}>{label}</Badge>
                     ))}
                   </span>
-                </Card>
+                </Row>
               ))}
-            </div>
+            </List>
           )
         }
       </Loaded>
