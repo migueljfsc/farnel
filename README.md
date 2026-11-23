@@ -37,6 +37,13 @@ in the Claude app (`claude://` deep link) or claude.ai, where the Farnel connect
 **Refresh** shows it. Locally, claude.ai cannot reach `localhost`: use **Copy prompt** and paste it
 into Claude Code connected to the local server (below).
 
+## Languages
+
+The UI speaks English and European Portuguese (the EN/PT button in the navigation; the first visit
+follows the browser). Copy lives in `src/i18n/`: `en.ts` declares every key, `pt.ts` must answer
+each one (a missing key does not compile), and `i18n.test.ts` checks placeholders and plurals.
+The "Plan with Claude" prompt is written in the chosen language, so Claude replies in it.
+
 ## Renaming
 
 `farnel` appears only in these places:

@@ -1,17 +1,20 @@
-/** Hand-off to Claude: the prompt that plans a week, and the links that open it in Claude. */
+/** Hand-off to Claude: the prompt that plans a week, in the reader's language, and the links that open it. */
 
 import { APP_NAME } from "../../shared/app";
 import { formatDay } from "../../shared/format";
-
-const names = (list: string[]): string => (list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}` : list[0]);
+import type { Locale, Translate } from "../i18n/core";
 
 /** `eaters` null means everyone in the household. */
-export function planPrompt({ weekStart, notes, eaters }: { weekStart: string; notes: string; eaters: string[] | null }): string {
-  const who = eaters ? `only for ${names(eaters)}` : "for everyone";
+export function planPrompt(
+  { weekStart, notes, eaters }: { weekStart: string; notes: string; eaters: string[] | null },
+  { t, locale }: { t: Translate; locale: Locale },
+): string {
+  const names = (list: string[]) => (list.length > 1 ? t("prompt.and", { first: list.slice(0, -1).join(", "), last: list[list.length - 1] }) : list[0]);
+  const who = eaters ? t("prompt.only", { names: names(eaters) }) : t("prompt.everyone");
   return [
-    `Use the ${APP_NAME} tools to plan lunches for the week starting ${formatDay(weekStart)} (${weekStart}), ${who}.`,
-    notes.trim() && `Notes for this week: ${notes.trim()}`,
-    "Start with get_context and list_candidates, then save the plan with save_plan. If a good dish is missing from the catalogue, propose it with add_dish.",
+    t("prompt.plan", { app: APP_NAME, day: formatDay(weekStart, locale), date: weekStart, who }),
+    notes.trim() && t("prompt.notes", { notes: notes.trim() }),
+    t("prompt.steps"),
   ]
     .filter(Boolean)
     .join("\n");

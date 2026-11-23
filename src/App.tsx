@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { APP_NAME } from "../shared/app";
 import type { Me } from "../shared/types";
+import { LocaleSwitch } from "./components/LocaleSwitch";
 import { Link, Loaded } from "./components/ui";
+import { useI18n } from "./i18n/context";
 import { useApi } from "./lib/api";
 import { AppCtx } from "./lib/app-context";
 import { useRoute, type Route } from "./lib/router";
@@ -45,6 +47,7 @@ export function App() {
 }
 
 function Shell({ me, refreshMe, navigate, children }: { me: Me; refreshMe: () => void; navigate: (r: Route) => void; children: React.ReactNode }) {
+  const { t } = useI18n();
   const ctx = useMemo(() => ({ me, refreshMe, navigate }), [me, refreshMe, navigate]);
   const count = (n: number) => (n > 0 ? ` (${n})` : "");
   return (
@@ -52,14 +55,23 @@ function Shell({ me, refreshMe, navigate, children }: { me: Me; refreshMe: () =>
       <div className="min-h-screen bg-stone-50 text-stone-900">
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-stone-200 bg-white px-4 py-3 text-sm">
           <span className="font-semibold">{APP_NAME}</span>
-          <Link to={{ page: "week" }}>Week</Link>
-          <Link to={{ page: "history" }}>History</Link>
-          <Link to={{ page: "dishes" }}>Dishes</Link>
-          <Link to={{ page: "dishes", filter: "to-validate" }}>To validate{count(me.pendingDishes)}</Link>
-          <Link to={{ page: "ingredients", filter: "to-decide" }}>To decide{count(me.undecided)}</Link>
-          <Link to={{ page: "ingredients" }}>Ingredients</Link>
-          <Link to={{ page: "settings" }}>Settings</Link>
-          <span className="ml-auto text-stone-500">{me.person.name}</span>
+          <Link to={{ page: "week" }}>{t("nav.week")}</Link>
+          <Link to={{ page: "history" }}>{t("nav.history")}</Link>
+          <Link to={{ page: "dishes" }}>{t("nav.dishes")}</Link>
+          <Link to={{ page: "dishes", filter: "to-validate" }}>
+            {t("nav.toValidate")}
+            {count(me.pendingDishes)}
+          </Link>
+          <Link to={{ page: "ingredients", filter: "to-decide" }}>
+            {t("nav.toDecide")}
+            {count(me.undecided)}
+          </Link>
+          <Link to={{ page: "ingredients" }}>{t("nav.ingredients")}</Link>
+          <Link to={{ page: "settings" }}>{t("nav.settings")}</Link>
+          <span className="ml-auto flex items-center gap-2 text-stone-500">
+            {me.person.name}
+            <LocaleSwitch />
+          </span>
         </nav>
         <main className="mx-auto max-w-3xl px-4 py-4">{children}</main>
       </div>

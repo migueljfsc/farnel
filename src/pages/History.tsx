@@ -1,20 +1,21 @@
 import { useState } from "react";
-import { formatDay } from "../../shared/format";
 import type { CookingView, FeedbackView, PersonView } from "../../shared/types";
 import { Badge, Card, ErrorText, Link, Loaded, Page, Stars } from "../components/ui";
 import { inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
+import { useI18n } from "../i18n/context";
 
 export function History() {
+  const { t } = useI18n();
   const cookings = useApi<{ cookings: CookingView[] }>("/api/history");
   const people = useApi<{ people: PersonView[] }>("/api/people");
   return (
-    <Page title="History">
+    <Page title={t("nav.history")}>
       <Loaded data={cookings.data && people.data ? { ...cookings.data, ...people.data } : undefined} error={cookings.error ?? people.error}>
         {(data) =>
           data.cookings.length === 0 ? (
-            <p className="text-sm text-stone-500">Nothing eaten yet.</p>
+            <p className="text-sm text-stone-500">{t("history.empty")}</p>
           ) : (
             <div className="space-y-2">
               {data.cookings.map((c) => (
@@ -29,18 +30,19 @@ export function History() {
 }
 
 function HistoryRow({ cooking, people, onChange }: { cooking: CookingView; people: PersonView[]; onChange: () => void }) {
+  const { t, tn, day } = useI18n();
   const skipped = cooking.status === "skipped";
   return (
     <Card className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm">
-          <span className="text-stone-500">{formatDay(cooking.cookDate)}</span>{" "}
+          <span className="text-stone-500">{day(cooking.cookDate)}</span>{" "}
           <Link to={{ page: "dish", id: cooking.dishId }} className="font-medium">
             {cooking.dish}
           </Link>{" "}
-          <span className="text-stone-500">({cooking.portions} portions)</span>
+          <span className="text-stone-500">({tn("dish.portions", cooking.portions)})</span>
         </p>
-        {cooking.status !== "done" && <Badge tone="amber">{cooking.status}</Badge>}
+        {cooking.status !== "done" && <Badge tone="amber">{t(`status.${cooking.status}`)}</Badge>}
       </div>
       {!skipped &&
         people.map((p) => (
@@ -52,6 +54,7 @@ function HistoryRow({ cooking, people, onChange }: { cooking: CookingView; peopl
 
 function PersonFeedback({ cookingId, person, feedback, onChange }: { cookingId: number; person: PersonView; feedback?: FeedbackView; onChange: () => void }) {
   const { me } = useApp();
+  const { t } = useI18n();
   const mine = me.person.id === person.id;
   const [comment, setComment] = useState(feedback?.comment ?? "");
   const [failure, setFailure] = useState<unknown>();
@@ -72,7 +75,7 @@ function PersonFeedback({ cookingId, person, feedback, onChange }: { cookingId: 
       {mine ? (
         <input
           className={`${inputClass} min-w-40 flex-1`}
-          placeholder={feedback ? "What went well or badly?" : "Rate first, then comment"}
+          placeholder={t(feedback ? "history.commentHint" : "history.rateFirst")}
           value={comment}
           disabled={!feedback}
           onChange={(e) => setComment(e.target.value)}

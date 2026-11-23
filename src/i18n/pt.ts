@@ -1,0 +1,153 @@
+/**
+ * European Portuguese copy. Typed as `Dictionary`, so it must answer every key `en.ts` declares.
+ *
+ * Kitchen vocabulary is pt-PT: dose (not porção), almoço/jantar, lista de compras.
+ */
+
+import type { Dictionary } from "./core";
+
+export const pt: Dictionary = {
+  // ------------------------------------------------------------------- app
+  "app.locale": "Idioma",
+  "nav.week": "Semana",
+  "nav.history": "Histórico",
+  "nav.dishes": "Pratos",
+  "nav.toValidate": "Por validar",
+  "nav.toDecide": "Por decidir",
+  "nav.ingredients": "Ingredientes",
+  "nav.settings": "Definições",
+
+  // ---------------------------------------------------------------- common
+  "common.loading": "A carregar…",
+  "common.save": "Guardar",
+  "common.saved": "Guardado",
+  "common.add": "Adicionar",
+  "common.remove": "Remover {name}",
+  "common.refresh": "Atualizar",
+  "common.undo": "Anular",
+  "common.rating": "{value} de 5",
+  "common.notRated": "sem avaliação",
+
+  // ---------------------------------------------------------------- errors
+  "error.generic": "Algo correu mal.",
+  "error.not_found": "Não encontrado.",
+  "error.invalid": "Há valores inválidos.",
+  "error.unauthorized": "A sessão terminou. Recarregue para voltar a entrar.",
+  "error.name_taken": "Esse nome já está a ser usado.",
+  "error.in_use": "A unidade não pode mudar enquanto houver pratos com este ingrediente.",
+  "error.email_taken": "Esse email já está no agregado.",
+  "error.unit_mismatch": "{ingredient} já existe com outra unidade.",
+  "error.undecided_ingredients": "Decida seguro ou proibido para cada ingrediente abaixo antes de validar.",
+  "error.not_pending": "Só se podem validar pratos que estão por validar.",
+  "error.no_ingredients": "Adicione ingredientes antes de validar.",
+  "error.week_start_not_monday": "As semanas começam à segunda-feira.",
+
+  // ----------------------------------------------------------------- terms
+  "status.planned": "planeado",
+  "status.done": "feito",
+  "status.skipped": "não feito",
+  "status.replaced": "trocado",
+  "dishStatus.pending": "por validar",
+  "dishStatus.validated": "validado",
+  "dishStatus.archived": "arquivado",
+  "slot.lunch": "almoço",
+  "slot.dinner": "jantar",
+  "restriction.safe": "seguro",
+  "restriction.forbidden": "proibido",
+  "unit.g": "g",
+  "unit.ml": "ml",
+  "unit.un": "un",
+  "dish.portions.one": "{count} dose",
+  "dish.portions.other": "{count} doses",
+
+  // ------------------------------------------------------------------ week
+  "week.title": "Semana de {day}",
+  "week.previous": "← Anterior",
+  "week.next": "Seguinte →",
+  "week.summary": "Para {people} · planeado {total} de {budget}",
+  "week.overBudget": "acima do orçamento",
+  "week.empty": "Ainda não há plano para esta semana.",
+  "week.plan.title": "Planear com o Claude",
+  "week.plan.retitle": "Voltar a planear com o Claude",
+  "week.plan.who": "Quem come?",
+  "week.plan.notes": "Algo especial esta semana?",
+  "week.plan.notesHint": "ex.: comemos fora na quinta, convidados no sábado",
+  "week.plan.openApp": "Abrir na app Claude",
+  "week.plan.openWeb": "Abrir claude.ai",
+  "week.plan.copy": "Copiar pedido",
+  "week.plan.copied": "Copiado",
+  "week.plan.help": "O Claude guarda o plano aqui através do conector {app}; carregue em Atualizar quando terminar.",
+  "cooking.cook": "Cozinhar {day} · {portions} · {cost}",
+  "cooking.eat": "Comer {meals}",
+  "cooking.replacedBy": "trocado por {dish}",
+  "cooking.skip": "Não fizemos",
+  "cooking.replace": "Trocámos…",
+  "cooking.replacePick": "Um prato do catálogo…",
+  "cooking.replaceOther": "…ou outra coisa",
+  "shopping.title": "Lista de compras",
+  "shopping.noPrice": "sem preço",
+  "shopping.total": "Total: {amount}",
+  "shopping.missing.one": "falta {count} preço",
+  "shopping.missing.other": "faltam {count} preços",
+
+  // --------------------------------------------------------------- history
+  "history.empty": "Ainda não se comeu nada.",
+  "history.commentHint": "O que correu bem ou mal?",
+  "history.rateFirst": "Avalie primeiro e depois comente",
+
+  // ---------------------------------------------------------------- dishes
+  "dishes.new": "Novo prato",
+  "dishes.tab.validated": "Validados",
+  "dishes.tab.archived": "Arquivados",
+  "dishes.tag": "Etiqueta",
+  "dishes.empty": "Não há pratos aqui.",
+  "dishes.summary": "{portions} · {cost}/dose · a cada {days} dias · última vez {last}",
+  "dishes.missingPrice": "(faltam preços)",
+  "dishes.never": "nunca",
+  "dishes.byClaude": "pelo Claude",
+  "dish.validate": "Validar",
+  "dish.archive": "Arquivar",
+  "dish.unarchive": "Desarquivar",
+  "dish.name": "Nome",
+  "dish.tags": "Etiquetas (separadas por vírgulas)",
+  "dish.portionsField": "Doses que a receita rende",
+  "dish.interval": "Repetir no máximo a cada (dias)",
+  "dish.notes": "Notas",
+  "dish.ingredient": "Ingrediente",
+  "dish.quantity": "Qtd.",
+  "dish.newPrice": "€ (novo)",
+  "dish.addIngredient": "Adicionar ingrediente",
+  "dish.create": "Criar",
+  "dish.restrictions": "Restrições",
+  "dish.costPerPortion": "{cost} por dose",
+  "dish.someMissing": "(faltam alguns preços)",
+  "dish.feedback": "Opiniões",
+
+  // ----------------------------------------------------------- ingredients
+  "ingredients.all": "Todos",
+  "ingredients.nothingToDecide": "Nada por decidir.",
+  "ingredients.empty": "Ainda não há ingredientes.",
+
+  // -------------------------------------------------------------- settings
+  "settings.budget": "Orçamento semanal (€)",
+  "settings.lunches": "Almoços por semana",
+  "settings.none": "Nenhuma.",
+  "settings.hard": "rígida (nunca)",
+  "settings.soft": "flexível (evitar)",
+  "settings.weight": "peso",
+  "settings.restrictionHint": "ex.: glúten, lactose",
+  "settings.addRestriction": "Adicionar restrição",
+  "settings.preferences": "Preferências",
+  "settings.addPerson": "Adicionar pessoa: nome",
+  "settings.email": "Email com que entra",
+  "settings.accessNote": "Online, também tem de estar na lista de acesso (Access) para abrir a app.",
+
+  // ------------------------------------------------- prompt sent to Claude
+  "prompt.plan": "Usa as ferramentas do {app} para planear os almoços da semana de {day} ({date}), {who}.",
+  "prompt.everyone": "para todos",
+  "prompt.only": "só para {names}",
+  "prompt.and": "{first} e {last}",
+  "prompt.notes": "Notas desta semana: {notes}",
+  "prompt.steps":
+    "Começa por get_context e list_candidates e depois guarda o plano com save_plan. Se faltar um bom prato no catálogo, propõe-o com add_dish.",
+};

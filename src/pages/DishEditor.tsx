@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { formatDay, formatMoney, parseMoney } from "../../shared/format";
+import { parseMoney } from "../../shared/format";
 import { nameKey } from "../../shared/names";
 import type { DishDetail, IngredientView, Restriction, Unit } from "../../shared/types";
 import { IngredientStatuses } from "../components/IngredientStatuses";
 import { Badge, Button, Card, ErrorText, Field, Loaded, Page, Stars } from "../components/ui";
 import { inputClass } from "../components/styles";
-import { api, ApiError, useApi } from "../lib/api";
+import { api, useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
+import { useI18n } from "../i18n/context";
 
 interface Line {
   name: string;
@@ -62,6 +63,7 @@ export function DishEditor({ id }: { id: number | "new" }) {
 
 function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; known: IngredientView[]; restrictions: Restriction[]; reload: () => void }) {
   const { navigate, refreshMe } = useApp();
+  const { t, day, money } = useI18n();
   const [form, setForm] = useState<Form>(dish ? toForm(dish) : EMPTY);
   const [failure, setFailure] = useState<unknown>();
   const [busy, setBusy] = useState(false);
@@ -100,49 +102,45 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
 
   return (
     <Page
-      title={dish ? dish.name : "New dish"}
+      title={dish ? dish.name : t("dishes.new")}
       actions={
         dish && (
           <>
-            <Badge tone={dish.status === "validated" ? "emerald" : "amber"}>{dish.status}</Badge>
-            {dish.status === "pending" && <Button disabled={busy} onClick={() => action("validate")}>Validate</Button>}
+            <Badge tone={dish.status === "validated" ? "emerald" : "amber"}>{t(`dishStatus.${dish.status}`)}</Badge>
+            {dish.status === "pending" && <Button disabled={busy} onClick={() => action("validate")}>{t("dish.validate")}</Button>}
             {dish.status === "archived" ? (
-              <Button variant="secondary" disabled={busy} onClick={() => action("unarchive")}>Unarchive</Button>
+              <Button variant="secondary" disabled={busy} onClick={() => action("unarchive")}>{t("dish.unarchive")}</Button>
             ) : (
-              <Button variant="danger" disabled={busy} onClick={() => action("archive")}>Archive</Button>
+              <Button variant="danger" disabled={busy} onClick={() => action("archive")}>{t("dish.archive")}</Button>
             )}
           </>
         )
       }
     >
-      {failure instanceof ApiError && failure.code === "undecided_ingredients" ? (
-        <p className="text-sm text-amber-800">Decide safe or forbidden for every ingredient below before validating.</p>
-      ) : (
-        failure !== undefined && <ErrorText error={failure} />
-      )}
+      {failure !== undefined && <ErrorText error={failure} />}
 
       <Card className="grid gap-3 sm:grid-cols-2">
-        <Field label="Name">
+        <Field label={t("dish.name")}>
           <input className={inputClass} value={form.name} onChange={(e) => set({ name: e.target.value })} />
         </Field>
-        <Field label="Tags (comma separated)">
+        <Field label={t("dish.tags")}>
           <input className={inputClass} value={form.tags} onChange={(e) => set({ tags: e.target.value })} />
         </Field>
-        <Field label="Portions the recipe makes">
+        <Field label={t("dish.portionsField")}>
           <input className={inputClass} type="number" min={1} value={form.portions} onChange={(e) => set({ portions: e.target.value })} />
         </Field>
-        <Field label="Repeat at most every (days)">
+        <Field label={t("dish.interval")}>
           <input className={inputClass} type="number" min={0} value={form.repeatIntervalDays} onChange={(e) => set({ repeatIntervalDays: e.target.value })} />
         </Field>
         <div className="sm:col-span-2">
-          <Field label="Notes">
+          <Field label={t("dish.notes")}>
             <textarea className={inputClass} rows={3} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
           </Field>
         </div>
       </Card>
 
       <Card className="space-y-2">
-        <h2 className="font-medium">Ingredients</h2>
+        <h2 className="font-medium">{t("nav.ingredients")}</h2>
         <datalist id="known-ingredients">
           {known.map((k) => (
             <option key={k.id} value={k.name} />
@@ -152,27 +150,29 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           const existing = knownByKey.get(nameKey(line.name));
           return (
             <div key={index} className="flex flex-wrap items-center gap-2">
-              <input className={`${inputClass} min-w-32 flex-1`} list="known-ingredients" placeholder="Ingredient" value={line.name} onChange={(e) => setLine(index, { name: e.target.value })} />
-              <input className={`${inputClass} w-20`} inputMode="decimal" placeholder="Qty" value={line.quantity} onChange={(e) => setLine(index, { quantity: e.target.value })} />
+              <input className={`${inputClass} min-w-32 flex-1`} list="known-ingredients" placeholder={t("dish.ingredient")} value={line.name} onChange={(e) => setLine(index, { name: e.target.value })} />
+              <input className={`${inputClass} w-20`} inputMode="decimal" placeholder={t("dish.quantity")} value={line.quantity} onChange={(e) => setLine(index, { quantity: e.target.value })} />
               <select className={`${inputClass} w-16`} value={existing?.unit ?? line.unit} disabled={!!existing} onChange={(e) => setLine(index, { unit: e.target.value as Unit })}>
-                <option value="g">g</option>
-                <option value="ml">ml</option>
-                <option value="un">un</option>
+                {(["g", "ml", "un"] as const).map((u) => (
+                  <option key={u} value={u}>
+                    {t(`unit.${u}`)}
+                  </option>
+                ))}
               </select>
-              {!existing && <input className={`${inputClass} w-24`} inputMode="decimal" placeholder="€ (new)" value={line.price} onChange={(e) => setLine(index, { price: e.target.value })} />}
-              <Button variant="secondary" onClick={() => set({ lines: form.lines.filter((_, i) => i !== index) })}>✕</Button>
+              {!existing && <input className={`${inputClass} w-24`} inputMode="decimal" placeholder={t("dish.newPrice")} value={line.price} onChange={(e) => setLine(index, { price: e.target.value })} />}
+              <Button variant="secondary" aria-label={t("common.remove", { name: line.name })} onClick={() => set({ lines: form.lines.filter((_, i) => i !== index) })}>✕</Button>
             </div>
           );
         })}
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>Add ingredient</Button>
-          <Button disabled={busy} onClick={save}>{dish ? "Save" : "Create"}</Button>
+          <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>{t("dish.addIngredient")}</Button>
+          <Button disabled={busy} onClick={save}>{t(dish ? "common.save" : "dish.create")}</Button>
         </div>
       </Card>
 
       {dish && dish.ingredients.length > 0 && (
         <Card className="space-y-2">
-          <h2 className="font-medium">Restrictions</h2>
+          <h2 className="font-medium">{t("dish.restrictions")}</h2>
           {dish.ingredients.map((i) => (
             <div key={i.ingredientId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>{i.name}</span>
@@ -180,17 +180,18 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
             </div>
           ))}
           <p className="text-xs text-stone-500">
-            {formatMoney(dish.costPerPortionCents)} per portion{dish.missingPrice && " (some prices missing)"}
+            {t("dish.costPerPortion", { cost: money(dish.costPerPortionCents) })}
+            {dish.missingPrice && ` ${t("dish.someMissing")}`}
           </p>
         </Card>
       )}
 
       {dish && dish.feedback.length > 0 && (
         <Card className="space-y-1">
-          <h2 className="font-medium">Feedback</h2>
+          <h2 className="font-medium">{t("dish.feedback")}</h2>
           {dish.feedback.map((f) => (
             <p key={`${f.cookingId}-${f.personId}`} className="text-sm">
-              <span className="text-stone-500">{formatDay(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
+              <span className="text-stone-500">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
             </p>
           ))}
         </Card>

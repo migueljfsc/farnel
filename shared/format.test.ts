@@ -32,3 +32,13 @@ describe("money input and price units", () => {
     expect([priceUnit("g"), priceUnit("ml"), priceUnit("un")]).toEqual(["€/kg", "€/L", "€/un"]);
   });
 });
+
+describe("formatting per language", () => {
+  it("writes days and money the way each language does", async () => {
+    const { formatDay, formatMoney } = await import("./format");
+    expect(formatDay("2026-11-17", "pt")).toBe("ter 17/11");
+    expect(formatDay("2026-11-17", "en")).toBe("Tue 17/11");
+    expect(formatMoney(1234, "pt")).toBe("12,34 €");
+    expect(formatMoney(1234, "en")).toBe("€12.34");
+  });
+});

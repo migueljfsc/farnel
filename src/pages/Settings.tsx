@@ -4,12 +4,14 @@ import type { PersonView, RestrictionKind, Settings as SettingsData } from "../.
 import { Button, Card, ErrorText, Field, Loaded, Page } from "../components/ui";
 import { inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
+import { useI18n } from "../i18n/context";
 
 export function Settings() {
+  const { t } = useI18n();
   const settings = useApi<{ settings: SettingsData }>("/api/settings");
   const people = useApi<{ people: PersonView[] }>("/api/people");
   return (
-    <Page title="Settings">
+    <Page title={t("nav.settings")}>
       <Loaded data={settings.data && people.data ? { ...settings.data, ...people.data } : undefined} error={settings.error ?? people.error}>
         {(data) => (
           <>
@@ -27,6 +29,7 @@ export function Settings() {
 
 /** Saves through `action`, showing "Saved" or the error. */
 function useSave(): [(action: () => Promise<unknown>) => Promise<void>, React.ReactNode] {
+  const { t } = useI18n();
   const [state, setState] = useState<{ saved?: boolean; failure?: unknown }>({});
   const save = async (action: () => Promise<unknown>) => {
     try {
@@ -36,24 +39,25 @@ function useSave(): [(action: () => Promise<unknown>) => Promise<void>, React.Re
       setState({ failure });
     }
   };
-  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-emerald-700">Saved</span> : null;
+  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-emerald-700">{t("common.saved")}</span> : null;
   return [save, feedback];
 }
 
 function HouseholdForm({ settings }: { settings: SettingsData }) {
+  const { t } = useI18n();
   const [budget, setBudget] = useState((settings.weeklyBudgetCents / 100).toFixed(2));
   const [lunches, setLunches] = useState(String(settings.lunchesPerWeek));
   const [save, status] = useSave();
   return (
     <Card className="grid gap-3 sm:grid-cols-3 sm:items-end">
-      <Field label="Weekly budget (€)">
+      <Field label={t("settings.budget")}>
         <input className={inputClass} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} />
       </Field>
-      <Field label="Lunches per week">
+      <Field label={t("settings.lunches")}>
         <input className={inputClass} type="number" min={0} max={14} value={lunches} onChange={(e) => setLunches(e.target.value)} />
       </Field>
       <div className="flex items-center gap-2">
-        <Button onClick={() => save(() => api.put("/api/settings", { weeklyBudgetCents: parseMoney(budget) ?? 0, lunchesPerWeek: Number(lunches) }))}>Save</Button>
+        <Button onClick={() => save(() => api.put("/api/settings", { weeklyBudgetCents: parseMoney(budget) ?? 0, lunchesPerWeek: Number(lunches) }))}>{t("common.save")}</Button>
         {status}
       </div>
     </Card>
@@ -67,6 +71,7 @@ interface RestrictionRow {
 }
 
 function PersonForm({ person, onSaved }: { person: PersonView; onSaved: () => void }) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<RestrictionRow[]>(person.restrictions.map(({ name, kind, weight }) => ({ name, kind, weight })));
   const [adding, setAdding] = useState("");
   const [preferences, setPreferences] = useState(person.preferences);
@@ -84,40 +89,40 @@ function PersonForm({ person, onSaved }: { person: PersonView; onSaved: () => vo
         {person.name} <span className="text-sm font-normal text-stone-500">{person.email}</span>
       </h2>
       <div className="space-y-2">
-        <p className="text-sm font-medium text-stone-700">Restrictions</p>
-        {rows.length === 0 && <p className="text-sm text-stone-500">None.</p>}
+        <p className="text-sm font-medium text-stone-700">{t("dish.restrictions")}</p>
+        {rows.length === 0 && <p className="text-sm text-stone-500">{t("settings.none")}</p>}
         {rows.map((r, index) => (
           <div key={r.name} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-24">{r.name}</span>
             <select className={`${inputClass} w-32`} value={r.kind} onChange={(e) => setRow(index, { kind: e.target.value as RestrictionKind })}>
-              <option value="hard">hard (never)</option>
-              <option value="soft">soft (avoid)</option>
+              <option value="hard">{t("settings.hard")}</option>
+              <option value="soft">{t("settings.soft")}</option>
             </select>
             {r.kind === "soft" && (
               <label className="flex items-center gap-1">
-                weight
+                {t("settings.weight")}
                 <input className={`${inputClass} w-16`} type="number" min={1} max={5} value={r.weight} onChange={(e) => setRow(index, { weight: Number(e.target.value) })} />
               </label>
             )}
-            <Button variant="secondary" aria-label={`Remove ${r.name}`} onClick={() => setRows(rows.filter((_, i) => i !== index))}>✕</Button>
+            <Button variant="secondary" aria-label={t("common.remove", { name: r.name })} onClick={() => setRows(rows.filter((_, i) => i !== index))}>✕</Button>
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
           <input
             className={`${inputClass} max-w-48`}
-            placeholder="e.g. gluten, lactose"
+            placeholder={t("settings.restrictionHint")}
             value={adding}
             onChange={(e) => setAdding(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
           />
-          <Button variant="secondary" disabled={!adding.trim()} onClick={add}>Add restriction</Button>
+          <Button variant="secondary" disabled={!adding.trim()} onClick={add}>{t("settings.addRestriction")}</Button>
         </div>
       </div>
-      <Field label="Preferences">
+      <Field label={t("settings.preferences")}>
         <textarea className={inputClass} rows={2} value={preferences} onChange={(e) => setPreferences(e.target.value)} />
       </Field>
       <div className="flex items-center gap-2">
-        <Button onClick={() => save(async () => { await api.put(`/api/people/${person.id}`, { restrictions: rows, preferences }); onSaved(); })}>Save</Button>
+        <Button onClick={() => save(async () => { await api.put(`/api/people/${person.id}`, { restrictions: rows, preferences }); onSaved(); })}>{t("common.save")}</Button>
         {status}
       </div>
     </Card>
@@ -125,6 +130,7 @@ function PersonForm({ person, onSaved }: { person: PersonView; onSaved: () => vo
 }
 
 function NewPerson({ onCreated }: { onCreated: () => void }) {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [save, status] = useSave();
@@ -138,16 +144,16 @@ function NewPerson({ onCreated }: { onCreated: () => void }) {
   return (
     <Card className="space-y-2">
       <div className="flex flex-wrap items-end gap-2">
-        <Field label="Add person: name">
+        <Field label={t("settings.addPerson")}>
           <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Email they sign in with">
+        <Field label={t("settings.email")}>
           <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
-        <Button disabled={!name.trim() || !email.trim()} onClick={add}>Add</Button>
+        <Button disabled={!name.trim() || !email.trim()} onClick={add}>{t("common.add")}</Button>
         {status}
       </div>
-      <p className="text-xs text-stone-500">Online, they also need to be on the sign-in list (Access) to open the app.</p>
+      <p className="text-xs text-stone-500">{t("settings.accessNote")}</p>
     </Card>
   );
 }

@@ -1,5 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { DecidedStatus, RestrictionStatus } from "../../shared/types";
+import { isMessageKey } from "../i18n/core";
+import { useI18n } from "../i18n/context";
 import { ApiError } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { href, type Route } from "../lib/router";
@@ -65,17 +67,27 @@ export const Badge = ({ children, tone = "stone" }: { children: ReactNode; tone?
 /** Loading, error, or the content once `data` is there. */
 export function Loaded<T>({ data, error, children }: { data: T | undefined; error?: ApiError; children: (data: T) => ReactNode }) {
   if (error) return <ErrorText error={error} />;
-  if (data === undefined) return <p className="text-sm text-stone-500">Loading…</p>;
+  if (data === undefined) return <LoadingText />;
   return <>{children(data)}</>;
 }
 
-export const ErrorText = ({ error }: { error: unknown }) => (
-  <p className="text-sm text-red-700">{error instanceof ApiError ? `Error: ${error.code.replaceAll("_", " ")}` : "Something went wrong."}</p>
-);
+function LoadingText() {
+  const { t } = useI18n();
+  return <p className="text-sm text-stone-500">{t("common.loading")}</p>;
+}
+
+/** An API error as a sentence in the reader's language; unknown codes get the generic one. */
+export function ErrorText({ error }: { error: unknown }) {
+  const { t } = useI18n();
+  const key = error instanceof ApiError ? `error.${error.code}` : "";
+  const vars = error instanceof ApiError ? (error.details as Record<string, string>) : undefined;
+  return <p className="text-sm text-red-700">{isMessageKey(key) ? t(key, vars) : t("error.generic")}</p>;
+}
 
 export function Stars({ value, onChange }: { value: number | undefined; onChange?: (rating: number) => void }) {
+  const { t } = useI18n();
   return (
-    <span className="inline-flex" aria-label={value ? `${value} of 5` : "not rated"}>
+    <span className="inline-flex" aria-label={value ? t("common.rating", { value }) : t("common.notRated")}>
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
@@ -93,6 +105,7 @@ export function Stars({ value, onChange }: { value: number | undefined; onChange
 
 /** Safe / forbidden for one ingredient and restriction; unknown shows as undecided. */
 export function StatusToggle({ label, status, onChange }: { label: string; status: RestrictionStatus | undefined; onChange: (status: DecidedStatus) => void }) {
+  const { t } = useI18n();
   const option = (value: DecidedStatus, text: string, on: string) => (
     <button
       type="button"
@@ -106,8 +119,8 @@ export function StatusToggle({ label, status, onChange }: { label: string; statu
     <span className="inline-flex items-center gap-1 text-xs">
       <span className={cx(status === "unknown" || !status ? "font-semibold text-amber-700" : "text-stone-600")}>{label}</span>
       <span className="inline-flex overflow-hidden rounded border border-stone-300">
-        {option("safe", "safe", "bg-emerald-600 text-white")}
-        {option("forbidden", "forbidden", "bg-red-600 text-white")}
+        {option("safe", t("restriction.safe"), "bg-emerald-600 text-white")}
+        {option("forbidden", t("restriction.forbidden"), "bg-red-600 text-white")}
       </span>
     </span>
   );
