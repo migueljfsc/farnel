@@ -1,9 +1,11 @@
 import type { DishStatus } from "../../shared/types";
 import { fail, json, noContent } from "../lib/http";
-import { dishInput, ingredientCreate, ingredientPatch } from "../lib/schemas";
+import { dishInput, ids, ingredientCreate, ingredientPatch } from "../lib/schemas";
 import {
   archiveDish,
   createIngredient,
+  deleteDishes,
+  deleteIngredients,
   createDish,
   getDish,
   listDishes,
@@ -25,6 +27,17 @@ export const catalogueRoutes: Route[] = [
     const tag = url.searchParams.get("tag") ?? undefined;
     return json({ dishes: await listDishes(db, { status: status && STATUSES.includes(status) ? status : undefined, tag }) });
   }),
+  route(
+    "POST",
+    /^\/api\/dishes\/(archive|unarchive)$/,
+    withBody(ids, async ({ db, params }, body) => {
+      const act = params[0] === "archive" ? archiveDish : unarchiveDish;
+      for (const id of body.ids) await act(db, id);
+      return noContent();
+    }),
+  ),
+  route("POST", /^\/api\/dishes\/delete$/, withBody(ids, async ({ db, today, now }, body) => json(await deleteDishes(db, body.ids, today, now)))),
+  route("POST", /^\/api\/ingredients\/delete$/, withBody(ids, async ({ db }, body) => json(await deleteIngredients(db, body.ids)))),
   route("GET", /^\/api\/dishes\/(\d+)$/, async (ctx) => found("dish", await getDish(ctx.db, idParam(ctx)))),
   route(
     "POST",

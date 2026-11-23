@@ -1,9 +1,12 @@
 import { useState } from "react";
 import type { DishStatus, DishSummary } from "../../shared/types";
 import { Badge, Button, CatalogueTabs, Link, Loaded, Page, List, Row } from "../components/ui";
-import { inputClass } from "../components/styles";
+import { cx, inputClass } from "../components/styles";
 import { useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
+import { useBulk } from "../lib/bulk";
+import { useSelection } from "../lib/selection";
+import { Check, SelectionBar } from "../components/SelectionBar";
 import type { Route } from "../lib/router";
 import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/core";
@@ -21,8 +24,10 @@ export function Dishes({ filter }: { filter: Filter }) {
   const { t, tn, day, money } = useI18n();
   const [tag, setTag] = useState("");
   const tab = TABS.find((candidate) => candidate.filter === filter)!;
-  const { data, error } = useApi<{ dishes: DishSummary[] }>(`/api/dishes?status=${tab.status}${tag.trim() ? `&tag=${encodeURIComponent(tag.trim().toLowerCase())}` : ""}`);
+  const selection = useSelection(`${tab.status}:${tag.trim().toLowerCase()}`);
+  const { data, error, reload } = useApi<{ dishes: DishSummary[] }>(`/api/dishes?status=${tab.status}${tag.trim() ? `&tag=${encodeURIComponent(tag.trim().toLowerCase())}` : ""}`);
 
+  const bulk = useBulk(selection, reload);
   return (
     <Page title={t("nav.dishes")} actions={<Button onClick={() => navigate({ page: "dish", id: "new" })}>{t("dishes.new")}</Button>}>
       <CatalogueTabs current="dishes" />
@@ -40,10 +45,29 @@ export function Dishes({ filter }: { filter: Filter }) {
           dishes.length === 0 ? (
             <p className="text-sm text-cafe-soft">{t("dishes.empty")}</p>
           ) : (
+            <div className="space-y-2">
+              <SelectionBar
+                selection={selection}
+                visible={dishes.map((d) => d.id)}
+                confirmKey="delete.confirmDishes"
+                onDelete={() => bulk.remove("/api/dishes/delete", "delete.keptDishes")}
+                actions={
+                  tab.status === "archived" ? (
+                    <Button variant="secondary" onClick={() => bulk.status("/api/dishes/unarchive", "unarchive.done")}>
+                      {t("dish.unarchive")}
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" onClick={() => bulk.status("/api/dishes/archive", "archive.done")}>
+                      {t("dish.archive")}
+                    </Button>
+                  )
+                }
+              />
             <List>
               {dishes.map((d) => (
-                <Row key={d.id} className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
+                <Row key={d.id} className={cx("flex flex-wrap items-center gap-3", selection.selected.has(d.id) && "bg-salva-soft/60")}>
+                  <Check checked={selection.selected.has(d.id)} onChange={() => selection.toggle(d.id)} label={t("selection.select", { name: d.name })} />
+                  <div className="min-w-0 flex-1">
                     <Link to={{ page: "dish", id: d.id }} className="font-medium">
                       {d.name}
                     </Link>
@@ -57,7 +81,7 @@ export function Dishes({ filter }: { filter: Filter }) {
                       {d.missingPrice && ` ${t("dishes.missingPrice")}`}
                     </p>
                   </div>
-                  <span className="flex flex-wrap gap-1">
+                  <span className="flex flex-wrap justify-end gap-1">
                     {d.createdBy === "claude" && <Badge>{t("dishes.byClaude")}</Badge>}
                     {d.tags.map((label) => (
                       <Badge key={label}>{label}</Badge>
@@ -66,6 +90,7 @@ export function Dishes({ filter }: { filter: Filter }) {
                 </Row>
               ))}
             </List>
+            </div>
           )
         }
       </Loaded>

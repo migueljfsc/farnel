@@ -18,6 +18,7 @@ import type { Aisle } from "../../../shared/aisles";
 import { idList, isUniqueViolation, rows } from "../db";
 import { nameKey } from "../../../shared/names";
 import { costPerPortionCents, type DishFacts } from "../rules";
+import { weekStartOf } from "../../../shared/time";
 
 export interface IngredientLine {
   name: string;
@@ -75,6 +76,9 @@ async function undecidedIngredientIds(db: D1Database, dishId: number): Promise<n
 
 // ---------------------------------------------------------------- dish records
 
+/** Dishes not deleted; a deleted dish only lives on in the history. */
+const LIVE = "deleted_at IS NULL";
+
 interface DishRecord {
   id: number;
   name: string;
@@ -112,7 +116,8 @@ async function loadDishRecords(db: D1Database, query: DishQuery = {}): Promise<D
     db
       .prepare(
         `SELECT id, name, notes, status, created_by AS createdBy, portions, repeat_interval_days AS repeatIntervalDays FROM dishes
-         WHERE (?1 IS NULL OR id IN (SELECT value FROM json_each(?1)))
+         WHERE deleted_at IS NULL
+           AND (?1 IS NULL OR id IN (SELECT value FROM json_each(?1)))
            AND (?2 IS NULL OR status = ?2)
            AND (?3 IS NULL OR id IN (SELECT dish_id FROM dish_tags WHERE tag = ?3))
          ORDER BY name COLLATE NOCASE`,
@@ -316,7 +321,7 @@ export async function updateDish(
   input: DishInput,
   now: string,
 ): Promise<{ ok: true; newIngredients: number[] } | { ok: false; error: "not_found" } | UnitMismatch> {
-  const exists = await db.prepare("SELECT 1 FROM dishes WHERE id = ?1").bind(id).first();
+  const exists = await db.prepare(`SELECT 1 FROM dishes WHERE id = ?1 AND ${LIVE}`).bind(id).first();
   if (!exists) return { ok: false, error: "not_found" };
   const resolved = await resolveLines(db, input.ingredients, now);
   if (!resolved.ok) return resolved;
@@ -333,7 +338,7 @@ export async function validateDish(
   db: D1Database,
   id: number,
 ): Promise<{ ok: true } | { ok: false; error: "not_found" | "not_pending" | "no_ingredients" } | { ok: false; error: "undecided_ingredients"; ingredientIds: number[] }> {
-  const dish = await db.prepare("SELECT status FROM dishes WHERE id = ?1").bind(id).first<{ status: DishStatus }>();
+  const dish = await db.prepare(`SELECT status FROM dishes WHERE id = ?1 AND ${LIVE}`).bind(id).first<{ status: DishStatus }>();
   if (!dish) return { ok: false, error: "not_found" };
   if (dish.status !== "pending") return { ok: false, error: "not_pending" };
   const ingredientIds = await undecidedIngredientIds(db, id);
@@ -346,14 +351,14 @@ export async function validateDish(
 }
 
 export async function archiveDish(db: D1Database, id: number): Promise<boolean> {
-  const result = await db.prepare("UPDATE dishes SET status = 'archived' WHERE id = ?1").bind(id).run();
+  const result = await db.prepare(`UPDATE dishes SET status = 'archived' WHERE id = ?1 AND ${LIVE}`).bind(id).run();
   return result.meta.changes > 0;
 }
 
 /** Back to `validated`, or to `pending` when an ingredient became undecided meanwhile. */
 export async function unarchiveDish(db: D1Database, id: number): Promise<boolean> {
   const status: DishStatus = (await undecidedIngredientIds(db, id)).length ? "pending" : "validated";
-  const result = await db.prepare("UPDATE dishes SET status = ?2 WHERE id = ?1 AND status = 'archived'").bind(id, status).run();
+  const result = await db.prepare(`UPDATE dishes SET status = ?2 WHERE id = ?1 AND status = 'archived' AND ${LIVE}`).bind(id, status).run();
   return result.meta.changes > 0;
 }
 
@@ -454,9 +459,72 @@ export async function restrictionByName(db: D1Database, name: string): Promise<n
 export async function catalogueCounts(db: D1Database): Promise<{ pendingDishes: number; undecided: number }> {
   const row = await db
     .prepare(
-      `SELECT (SELECT COUNT(*) FROM dishes WHERE status = 'pending') AS pendingDishes,
+      `SELECT (SELECT COUNT(*) FROM dishes WHERE status = 'pending' AND ${LIVE}) AS pendingDishes,
               (SELECT COUNT(*) FROM ingredient_restrictions WHERE status = 'unknown' AND restriction_id IN ${IN_USE}) AS undecided`,
     )
     .first<{ pendingDishes: number; undecided: number }>();
   return row!;
+}
+
+// ---------------------------------------------------------------- deleting
+
+export interface Deletion {
+  deleted: number[];
+  /** Kept: a dish planned this week or later, or an ingredient a dish uses. */
+  blocked: number[];
+}
+
+/**
+ * Deletes dishes not planned in the current or a later week. One that was never cooked goes
+ * entirely; one in the history (eaten, or a replacement) keeps its row, marked deleted and
+ * emptied of ingredients and tags, so past weeks still show its name.
+ */
+export async function deleteDishes(db: D1Database, ids: number[], today: string, now: string): Promise<Deletion> {
+  const list = idList(ids);
+  const [planned, cooked] = await Promise.all([
+    rows<{ id: number }>(
+      db
+        .prepare(
+          `SELECT DISTINCT c.dish_id AS id FROM cookings c JOIN plans p ON p.id = c.plan_id
+           WHERE p.week_start >= ?2 AND c.dish_id IN (SELECT value FROM json_each(?1))`,
+        )
+        .bind(list, weekStartOf(today)),
+    ),
+    rows<{ id: number }>(
+      db
+        .prepare(
+          `SELECT dish_id AS id FROM cookings WHERE dish_id IN (SELECT value FROM json_each(?1))
+           UNION SELECT replaced_by_dish_id FROM cookings WHERE replaced_by_dish_id IN (SELECT value FROM json_each(?1))`,
+        )
+        .bind(list),
+    ),
+  ]);
+  const blocked = new Set(planned.map((r) => r.id));
+  const inHistory = new Set(cooked.map((r) => r.id));
+  const deleted = ids.filter((id) => !blocked.has(id));
+  const statements = deleted.flatMap((id) =>
+    inHistory.has(id)
+      ? [
+          db.prepare("UPDATE dishes SET deleted_at = ?2 WHERE id = ?1").bind(id, now),
+          db.prepare("DELETE FROM dish_ingredients WHERE dish_id = ?1").bind(id),
+          db.prepare("DELETE FROM dish_tags WHERE dish_id = ?1").bind(id),
+        ]
+      : [db.prepare("DELETE FROM dishes WHERE id = ?1").bind(id)],
+  );
+  if (statements.length) await db.batch(statements);
+  return { deleted, blocked: ids.filter((id) => blocked.has(id)) };
+}
+
+/** Deletes ingredients no dish uses. */
+export async function deleteIngredients(db: D1Database, ids: number[]): Promise<Deletion> {
+  const used = new Set(
+    (
+      await rows<{ id: number }>(
+        db.prepare("SELECT DISTINCT ingredient_id AS id FROM dish_ingredients WHERE ingredient_id IN (SELECT value FROM json_each(?1))").bind(idList(ids)),
+      )
+    ).map((r) => r.id),
+  );
+  const deleted = ids.filter((id) => !used.has(id));
+  if (deleted.length) await db.batch(deleted.map((id) => db.prepare("DELETE FROM ingredients WHERE id = ?1").bind(id)));
+  return { deleted, blocked: ids.filter((id) => used.has(id)) };
 }

@@ -238,7 +238,7 @@ export async function setCookingStatus(db: D1Database, id: number, change: Cooki
     const byText = change.text !== undefined && change.text.trim() !== "";
     if (byDish === byText) return "invalid";
     if (byDish) {
-      const exists = await db.prepare("SELECT 1 FROM dishes WHERE id = ?1").bind(change.dishId).first();
+      const exists = await db.prepare("SELECT 1 FROM dishes WHERE id = ?1 AND deleted_at IS NULL").bind(change.dishId).first();
       if (!exists) return "invalid";
       dishId = change.dishId!;
     } else text = change.text!.trim();

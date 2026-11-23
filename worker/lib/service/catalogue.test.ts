@@ -9,6 +9,8 @@ import {
   listRestrictions,
   restrictionByName,
   createIngredient,
+  deleteDishes,
+  deleteIngredients,
   getDish,
   listDishes,
   listIngredients,
@@ -93,6 +95,46 @@ describe("creating ingredients", () => {
     expect(fish.aisle).toBe("fish");
     expect(await updateIngredient(db, fish.id, { aisle: "frozen" }, NOW)).toBe("ok");
     expect((await listIngredients(db))[0].aisle).toBe("frozen");
+  });
+});
+
+describe("deleting", () => {
+  const TODAY = "2026-11-25";
+
+  it("deletes a dish never cooked, and refuses one planned this week or later", async () => {
+    const unused = await addDish(db, "Nunca");
+    const planned = await addDish(db, "Planeado");
+    await addPlan(db, "2026-11-23", [{ dishId: planned, cookDate: "2026-11-26" }]);
+    expect(await deleteDishes(db, [unused, planned], TODAY, NOW)).toEqual({ deleted: [unused], blocked: [planned] });
+    expect(await getDish(db, unused)).toBeNull();
+    expect((await getDish(db, planned))?.name).toBe("Planeado");
+  });
+
+  it("hides a dish eaten in past weeks but keeps it in the history", async () => {
+    const old = await addDish(db, "Antigo");
+    await addPlan(db, "2026-11-09", [{ dishId: old, cookDate: "2026-11-10" }]);
+    expect(await deleteDishes(db, [old], TODAY, NOW)).toEqual({ deleted: [old], blocked: [] });
+    expect(await getDish(db, old)).toBeNull();
+    expect(await listDishes(db)).toEqual([]);
+    expect((await loadDishFacts(db)).has(old)).toBe(false);
+    const { history } = await import("./planning");
+    expect((await history(db, "2026-11-01", "2026-11-30", TODAY)).map((c) => c.dish)).toEqual(["Antigo"]);
+  });
+
+  it("deletes only ingredients no dish uses", async () => {
+    const rice = await addIngredient(db, "Arroz");
+    const salt = await addIngredient(db, "Sal");
+    await addDish(db, "Arroz", { ingredients: [[rice, 300]] });
+    expect(await deleteIngredients(db, [rice, salt])).toEqual({ deleted: [salt], blocked: [rice] });
+    expect((await listIngredients(db)).map((i) => i.name)).toEqual(["Arroz"]);
+  });
+
+  it("frees the ingredients of a deleted dish", async () => {
+    const duck = await addIngredient(db, "Pato");
+    const dish = await addDish(db, "Pato", { ingredients: [[duck, 500]] });
+    await addPlan(db, "2026-11-09", [{ dishId: dish, cookDate: "2026-11-10" }]);
+    await deleteDishes(db, [dish], TODAY, NOW);
+    expect(await deleteIngredients(db, [duck])).toEqual({ deleted: [duck], blocked: [] });
   });
 });
 

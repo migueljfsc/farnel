@@ -93,6 +93,16 @@ describe("api", () => {
     expect(await (await call("GET", "/api/plans?from=2026-11-01&to=2026-11-30")).json()).toEqual({ weeks: [] });
   });
 
+  it("archives and deletes dishes and ingredients in bulk", async () => {
+    const dish = (await (await call("POST", "/api/dishes", { name: "Sopa", portions: 2, repeatIntervalDays: 7, tags: [], ingredients: [{ name: "Nabo", quantity: 1, unit: "un" }] })).json()) as { id: number; newIngredients: number[] };
+    expect((await call("POST", "/api/dishes/archive", { ids: [dish.id] })).status).toBe(204);
+    expect(await (await call("GET", `/api/dishes/${dish.id}`)).json()).toMatchObject({ dish: { status: "archived" } });
+    expect(await (await call("POST", "/api/ingredients/delete", { ids: dish.newIngredients })).json()).toEqual({ deleted: [], blocked: dish.newIngredients });
+    expect(await (await call("POST", "/api/dishes/delete", { ids: [dish.id] })).json()).toEqual({ deleted: [dish.id], blocked: [] });
+    expect(await (await call("POST", "/api/ingredients/delete", { ids: dish.newIngredients })).json()).toEqual({ deleted: dish.newIngredients, blocked: [] });
+    expect((await call("POST", "/api/dishes/delete", { ids: [] })).status).toBe(400);
+  });
+
   it("reads and writes settings", async () => {
     expect((await call("PUT", "/api/settings", { weeklyBudgetCents: 5000, lunchesPerWeek: 6 })).status).toBe(204);
     expect(await (await call("GET", "/api/settings")).json()).toEqual({ settings: { weeklyBudgetCents: 5000, lunchesPerWeek: 6 } });

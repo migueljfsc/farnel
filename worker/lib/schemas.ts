@@ -80,4 +80,7 @@ export const personUpdate = z.object({
 
 export const personCreate = z.object({ email: z.email().max(254), name: z.string().trim().min(1).max(60) });
 
+/** A selection of rows for a bulk action. */
+export const ids = z.object({ ids: z.array(id).min(1).max(200) });
+
 export const settings = z.object({ weeklyBudgetCents: cents, lunchesPerWeek: z.number().int().min(0).max(14) });
