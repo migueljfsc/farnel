@@ -288,7 +288,7 @@ async function loadCookings(
   );
   if (cookings.length === 0) return [];
   const ids = idList(cookings.map((c) => c.id));
-  const [meals, feedback] = await Promise.all([
+  const [meals, feedback, tags] = await Promise.all([
     rows<Meal & { cookingId: number }>(
       db
         .prepare("SELECT cooking_id AS cookingId, date, slot FROM meals WHERE cooking_id IN (SELECT value FROM json_each(?1)) ORDER BY date, slot = 'dinner'")
@@ -302,11 +302,17 @@ async function loadCookings(
         )
         .bind(ids),
     ),
+    rows<{ dishId: number; tag: string }>(
+      db
+        .prepare("SELECT dish_id AS dishId, tag FROM dish_tags WHERE dish_id IN (SELECT value FROM json_each(?1)) ORDER BY tag")
+        .bind(idList([...new Set(cookings.map((c) => c.dishId))])),
+    ),
   ]);
   return cookings.map((c) => ({
     id: c.id,
     dishId: c.dishId,
     dish: c.dish,
+    tags: tags.filter((t) => t.dishId === c.dishId).map((t) => t.tag),
     cookDate: c.cookDate,
     portions: c.portions,
     costCents: c.costCents,

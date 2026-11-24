@@ -36,6 +36,12 @@ describe("savePlan", () => {
     ]);
   });
 
+  it("gives each cooking its dish's tags", async () => {
+    const a = await addDish(db, "A", { tags: ["peixe", "arroz"] });
+    await addPlan(db, "2026-11-23", [{ dishId: a, cookDate: "2026-11-23" }]);
+    expect((await getPlan(db, "2026-11-23", TODAY))!.cookings[0].tags).toEqual(["arroz", "peixe"]);
+  });
+
   it("rejects a dish inside its repeat interval and writes nothing", async () => {
     const a = await addDish(db, "A", { interval: 14 });
     await addPlan(db, "2026-11-09", [{ dishId: a, cookDate: "2026-11-10" }]);

@@ -83,6 +83,8 @@ export interface CookingView {
   id: number;
   dishId: number;
   dish: string;
+  /** The dish's tags, sorted. */
+  tags: string[];
   cookDate: string;
   portions: number;
   costCents: number;

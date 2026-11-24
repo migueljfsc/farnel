@@ -12,6 +12,7 @@ import { SLOTS, segments } from "../lib/board";
 import { AddMeal } from "../components/AddMeal";
 import { CloseButton, Sheet } from "../components/Sheet";
 import { byAisle, shoppingText } from "../lib/shopping";
+import { TIN_CLASS, tinTone } from "../lib/tins";
 import { claudeLinks, planPrompt } from "../lib/claude";
 import { errorMessage } from "../lib/errors";
 import { useToast } from "../lib/toast";
@@ -94,8 +95,8 @@ function Budget({ plan }: { plan: PlanView }) {
         <span>{t("week.summary", { people: plan.people.map((p) => p.name).join(", "), total: money(plan.totalCents), budget: money(plan.budgetCents) })}</span>
         {plan.overBudget && <span className="font-semibold text-tomate">{t("week.overBudget")}</span>}
       </p>
-      <div className="h-2 overflow-hidden rounded-full bg-linha" role="presentation">
-        <div className={cx("animate-bar h-full rounded-full", plan.overBudget ? "bg-tomate" : "bg-mar")} style={{ width: `${share * 100}%` }} />
+      <div className="h-1.5 overflow-hidden bg-linha" role="presentation">
+        <div className={cx("animate-bar h-full", plan.overBudget ? "bg-tomate" : "bg-mar")} style={{ width: `${share * 100}%` }} />
       </div>
       {plan.notes && <p className="text-sm italic text-tinta-soft">{plan.notes}</p>}
     </div>
@@ -104,8 +105,16 @@ function Budget({ plan }: { plan: PlanView }) {
 
 // ----------------------------------------------------------------- board
 
-/** Every cooking looks the same; rose stays for what needs attention. */
-const COOKING = "border-mar bg-mar-soft";
+/** A cooking is a tin in its protein's colour, with the hairline frame of a printed label. */
+const tin = (cooking: CookingView) =>
+  cx(
+    "relative rounded-[3px] after:pointer-events-none after:absolute after:inset-[3px] after:rounded-[2px] after:border after:border-current after:opacity-40",
+    TIN_CLASS[tinTone(cooking.tags)],
+    cooking.status === "skipped" && "line-through opacity-45 saturate-0",
+  );
+
+/** Marks the day a cooking is cooked on. */
+const POT = "grid size-5 place-items-center rounded-[2px] bg-tinta text-papel";
 
 function PotIcon({ className }: { className?: string }) {
   return (
@@ -175,7 +184,7 @@ function FreeMeal({ date, slot, today, adding, onAdd, className, style }: { date
       aria-label={t("board.add", { meal: `${day(date)} ${t(`slot.${slot}`)}` })}
       aria-expanded={active}
       onClick={() => onAdd({ date, slot })}
-      className={cx(className, "text-xl transition", active ? "border-mar bg-mar-soft text-mar" : "border-linha text-tinta-soft/50 hover:border-mar hover:bg-mar-soft/60 hover:text-mar")}
+      className={cx(className, "text-xl font-semibold transition", active ? "border-mar bg-mar-soft text-mar" : "border-linha text-mar/70 hover:border-mar hover:bg-mar-soft/60 hover:text-mar")}
       style={style}
     >
       +
@@ -195,14 +204,14 @@ function MealGrid({ weekStart, cookings, selected, adding, onSelect, onAdd }: Bo
         const [weekday, numbers] = day(date).split(" ");
         const cooked = cookings.filter((c) => c.cookDate === date && c.status !== "skipped");
         return (
-          <div key={date} className={cx("flex items-center gap-1.5 border-b-2 pb-1", date === today ? "border-mar text-mar" : "border-linha text-tinta-soft")}>
+          <div key={date} className={cx("flex items-center gap-1.5 border-b-2 pb-1", date === today ? "border-mostarda text-tinta" : "border-tinta/70 text-tinta-soft")}>
             <span className="flex items-baseline gap-1">
               <span className="display text-2xl">{numbers.split("/")[0]}</span>
-              <span className="text-xs font-medium">{weekday}</span>
+              <span className="text-xs font-semibold uppercase">{weekday}</span>
             </span>
             <span className="flex gap-0.5">
               {cooked.map((c) => (
-                <span key={c.id} title={`${t("board.cookDay")}: ${c.dish}`} className="grid size-5 place-items-center rounded-full bg-mar text-on-mar">
+                <span key={c.id} title={`${t("board.cookDay")}: ${c.dish}`} className={POT}>
                   <PotIcon className="size-3.5" />
                 </span>
               ))}
@@ -212,7 +221,7 @@ function MealGrid({ weekStart, cookings, selected, adding, onSelect, onAdd }: Bo
       })}
       {SLOTS.map((slot, row) => (
         <Fragment key={slot}>
-          <span className="self-center text-sm font-semibold text-tinta-soft" style={{ gridRow: row + 2, gridColumn: 1 }}>
+          <span className="self-center text-xs font-semibold uppercase tracking-wide text-tinta-soft" style={{ gridRow: row + 2, gridColumn: 1 }}>
             {t(`slot.${slot}`)}
           </span>
           {days.map((date, i) =>
@@ -224,7 +233,7 @@ function MealGrid({ weekStart, cookings, selected, adding, onSelect, onAdd }: Bo
                 today={today}
                 adding={adding}
                 onAdd={onAdd}
-                className="grid min-h-20 place-items-center rounded-xl border-2 border-dashed"
+                className="grid min-h-20 place-items-center rounded-[3px] border-[1.5px] border-dashed"
                 style={{ gridRow: row + 2, gridColumn: i + 2 }}
               />
             ),
@@ -270,25 +279,24 @@ function MealBlock({
       aria-expanded={selected}
       style={style}
       className={cx(
-        "animate-tin relative z-10 flex min-h-20 flex-col justify-between gap-1 rounded-xl border-2 p-2.5 text-left transition",
-        COOKING,
-        cooking.status === "skipped" && "border-dashed opacity-50",
-        selected ? "ring-4 ring-mar/25" : "hover:-translate-y-0.5",
+        "animate-tin z-10 flex min-h-20 flex-col justify-between gap-1 p-2.5 text-left transition",
+        tin(cooking),
+        selected ? "outline-[3px] outline-offset-2 outline-tinta" : "hover:-translate-y-0.5",
       )}
     >
       {replacedBy && (
-        <span title={t("cooking.replacedBy", { dish: replacedBy })} className="absolute -right-1.5 -top-2.5 max-w-[85%] truncate rounded-full bg-tomate px-2 py-0.5 text-[11px] font-bold text-on-mar shadow-sm">
+        <span title={t("cooking.replacedBy", { dish: replacedBy })} className="absolute -right-1 -top-2.5 z-10 max-w-[85%] truncate rounded-[2px] bg-tinta px-1.5 py-0.5 text-[11px] font-bold text-papel">
           {t("cooking.replacedBy", { dish: replacedBy })}
         </span>
       )}
-      <span className={cx("text-sm font-semibold leading-tight", cooking.status === "skipped" && "line-through")}>
+      <span className="display text-base leading-[0.95]">
         {continued ? `↳ ${cooking.dish}` : cooking.dish}
-        {cooking.status === "done" && <span className="ml-1 text-mar">✓</span>}
+        {cooking.status === "done" && <span className="ml-1 font-sans">✓</span>}
       </span>
       {!continued && (
-        <span className="flex items-center justify-between gap-2 text-[11px] text-tinta-soft">
+        <span className="flex items-center justify-between gap-2 text-[11px] italic opacity-90">
           <span>{tn("dish.portions", cooking.portions)}</span>
-          <span className="tabular-nums">{money(cooking.costCents)}</span>
+          <span className="tabular-nums not-italic">{money(cooking.costCents)}</span>
         </span>
       )}
     </button>
@@ -303,12 +311,12 @@ function DayList({ weekStart, cookings, selected, adding, onSelect, onAdd }: Boa
   return (
     <ol className="space-y-2 sm:hidden">
       {days.map((date) => (
-        <li key={date} className={cx("rounded-2xl border bg-raised p-3", date === today ? "border-mar" : "border-linha")}>
-          <p className={cx("mb-2 flex items-center gap-2 text-sm font-semibold", date === today ? "text-mar" : "text-tinta-soft")}>
+        <li key={date} className={cx("border-t-2 pt-2", date === today ? "border-mostarda" : "border-tinta/70")}>
+          <p className={cx("mb-2 flex items-center gap-2 text-sm font-semibold uppercase", date === today ? "text-tinta" : "text-tinta-soft")}>
             {day(date)}
             {cookings.map((c) =>
               c.cookDate === date && c.status !== "skipped" ? (
-                <span key={c.id} className="grid size-5 place-items-center rounded-full bg-mar text-on-mar" title={`${t("board.cookDay")}: ${c.dish}`}>
+                <span key={c.id} className={POT} title={`${t("board.cookDay")}: ${c.dish}`}>
                   <PotIcon className="size-3.5" />
                 </span>
               ) : null,
@@ -319,18 +327,18 @@ function DayList({ weekStart, cookings, selected, adding, onSelect, onAdd }: Boa
               const cooking = feeding(cookings, date, slot);
               return (
                 <div key={slot} className="flex items-center gap-2 text-sm">
-                  <span className="w-16 shrink-0 text-xs text-tinta-soft">{t(`slot.${slot}`)}</span>
+                  <span className="w-16 shrink-0 text-xs font-semibold uppercase text-tinta-soft">{t(`slot.${slot}`)}</span>
                   {cooking ? (
                     <button
                       type="button"
                       onClick={() => onSelect(cooking.id)}
                       aria-expanded={cooking.id === selected}
-                      className={cx("flex-1 truncate rounded-lg border-2 px-2.5 py-1.5 text-left font-semibold", COOKING, cooking.status === "skipped" && "border-dashed line-through opacity-50")}
+                      className={cx("display flex-1 truncate px-2.5 py-2 text-left text-base", tin(cooking))}
                     >
                       {cooking.dish}
                     </button>
                   ) : (
-                    <FreeMeal date={date} slot={slot} today={today} adding={adding} onAdd={onAdd} className="flex-1 rounded-lg border-2 border-dashed px-2.5 py-1 text-left" />
+                    <FreeMeal date={date} slot={slot} today={today} adding={adding} onAdd={onAdd} className="flex-1 rounded-[3px] border-[1.5px] border-dashed px-2.5 py-1 text-left" />
                   )}
                 </div>
               );
@@ -401,7 +409,7 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
   return (
     <Sheet labelledBy={`tin-${cooking.id}`} onClose={onClose}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <Link to={{ page: "dish", id: cooking.dishId }} className="display text-xl">
+          <Link to={{ page: "dish", id: cooking.dishId }} className="display text-2xl">
             <span id={`tin-${cooking.id}`} ref={heading} tabIndex={-1}>
               {cooking.dish}
             </span>
@@ -466,8 +474,8 @@ function ReplaceForm({ onReplace }: { onReplace: (by: { dishId: number } | { tex
 function EmptyWeek() {
   const { t } = useI18n();
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-linha px-6 py-12 text-center">
-      <span className="h-10 w-16 rounded-b-2xl rounded-t-md border-[3px] border-mar/40" aria-hidden />
+    <div className="flex flex-col items-center gap-3 rounded-[3px] border-[1.5px] border-dashed border-linha px-6 py-12 text-center">
+      <span className="h-10 w-16 rounded-[3px] border-[3px] border-mar/40 bg-mostarda/30" aria-hidden />
       <p className="text-tinta-soft">{t("week.empty")}</p>
     </div>
   );
@@ -502,7 +510,7 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
   }
 
   return (
-    <div className="animate-expand space-y-3 rounded-2xl bg-mar-soft p-4 sm:p-5">
+    <div className="animate-expand space-y-3 rounded-[3px] border-2 border-mar bg-mar-soft/50 p-4 sm:p-5">
       <h2 className="display text-xl text-mar">{t(hasPlan ? "week.plan.retitle" : "week.plan.title")}</h2>
       {people.length > 1 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -515,7 +523,7 @@ function PlanWithClaude({ weekStart, hasPlan, onRefresh }: { weekStart: string; 
                 type="button"
                 aria-pressed={on}
                 onClick={() => toggle(p.id)}
-                className={cx("rounded-full px-3 py-1 font-semibold transition", on ? "bg-mar text-on-mar" : "bg-raised text-tinta-soft ring-1 ring-linha")}
+                className={cx("rounded-[3px] px-3 py-1 font-semibold transition", on ? "bg-mar text-on-mar" : "text-tinta-soft shadow-[inset_0_0_0_1.5px_var(--linha)]")}
               >
                 {p.name}
               </button>
@@ -595,10 +603,10 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
   };
 
   return (
-    <section className="space-y-4 rounded-2xl border border-linha bg-raised p-4 sm:p-5">
+    <section className="space-y-4 border-t-2 border-tinta pt-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="display text-2xl">{t("shopping.title")}</h2>
+          <h2 className="display text-3xl text-mar">{t("shopping.title")}</h2>
           <p className="text-sm text-tinta-soft">
             {t("shopping.estimate", { total: money(list.totalCents), budget: money(plan.budgetCents) })}
             {list.missingPrices > 0 && <> · {tn("shopping.missing", list.missingPrices)}</>}
@@ -614,7 +622,7 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
       <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
         {groups.map((group) => (
           <div key={group.aisle} className="space-y-1">
-            <h3 className="text-sm font-semibold text-tomate">{t(`aisle.${group.aisle}`)}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-tinta-soft">{t(`aisle.${group.aisle}`)}</h3>
             <ul>
               {group.items.map((i) => {
                 const done = ticked.has(i.ingredientId);
@@ -625,8 +633,8 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
                       <span
                         aria-hidden
                         className={cx(
-                          "grid size-5 shrink-0 place-items-center rounded-full border-2 text-[11px] font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-mar",
-                          done ? "animate-pop border-mar bg-mar text-on-mar" : "border-linha",
+                          "grid size-5 shrink-0 place-items-center rounded-[3px] border-2 text-[11px] font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-mar",
+                          done ? "animate-pop border-mar bg-mar text-on-mar" : "border-tinta/40",
                         )}
                       >
                         {done && "✓"}

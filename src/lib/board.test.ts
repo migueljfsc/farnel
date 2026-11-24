@@ -6,6 +6,7 @@ const cooking = (id: number, meals: [string, "lunch" | "dinner"][], cookDate = m
   id,
   dishId: id,
   dish: `D${id}`,
+  tags: [],
   cookDate,
   portions: 4,
   costCents: 0,

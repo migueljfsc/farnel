@@ -15,9 +15,9 @@ export function Sheet({ labelledBy, onClose, children }: { labelledBy: string; o
       <div
         role="dialog"
         aria-labelledby={labelledBy}
-        className="animate-sheet fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] space-y-3 overflow-y-auto rounded-t-3xl border-t border-linha bg-raised p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-tin sm:animate-expand sm:static sm:z-auto sm:rounded-2xl sm:border sm:p-4 sm:shadow-none"
+        className="animate-sheet fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] space-y-3 overflow-y-auto rounded-t-[6px] border-t-2 border-tinta bg-raised p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-tin sm:animate-expand sm:static sm:z-auto sm:rounded-[3px] sm:border-2 sm:p-4 sm:shadow-tin"
       >
-        <span className="mx-auto block h-1 w-10 rounded-full bg-linha sm:hidden" aria-hidden />
+        <span className="mx-auto block h-1 w-10 rounded-[3px] bg-linha sm:hidden" aria-hidden />
         {children}
       </div>
     </>
@@ -27,7 +27,7 @@ export function Sheet({ labelledBy, onClose, children }: { labelledBy: string; o
 export function CloseButton({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
   return (
-    <button type="button" onClick={onClose} aria-label={t("common.close")} className="grid size-7 place-items-center rounded-full hover:bg-papel">
+    <button type="button" onClick={onClose} aria-label={t("common.close")} className="grid size-7 place-items-center rounded-[3px] hover:bg-papel">
       ✕
     </button>
   );

@@ -78,7 +78,7 @@ export function AddMeal({
           setExtra([]);
         }}
         className={cx(
-          "flex w-full flex-wrap items-baseline justify-between gap-x-3 rounded-xl border-2 px-3 py-2 text-left transition",
+          "flex w-full flex-wrap items-baseline justify-between gap-x-3 rounded-[3px] border-2 px-3 py-2 text-left transition",
           picked?.id === d.id ? "border-mar bg-mar-soft" : "border-transparent hover:bg-papel",
         )}
       >
@@ -134,7 +134,7 @@ export function AddMeal({
                 disabled={!has(m) && extra.length >= spare}
                 onClick={() => toggle(m)}
                 className={cx(
-                  "rounded-full px-3 py-1 text-sm font-semibold transition disabled:opacity-40",
+                  "rounded-[3px] px-3 py-1 text-sm font-semibold transition disabled:opacity-40",
                   has(m) ? "bg-mar text-on-mar" : "ring-1 ring-linha hover:bg-mar-soft",
                 )}
               >
