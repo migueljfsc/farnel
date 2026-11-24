@@ -79,11 +79,11 @@ export function AddMeal({
         }}
         className={cx(
           "flex w-full flex-wrap items-baseline justify-between gap-x-3 rounded-xl border-2 px-3 py-2 text-left transition",
-          picked?.id === d.id ? "border-salva bg-salva-soft" : "border-transparent hover:bg-aveia",
+          picked?.id === d.id ? "border-mar bg-mar-soft" : "border-transparent hover:bg-papel",
         )}
       >
         <span className="font-semibold">{d.name}</span>
-        <span className="text-xs text-cafe-soft">
+        <span className="text-xs text-tinta-soft">
           {t("add.meta", { cost: money(d.costPerPortionCents), portions: tn("dish.portions", d.portions) })}
           {d.lastCooked && ` · ${t("add.last", { day: day(d.lastCooked) })}`}
         </span>
@@ -106,13 +106,13 @@ export function AddMeal({
           const fresh = shown.filter((d) => !d.tooSoon);
           const recent = shown.filter((d) => d.tooSoon);
           return shown.length === 0 ? (
-            <p className="text-sm text-cafe-soft">{t("add.none")}</p>
+            <p className="text-sm text-tinta-soft">{t("add.none")}</p>
           ) : (
             <div className="max-h-72 space-y-2 overflow-y-auto">
               <ul className="space-y-0.5">{fresh.map(option)}</ul>
               {recent.length > 0 && (
                 <div className="space-y-1">
-                  <p className="px-3 text-xs font-semibold text-cafe-soft">
+                  <p className="px-3 text-xs font-semibold text-tinta-soft">
                     {t("add.recent")} <span className="font-normal">· {t("add.recentNote")}</span>
                   </p>
                   <ul className="space-y-0.5 opacity-75">{recent.map(option)}</ul>
@@ -124,7 +124,7 @@ export function AddMeal({
       </Loaded>
       {picked && spare > 0 && free.length > 0 && (
         <div className="animate-expand space-y-1.5">
-          <p className="text-sm font-medium text-cafe-soft">{t("add.leftovers")}</p>
+          <p className="text-sm font-medium text-tinta-soft">{t("add.leftovers")}</p>
           <div className="flex flex-wrap gap-1.5">
             {free.map((m) => (
               <button
@@ -135,7 +135,7 @@ export function AddMeal({
                 onClick={() => toggle(m)}
                 className={cx(
                   "rounded-full px-3 py-1 text-sm font-semibold transition disabled:opacity-40",
-                  has(m) ? "bg-salva text-louca" : "ring-1 ring-linha hover:bg-salva-soft",
+                  has(m) ? "bg-mar text-on-mar" : "ring-1 ring-linha hover:bg-mar-soft",
                 )}
               >
                 {label(m)}

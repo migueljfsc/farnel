@@ -14,7 +14,7 @@ export function Link({ to, className, children, ...rest }: { to: Route; classNam
     <a
       {...rest}
       href={href(to)}
-      className={cx("text-salva underline-offset-4 hover:underline", className)}
+      className={cx("text-mar underline-offset-4 hover:underline", className)}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey) return;
         e.preventDefault();
@@ -33,8 +33,8 @@ export function Button({ variant = "primary", className, ...props }: ButtonHTMLA
 export function Page({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
   return (
     <section className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="display text-3xl sm:text-4xl">{title}</h1>
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b-2 border-tinta pb-3">
+        <h1 className="display text-4xl text-mar sm:text-5xl">{title}</h1>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </header>
       {children}
@@ -42,17 +42,18 @@ export function Page({ title, actions, children }: { title: string; actions?: Re
   );
 }
 
+/** A part of a page, set off by an ink rule instead of a floating box. */
 export const Card = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <div className={cx("rounded-xl border border-linha bg-louca p-4", className)}>{children}</div>
+  <div className={cx("border-t-2 border-tinta pt-4", className)}>{children}</div>
 );
 
-/** One enamel surface holding rows divided by hairlines, instead of a stack of separate cards. */
+/** Rows divided by hairlines under an ink rule, like a printed table. */
 export const List = ({ children }: { children: ReactNode }) => (
-  <ul className="divide-y divide-linha overflow-hidden rounded-2xl border border-linha bg-louca">{children}</ul>
+  <ul className="divide-y divide-linha border-y border-t-2 border-linha border-t-tinta">{children}</ul>
 );
 
 export const Row = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <li className={cx("px-4 py-3 transition-colors hover:bg-aveia/60", className)}>{children}</li>
+  <li className={cx("px-2 py-3 transition-colors hover:bg-mar-soft/40 sm:px-3", className)}>{children}</li>
 );
 
 /** Switches between the two halves of the catalogue: dishes and their ingredients. */
@@ -62,13 +63,13 @@ export function CatalogueTabs({ current }: { current: "dishes" | "ingredients" }
     <Link
       to={{ page }}
       aria-current={current === page ? "page" : undefined}
-      className={cx("rounded-full px-4 py-1.5 text-sm font-semibold no-underline transition hover:no-underline", current === page ? "bg-louca text-cafe! shadow-tin" : "text-cafe-soft! hover:text-cafe!")}
+      className={cx("py-2 text-sm font-semibold no-underline transition hover:no-underline", current === page ? "text-tinta! shadow-[inset_0_-3px_0_var(--mar)]" : "text-tinta-soft! hover:text-tinta!")}
     >
       {t(label)}
     </Link>
   );
   return (
-    <div className="inline-flex rounded-full bg-linha/60 p-1">
+    <div className="flex gap-5 border-b border-linha">
       {tab("dishes", "nav.dishes")}
       {tab("ingredients", "nav.ingredients")}
     </div>
@@ -79,9 +80,9 @@ export function CatalogueTabs({ current }: { current: "dishes" | "ingredients" }
 export function SaveStatus({ state }: { state: SaveState }) {
   const { t } = useI18n();
   if (state === "idle") return null;
-  if (state === "error") return <span className="text-sm font-medium text-rosa">{t("error.generic")}</span>;
+  if (state === "error") return <span className="text-sm font-medium text-tomate">{t("error.generic")}</span>;
   return (
-    <span role="status" className={cx("text-sm font-medium", state === "saving" ? "text-cafe-soft" : "animate-pop text-salva")}>
+    <span role="status" className={cx("text-sm font-medium", state === "saving" ? "text-tinta-soft" : "animate-pop text-mar")}>
       {state === "saving" ? t("common.saving") : `✓ ${t("common.saved")}`}
     </span>
   );
@@ -89,14 +90,14 @@ export function SaveStatus({ state }: { state: SaveState }) {
 
 export const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <label className="block space-y-1 text-sm">
-    <span className="font-medium text-cafe-soft">{label}</span>
+    <span className="font-medium text-tinta-soft">{label}</span>
     {children}
   </label>
 );
 
 
 export const Badge = ({ children, tone = "neutral" }: { children: ReactNode; tone?: Tone }) => (
-  <span className={cx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", TONES[tone])}>{children}</span>
+  <span className={cx("inline-flex items-center rounded-[2px] px-1.5 py-0.5 text-[11px] font-bold", TONES[tone])}>{children}</span>
 );
 
 /** Loading, error, or the content once `data` is there. */
@@ -120,7 +121,7 @@ function LoadingText() {
 
 export function ErrorText({ error }: { error: unknown }) {
   const { t } = useI18n();
-  return <p className="text-sm font-medium text-rosa">{errorMessage(t, error)}</p>;
+  return <p className="text-sm font-medium text-tomate">{errorMessage(t, error)}</p>;
 }
 
 export function Stars({ value, onChange }: { value: number | undefined; onChange?: (rating: number) => void }) {
@@ -140,8 +141,8 @@ export function Stars({ value, onChange }: { value: number | undefined; onChange
           }}
           className={cx(
             "px-0.5 text-xl leading-none transition-colors",
-            n <= (value ?? 0) ? "text-rosa" : "text-cafe-soft/35",
-            onChange ? "hover:text-rosa/70" : "cursor-default",
+            n <= (value ?? 0) ? "text-tomate" : "text-tinta-soft/35",
+            onChange ? "hover:text-tomate/70" : "cursor-default",
             popped === n && "animate-pop",
           )}
         >

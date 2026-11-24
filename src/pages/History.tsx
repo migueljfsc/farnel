@@ -15,7 +15,7 @@ export function History() {
       <Loaded data={cookings.data && people.data ? { ...cookings.data, ...people.data } : undefined} error={cookings.error ?? people.error}>
         {(data) =>
           data.cookings.length === 0 ? (
-            <p className="text-sm text-cafe-soft">{t("history.empty")}</p>
+            <p className="text-sm text-tinta-soft">{t("history.empty")}</p>
           ) : (
             <List>
               {data.cookings.map((c) => (
@@ -36,11 +36,11 @@ function HistoryRow({ cooking, people, onChange }: { cooking: CookingView; peopl
     <Row className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm">
-          <span className="text-cafe-soft">{day(cooking.cookDate)}</span>{" "}
+          <span className="text-tinta-soft">{day(cooking.cookDate)}</span>{" "}
           <Link to={{ page: "dish", id: cooking.dishId }} className="font-medium">
             {cooking.dish}
           </Link>{" "}
-          <span className="text-cafe-soft">({tn("dish.portions", cooking.portions)})</span>
+          <span className="text-tinta-soft">({tn("dish.portions", cooking.portions)})</span>
         </p>
         {cooking.status !== "done" && <Badge tone="neutral">{t(`status.${cooking.status}`)}</Badge>}
       </div>
@@ -70,7 +70,7 @@ function PersonFeedback({ cookingId, person, feedback, onChange }: { cookingId: 
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="w-16 font-medium text-cafe">{person.name}</span>
+      <span className="w-16 font-medium text-tinta">{person.name}</span>
       <Stars value={feedback?.rating} onChange={mine ? (r) => save(r, comment) : undefined} />
       {mine ? (
         <input
@@ -82,7 +82,7 @@ function PersonFeedback({ cookingId, person, feedback, onChange }: { cookingId: 
           onBlur={() => comment !== (feedback?.comment ?? "") && save(feedback?.rating, comment)}
         />
       ) : (
-        feedback?.comment && <span className="text-cafe-soft">"{feedback.comment}"</span>
+        feedback?.comment && <span className="text-tinta-soft">"{feedback.comment}"</span>
       )}
       {failure !== undefined && <ErrorText error={failure} />}
     </div>

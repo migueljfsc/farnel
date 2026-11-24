@@ -89,7 +89,7 @@ export function IngredientPicker({
         }}
       />
       {open && (
-        <ul id={listId} role="listbox" className="animate-expand absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-xl border border-linha bg-louca p-1 shadow-tin">
+        <ul id={listId} role="listbox" className="animate-expand absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-xl border border-linha bg-raised p-1 shadow-tin">
           {matches.map((ingredient, index) => (
             <li
               key={ingredient.id}
@@ -99,13 +99,13 @@ export function IngredientPicker({
                 e.preventDefault();
                 choose(ingredient);
               }}
-              className={cx("flex cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-sm", index === active && "bg-salva-soft text-salva")}
+              className={cx("flex cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-sm", index === active && "bg-mar-soft text-mar")}
             >
               <span>{ingredient.name}</span>
-              <span className="text-xs text-cafe-soft">{t(`unit.${ingredient.unit}`)}</span>
+              <span className="text-xs text-tinta-soft">{t(`unit.${ingredient.unit}`)}</span>
             </li>
           ))}
-          {matches.length === 0 && !query.trim() && <li className="px-3 py-1.5 text-sm text-cafe-soft">{t("picker.noMatch")}</li>}
+          {matches.length === 0 && !query.trim() && <li className="px-3 py-1.5 text-sm text-tinta-soft">{t("picker.noMatch")}</li>}
           {query.trim() && !exact && (
             <li
               role="option"
@@ -114,7 +114,7 @@ export function IngredientPicker({
                 e.preventDefault();
                 setCreating(query.trim());
               }}
-              className={cx("cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold text-rosa", active === matches.length && "bg-rosa-soft")}
+              className={cx("cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold text-tomate", active === matches.length && "bg-tomate-soft")}
             >
               + {t("picker.create", { name: query.trim() })}
             </li>

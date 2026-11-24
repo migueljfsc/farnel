@@ -41,7 +41,7 @@ export function NewIngredientForm({ initialName = "", onCreated, onCancel }: { i
   };
 
   return (
-    <div className="animate-expand space-y-3 rounded-xl border border-linha bg-aveia/60 p-3">
+    <div className="animate-expand space-y-3 rounded-xl border border-linha bg-papel/60 p-3">
       <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1.4fr]">
         <Field label={t("dish.name")}>
           <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} autoFocus={!initialName} />
@@ -70,13 +70,13 @@ export function NewIngredientForm({ initialName = "", onCreated, onCancel }: { i
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm" title={t("ingredients.proteinHint")}>
         <label className="inline-flex items-center gap-2">
-          <input type="checkbox" className="size-4 accent-salva" checked={protein} onChange={(e) => setProtein(e.target.checked)} />
+          <input type="checkbox" className="size-4 accent-mar" checked={protein} onChange={(e) => setProtein(e.target.checked)} />
           {t("ingredients.protein")}
         </label>
         {protein && unit === "un" && (
           <span className="inline-flex items-center gap-2">
             <input aria-label={t("ingredients.proteinEach")} className={`${inputBase} w-16`} inputMode="decimal" value={each} onChange={(e) => setEach(e.target.value)} />
-            <span className="text-cafe-soft">{t("ingredients.proteinEach")}</span>
+            <span className="text-tinta-soft">{t("ingredients.proteinEach")}</span>
           </span>
         )}
       </div>

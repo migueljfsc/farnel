@@ -1,44 +1,104 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "Bricolage Grotesque";
+  font-family: "Public Sans";
   font-style: normal;
-  font-weight: 200 800;
-  font-stretch: 75% 100%;
+  font-weight: 400 700;
   font-display: swap;
-  src: url("/fonts/bricolage-latin-var.woff2") format("woff2");
+  src: url("/fonts/public-sans-latin-var.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
     U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
-
 @font-face {
-  font-family: "Bricolage Grotesque";
+  font-family: "Public Sans";
   font-style: normal;
-  font-weight: 200 800;
-  font-stretch: 75% 100%;
+  font-weight: 400 700;
   font-display: swap;
-  src: url("/fonts/bricolage-latin-ext-var.woff2") format("woff2");
+  src: url("/fonts/public-sans-latin-ext-var.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Public Sans";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/public-sans-italic-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Public Sans";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/public-sans-italic-latin-ext-var.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Big Shoulders Display";
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+  src: url("/fonts/big-shoulders-display-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Big Shoulders Display";
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+  src: url("/fonts/big-shoulders-display-latin-ext-var.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Abril Fatface";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/abril-fatface-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Abril Fatface";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/abril-fatface-latin-ext.woff2") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
     U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /*
- * "Bica com natas": oat beige, sage green and rose, with espresso text. Sage is the main colour,
- * rose marks what needs attention (forbidden, over budget, counts).
+ * "Lata de conserva": the printed labels of Portuguese tinned fish. Paper and ink for the page,
+ * sea teal ("mar") for what is the brand's (titles, the active place, primary actions), tomato
+ * for what needs a look, mustard for highlights. Tins take a colour from their dish's protein.
  * Each colour carries its light and dark value; the active colour scheme picks one.
  */
 :root {
   color-scheme: light dark;
-  --aveia: light-dark(#f2ebdf, #1b1714);
-  --louca: light-dark(#fbf8f3, #252019);
-  --cafe: light-dark(#2a211c, #f0e7db);
-  --cafe-soft: light-dark(#6e625a, #b3a698);
-  --linha: light-dark(rgb(42 33 28 / 0.12), rgb(240 231 219 / 0.12));
-  --salva: light-dark(#3e6b4f, #93c4a2);
-  --salva-soft: light-dark(#dfeadf, #22392b);
-  --rosa: light-dark(#d9577b, #f293ad);
-  --rosa-soft: light-dark(#f8dfe6, #4a2530);
-  --sombra: 0 1px 2px light-dark(rgb(42 33 28 / 0.06), rgb(0 0 0 / 0.3)), 0 10px 28px -12px light-dark(rgb(42 33 28 / 0.22), rgb(0 0 0 / 0.6));
+  --papel: light-dark(#fbfaf7, #232c2a);
+  --raised: light-dark(#ffffff, #2b3532);
+  --tinta: light-dark(#17201e, #ece6da);
+  --tinta-soft: light-dark(#55605d, #b3bbb6);
+  --linha: light-dark(rgb(23 32 30 / 0.14), rgb(236 230 218 / 0.15));
+  --mar: light-dark(#0f5257, #8fcfc8);
+  --mar-soft: light-dark(#dcebea, #2f4a47);
+  --tomate: light-dark(#d2452c, #f07a63);
+  --tomate-soft: light-dark(#f8e1db, #4a2a24);
+  --mostarda: #e8b23a;
+  --on-mar: light-dark(#fbfaf7, #17201e);
+  --tin-carne: #d2452c;
+  --tin-peixe: #234e70;
+  --tin-marisco: #6d3a5c;
+  --tin-ovos: #e8b23a;
+  --tin-vegetariano: #0f5257;
+  --tin-none: #4b5653;
+  --sombra: 3px 3px 0 var(--tinta);
 }
 
 /* The theme button pins one scheme; without it the system decides. */
@@ -51,24 +111,33 @@
 }
 
 @theme inline {
-  --color-aveia: var(--aveia);
-  --color-louca: var(--louca);
-  --color-cafe: var(--cafe);
-  --color-cafe-soft: var(--cafe-soft);
+  --color-papel: var(--papel);
+  --color-raised: var(--raised);
+  --color-tinta: var(--tinta);
+  --color-tinta-soft: var(--tinta-soft);
   --color-linha: var(--linha);
-  --color-salva: var(--salva);
-  --color-salva-soft: var(--salva-soft);
-  --color-rosa: var(--rosa);
-  --color-rosa-soft: var(--rosa-soft);
+  --color-mar: var(--mar);
+  --color-mar-soft: var(--mar-soft);
+  --color-tomate: var(--tomate);
+  --color-tomate-soft: var(--tomate-soft);
+  --color-mostarda: var(--mostarda);
+  --color-on-mar: var(--on-mar);
+  --color-tin-carne: var(--tin-carne);
+  --color-tin-peixe: var(--tin-peixe);
+  --color-tin-marisco: var(--tin-marisco);
+  --color-tin-ovos: var(--tin-ovos);
+  --color-tin-vegetariano: var(--tin-vegetariano);
+  --color-tin-none: var(--tin-none);
   --shadow-tin: var(--sombra);
-  --font-sans: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --font-brand: "Abril Fatface", Georgia, serif;
 }
 
 @layer base {
   html {
-    background: var(--aveia);
-    color: var(--cafe);
-    font-optical-sizing: auto;
+    background: var(--papel);
+    color: var(--tinta);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -78,23 +147,31 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--salva);
+    outline: 2px solid var(--mar);
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: 2px;
   }
 
   ::selection {
-    background: var(--salva-soft);
+    background: var(--mar-soft);
   }
 }
 
 @layer components {
-  /* Headlines: condensed and heavy, the only place the type gets loud. */
+  /* Titles: condensed caps like the lettering on a tin, the only place the type gets loud. */
   .display {
-    font-stretch: 75%;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    line-height: 1.05;
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 0.95;
+  }
+
+  /* The name, and only the name. */
+  .wordmark {
+    font-family: var(--font-brand);
+    font-weight: 400;
+    line-height: 1;
   }
 }
 
@@ -103,7 +180,7 @@
 select {
   appearance: none;
   padding-right: 2.25rem;
-  background-image: linear-gradient(45deg, transparent 50%, var(--cafe-soft) 50%), linear-gradient(135deg, var(--cafe-soft) 50%, transparent 50%);
+  background-image: linear-gradient(45deg, transparent 50%, var(--tinta-soft) 50%), linear-gradient(135deg, var(--tinta-soft) 50%, transparent 50%);
   background-position:
     calc(100% - 1.125rem) 55%,
     calc(100% - 0.8rem) 55%;
@@ -213,8 +290,8 @@ select {
 
 /* Placeholder blocks while data loads. */
 .skeleton {
-  border-radius: 0.75rem;
-  background: linear-gradient(90deg, var(--linha) 25%, var(--aveia) 50%, var(--linha) 75%);
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--linha) 25%, var(--papel) 50%, var(--linha) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }

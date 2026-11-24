@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onBlur={resume}
             className={cx(
               "animate-toast pointer-events-auto flex max-w-md items-center gap-3 rounded-full py-2 pl-4 pr-2 text-sm font-medium shadow-tin",
-              toast.tone === "error" ? "bg-rosa text-louca" : "bg-cafe text-aveia",
+              toast.tone === "error" ? "bg-tomate text-on-mar" : "bg-tinta text-papel",
             )}
           >
             <span>{toast.message}</span>
@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   setToast(null);
                   await toast.action!.run();
                 }}
-                className="rounded-full bg-rosa px-3 py-1 text-xs font-bold text-cafe transition hover:brightness-105"
+                className="rounded-full bg-tomate px-3 py-1 text-xs font-bold text-tinta transition hover:brightness-105"
               >
                 {toast.action.label}
               </button>

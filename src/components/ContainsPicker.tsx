@@ -63,7 +63,7 @@ export function ContainsPicker({
   if (restrictions.length === 0) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5 text-xs">
-      <span className="font-medium text-cafe-soft">{t("contains.label")}</span>
+      <span className="font-medium text-tinta-soft">{t("contains.label")}</span>
       {restrictions.map((r) => (
         <button
           key={r.id}
@@ -73,18 +73,18 @@ export function ContainsPicker({
           onClick={() => toggle(r.id)}
           className={cx(
             "rounded-full px-2.5 py-0.5 font-semibold transition",
-            contains.has(r.id) ? "bg-rosa text-louca" : "text-cafe-soft ring-1 ring-linha hover:text-cafe",
+            contains.has(r.id) ? "bg-tomate text-on-mar" : "text-tinta-soft ring-1 ring-linha hover:text-tinta",
           )}
         >
           {r.name}
         </button>
       ))}
       {pending ? (
-        <button type="button" disabled={busy} onClick={() => save(contains)} className="rounded-full bg-salva px-3 py-0.5 font-semibold text-louca transition hover:brightness-110">
+        <button type="button" disabled={busy} onClick={() => save(contains)} className="rounded-full bg-mar px-3 py-0.5 font-semibold text-on-mar transition hover:brightness-110">
           {t(contains.size === 0 ? "contains.none" : "contains.confirm")}
         </button>
       ) : (
-        <span className="font-semibold text-salva" aria-label={t("contains.decided")}>
+        <span className="font-semibold text-mar" aria-label={t("contains.decided")}>
           ✓
         </span>
       )}

@@ -46,7 +46,7 @@ function useSave(): [(action: () => Promise<unknown>) => Promise<void>, React.Re
       setState({ failure });
     }
   };
-  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-salva">{t("common.saved")}</span> : null;
+  const feedback = state.failure !== undefined ? <ErrorText error={state.failure} /> : state.saved ? <span className="text-sm text-mar">{t("common.saved")}</span> : null;
   return [save, feedback];
 }
 
@@ -77,7 +77,7 @@ function HouseholdForm({ settings }: { settings: SettingsData }) {
 
 /** A part of a person's card, set off from the one above. */
 const SECTION = "space-y-2 border-t border-linha pt-3";
-const HEADING = "text-sm font-semibold text-cafe";
+const HEADING = "text-sm font-semibold text-tinta";
 
 interface RestrictionRow {
   name: string;
@@ -106,11 +106,11 @@ function PersonForm({ person, ingredientNames }: { person: PersonView; ingredien
   return (
     <Card className="space-y-3">
       <h2 className="flex flex-wrap items-baseline gap-2">
-        <span className="display text-2xl">{person.name}</span> <span className="text-sm text-cafe-soft">{person.email}</span>
+        <span className="display text-2xl">{person.name}</span> <span className="text-sm text-tinta-soft">{person.email}</span>
       </h2>
       <div className={SECTION}>
         <h3 className={HEADING}>{t("dish.restrictions")}</h3>
-        {rows.length === 0 && <p className="text-sm text-cafe-soft">{t("settings.none")}</p>}
+        {rows.length === 0 && <p className="text-sm text-tinta-soft">{t("settings.none")}</p>}
         {rows.map((r, index) => (
           <div key={r.name} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-24">{r.name}</span>
@@ -160,13 +160,13 @@ function NeverEats({ names, ingredientNames, onChange }: { names: string[]; ingr
   return (
     <div className={SECTION}>
       <h3 className={HEADING}>{t("settings.never")}</h3>
-      {names.length === 0 && <p className="text-sm text-cafe-soft">{t("settings.none")}</p>}
+      {names.length === 0 && <p className="text-sm text-tinta-soft">{t("settings.none")}</p>}
       {names.map((name) => {
         const caught = ingredientNames.filter((i) => holdsName(i, name));
         return (
           <div key={name} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-24">{name}</span>
-            <span className="min-w-0 flex-1 text-xs text-cafe-soft">
+            <span className="min-w-0 flex-1 text-xs text-tinta-soft">
               {caught.length ? t("settings.neverCatches", { names: caught.join(", ") }) : t("settings.neverNoMatch")}
             </span>
             <Button variant="secondary" aria-label={t("common.remove", { name })} onClick={() => onChange(names.filter((n) => n !== name))}>
@@ -215,7 +215,7 @@ function NewPerson({ onCreated }: { onCreated: () => void }) {
         <Button disabled={!name.trim() || !email.trim()} onClick={add}>{t("common.add")}</Button>
         {status}
       </div>
-      <p className="text-xs text-cafe-soft">{t("settings.accessNote")}</p>
+      <p className="text-xs text-tinta-soft">{t("settings.accessNote")}</p>
     </Card>
   );
 }

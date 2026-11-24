@@ -154,7 +154,7 @@ function DishForm({
       actions={
         dish && (
           <>
-            <Badge tone={dish.status === "validated" ? "salva" : dish.status === "pending" ? "rosa" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
+            <Badge tone={dish.status === "validated" ? "mar" : dish.status === "pending" ? "tomate" : "neutral"}>{t(`dishStatus.${dish.status}`)}</Badge>
             {dish.status === "pending" && <Button disabled={busy} onClick={() => action("validate")}>{t("dish.validate")}</Button>}
             {dish.status === "archived" ? (
               <Button variant="secondary" disabled={busy} onClick={() => action("unarchive")}>{t("dish.unarchive")}</Button>
@@ -205,7 +205,7 @@ function DishForm({
               />
               <span className="flex items-center gap-1.5">
                 <input className={`${inputBase} w-24`} inputMode="decimal" placeholder={t("dish.quantity")} value={line.quantity} onChange={(e) => setLine(index, { quantity: e.target.value })} />
-                <span className="w-6 text-sm text-cafe-soft">{ingredient && t(`unit.${ingredient.unit}`)}</span>
+                <span className="w-6 text-sm text-tinta-soft">{ingredient && t(`unit.${ingredient.unit}`)}</span>
               </span>
               <Button variant="secondary" aria-label={t("common.remove", { name: ingredient?.name ?? "" })} onClick={() => set({ lines: form.lines.filter((_, i) => i !== index) })}>
                 ✕
@@ -214,7 +214,7 @@ function DishForm({
           );
         })}
         <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>{t("dish.addIngredient")}</Button>
-        <p role="status" className={cx("text-sm", lowProtein ? "font-semibold text-rosa" : "text-cafe-soft")}>
+        <p role="status" className={cx("text-sm", lowProtein ? "font-semibold text-tomate" : "text-tinta-soft")}>
           {t("dish.protein", { grams: protein, min: minProteinGrams })}
           {lowProtein && <span className="block font-normal">{t("dish.lowProtein")}</span>}
         </p>
@@ -247,7 +247,7 @@ function DishForm({
               <ContainsPicker ingredientId={i.ingredientId} statuses={i.statuses} restrictions={restrictions} onChange={reload} />
             </div>
           ))}
-          <p className="text-xs text-cafe-soft">
+          <p className="text-xs text-tinta-soft">
             {t("dish.costPerPortion", { cost: money(dish.costPerPortionCents) })}
             {dish.missingPrice && ` ${t("dish.someMissing")}`}
           </p>
@@ -259,7 +259,7 @@ function DishForm({
           <h2 className="font-medium">{t("dish.feedback")}</h2>
           {dish.feedback.map((f) => (
             <p key={`${f.cookingId}-${f.personId}`} className="text-sm">
-              <span className="text-cafe-soft">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
+              <span className="text-tinta-soft">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}
             </p>
           ))}
         </Card>

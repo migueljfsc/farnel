@@ -45,7 +45,7 @@ export function Dishes({ filter }: { filter: Filter }) {
       <Loaded data={data} error={error}>
         {({ dishes }) =>
           dishes.length === 0 ? (
-            <p className="text-sm text-cafe-soft">{t("dishes.empty")}</p>
+            <p className="text-sm text-tinta-soft">{t("dishes.empty")}</p>
           ) : (
             <div className="space-y-2">
               <SelectionBar
@@ -67,13 +67,13 @@ export function Dishes({ filter }: { filter: Filter }) {
               />
             <List>
               {dishes.map((d) => (
-                <Row key={d.id} className={cx("flex flex-wrap items-center gap-3", selection.selected.has(d.id) && "bg-salva-soft/60")}>
+                <Row key={d.id} className={cx("flex flex-wrap items-center gap-3", selection.selected.has(d.id) && "bg-mar-soft/60")}>
                   <Check checked={selection.selected.has(d.id)} onChange={() => selection.toggle(d.id)} label={t("selection.select", { name: d.name })} />
                   <div className="min-w-0 flex-1">
                     <Link to={{ page: "dish", id: d.id }} className="font-medium">
                       {d.name}
                     </Link>
-                    <p className="text-xs text-cafe-soft">
+                    <p className="text-xs text-tinta-soft">
                       {t("dishes.summary", {
                         portions: tn("dish.portions", d.portions),
                         cost: money(d.costPerPortionCents),
@@ -84,7 +84,7 @@ export function Dishes({ filter }: { filter: Filter }) {
                     </p>
                   </div>
                   <span className="flex flex-wrap justify-end gap-1">
-                    {d.proteinPerPortionGrams < minProtein && <Badge tone="rosa">{t("dishes.lowProtein", { grams: d.proteinPerPortionGrams })}</Badge>}
+                    {d.proteinPerPortionGrams < minProtein && <Badge tone="tomate">{t("dishes.lowProtein", { grams: d.proteinPerPortionGrams })}</Badge>}
                     {d.createdBy === "claude" && <Badge>{t("dishes.byClaude")}</Badge>}
                     {d.tags.map((label) => (
                       <Badge key={label}>{label}</Badge>

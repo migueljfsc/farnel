@@ -21,7 +21,7 @@ import { useToast } from "../lib/toast";
 /** Shared by the header and every row, so the columns line up whatever the name. */
 const COLUMNS = "grid grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[1.5rem_minmax(0,1fr)_10rem_9rem_8rem]";
 
-const INVALID = "border-rosa ring-2 ring-rosa/25";
+const INVALID = "border-tomate ring-2 ring-tomate/25";
 
 export function Ingredients({ filter }: { filter?: "to-decide" }) {
   const { navigate, me, refreshMe } = useApp();
@@ -86,7 +86,7 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
         {(data) => {
           const shown = toDecide ? data.ingredients.filter((i) => isUndecided(i, data.restrictions)) : data.ingredients;
           return shown.length === 0 ? (
-            <p className="text-sm text-cafe-soft">{t(toDecide ? "ingredients.nothingToDecide" : "ingredients.empty")}</p>
+            <p className="text-sm text-tinta-soft">{t(toDecide ? "ingredients.nothingToDecide" : "ingredients.empty")}</p>
           ) : (
             <div className="space-y-2">
               <SelectionBar
@@ -96,7 +96,7 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
                 onDelete={() => bulk.remove("/api/ingredients/delete", "delete.keptIngredients")}
               />
               <List>
-                <li aria-hidden className={cx(COLUMNS, "hidden bg-aveia/60 px-4 py-2 text-xs font-semibold text-cafe-soft sm:grid")}>
+                <li aria-hidden className={cx(COLUMNS, "hidden bg-papel/60 px-4 py-2 text-xs font-semibold text-tinta-soft sm:grid")}>
                   <span />
                   <span>{t("ingredients.column.name")}</span>
                   <span>{t("ingredients.aisle")}</span>
@@ -109,7 +109,7 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
                   return (
                     <Row
                       key={i.id}
-                      className={cx(COLUMNS, selection.selected.has(i.id) && "bg-salva-soft/60", isChanged && "shadow-[inset_3px_0_0_var(--salva)]")}
+                      className={cx(COLUMNS, selection.selected.has(i.id) && "bg-mar-soft/60", isChanged && "shadow-[inset_3px_0_0_var(--mar)]")}
                     >
                       <Check checked={selection.selected.has(i.id)} onChange={() => selection.toggle(i.id)} label={t("selection.select", { name: i.name })} />
                       <span className="truncate font-medium" title={i.name}>
@@ -180,7 +180,7 @@ function PriceInput({ ingredient, view, onChange }: { ingredient: IngredientView
         value={view.price}
         onChange={(e) => onChange(e.target.value)}
       />
-      <span className="w-8 text-cafe-soft">{priceUnit(ingredient.unit)}</span>
+      <span className="w-8 text-tinta-soft">{priceUnit(ingredient.unit)}</span>
     </span>
   );
 }
@@ -204,13 +204,13 @@ function ProteinInput({ ingredient, view, onChange }: { ingredient: IngredientVi
           value={view.protein}
           onChange={(e) => onChange(e.target.value)}
         />
-        <span className="whitespace-nowrap text-cafe-soft">{t("ingredients.proteinEach")}</span>
+        <span className="whitespace-nowrap text-tinta-soft">{t("ingredients.proteinEach")}</span>
       </span>
     );
   }
   return (
     <label className="inline-flex items-center gap-2 text-sm" title={t("ingredients.proteinHint")}>
-      <input type="checkbox" className="size-4 accent-salva" checked={view.protein !== ""} onChange={(e) => onChange(e.target.checked ? "1" : "")} />
+      <input type="checkbox" className="size-4 accent-mar" checked={view.protein !== ""} onChange={(e) => onChange(e.target.checked ? "1" : "")} />
       <span className="sm:sr-only">{t("ingredients.protein")}</span>
     </label>
   );

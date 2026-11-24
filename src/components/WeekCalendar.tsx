@@ -51,24 +51,24 @@ export function WeekCalendar({ week, onPick }: { week: string; onPick: (weekStar
         className="group flex items-end gap-2 text-left"
       >
         <h1 className="display text-4xl sm:text-5xl">{t("week.title", { day: day(week) })}</h1>
-        <svg viewBox="0 0 24 24" aria-hidden className={cx("mb-2 size-6 text-salva transition group-hover:translate-y-0.5", open && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg viewBox="0 0 24 24" aria-hidden className={cx("mb-2 size-6 text-mar transition group-hover:translate-y-0.5", open && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="m6 9 6 6 6-6" />
         </svg>
         <span className="sr-only">{t("calendar.choose")}</span>
       </button>
 
       {open && (
-        <div role="dialog" aria-label={t("calendar.choose")} className="animate-expand absolute left-0 top-full z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-linha bg-louca p-4 shadow-tin">
+        <div role="dialog" aria-label={t("calendar.choose")} className="animate-expand absolute left-0 top-full z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-linha bg-raised p-4 shadow-tin">
           <div className="mb-3 flex items-center justify-between">
-            <button type="button" aria-label={t("calendar.previousMonth")} onClick={() => setShown(addMonths(shown, -1))} className="grid size-8 place-items-center rounded-full hover:bg-aveia">
+            <button type="button" aria-label={t("calendar.previousMonth")} onClick={() => setShown(addMonths(shown, -1))} className="grid size-8 place-items-center rounded-full hover:bg-papel">
               ‹
             </button>
             <span className="font-semibold capitalize">{month(shown)}</span>
-            <button type="button" aria-label={t("calendar.nextMonth")} onClick={() => setShown(addMonths(shown, 1))} className="grid size-8 place-items-center rounded-full hover:bg-aveia">
+            <button type="button" aria-label={t("calendar.nextMonth")} onClick={() => setShown(addMonths(shown, 1))} className="grid size-8 place-items-center rounded-full hover:bg-papel">
               ›
             </button>
           </div>
-          <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-semibold text-cafe-soft">
+          <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-semibold text-tinta-soft">
             {weekdayNames(locale).map((name) => (
               <span key={name}>{name}</span>
             ))}
@@ -83,7 +83,7 @@ export function WeekCalendar({ week, onPick }: { week: string; onPick: (weekStar
                   aria-current={current ? "date" : undefined}
                   aria-label={`${t("week.title", { day: day(weekStart) })}${planned.has(weekStart) ? `, ${t("calendar.hasPlan")}` : ""}`}
                   onClick={() => pick(weekStart)}
-                  className={cx("relative grid w-full grid-cols-7 rounded-full py-1 text-sm transition", current ? "bg-salva text-louca" : "hover:bg-salva-soft")}
+                  className={cx("relative grid w-full grid-cols-7 rounded-full py-1 text-sm transition", current ? "bg-mar text-on-mar" : "hover:bg-mar-soft")}
                 >
                   {Array.from({ length: 7 }, (_, i) => {
                     const date = addDays(weekStart, i);
@@ -93,20 +93,20 @@ export function WeekCalendar({ week, onPick }: { week: string; onPick: (weekStar
                         key={date}
                         className={cx(
                           "mx-auto grid size-7 place-items-center rounded-full tabular-nums",
-                          !inMonth && !current && "text-cafe-soft/50",
-                          date === today && (current ? "ring-2 ring-louca" : "ring-2 ring-rosa"),
+                          !inMonth && !current && "text-tinta-soft/50",
+                          date === today && (current ? "ring-2 ring-raised" : "ring-2 ring-tomate"),
                         )}
                       >
                         {Number(date.slice(8))}
                       </span>
                     );
                   })}
-                  {planned.has(weekStart) && <span className={cx("absolute -right-1 top-1/2 size-2 -translate-y-1/2 rounded-full", current ? "bg-rosa" : "bg-salva")} aria-hidden />}
+                  {planned.has(weekStart) && <span className={cx("absolute -right-1 top-1/2 size-2 -translate-y-1/2 rounded-full", current ? "bg-tomate" : "bg-mar")} aria-hidden />}
                 </button>
               );
             })}
           </div>
-          <button type="button" onClick={() => pick(weekStartOf(today))} className="mt-3 w-full rounded-full bg-aveia py-1.5 text-sm font-semibold text-salva hover:bg-salva-soft">
+          <button type="button" onClick={() => pick(weekStartOf(today))} className="mt-3 w-full rounded-full bg-papel py-1.5 text-sm font-semibold text-mar hover:bg-mar-soft">
             {t("calendar.thisWeek")}
           </button>
         </div>

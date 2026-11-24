@@ -42,7 +42,7 @@ export function Review() {
                 <section className="space-y-3">
                   <div>
                     <h2 className="display text-2xl">{t("review.ingredients")}</h2>
-                    <p className="text-sm text-cafe-soft">{t("review.ingredientsHint")}</p>
+                    <p className="text-sm text-tinta-soft">{t("review.ingredientsHint")}</p>
                   </div>
                   <List>
                     {rows.map((i) => (
@@ -81,7 +81,7 @@ function DishQueue({
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="display text-2xl">{t("review.dishes")}</h2>
-        <span className="text-sm text-cafe-soft">{t("review.position", { index: index + 1, total: dishes.length })}</span>
+        <span className="text-sm text-tinta-soft">{t("review.position", { index: index + 1, total: dishes.length })}</span>
       </div>
       <DishReview
         key={current.id}
@@ -137,11 +137,11 @@ function DishReview({
   if (!data) return <div className="skeleton h-64" />;
   const { dish } = data;
   return (
-    <article className="animate-tin space-y-4 rounded-2xl border-[3px] border-rosa bg-louca p-5">
+    <article className="animate-tin space-y-4 rounded-2xl border-[3px] border-tomate bg-raised p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h3 className="display text-3xl">{dish.name}</h3>
-          <p className="text-sm text-cafe-soft">
+          <p className="text-sm text-tinta-soft">
             {t("dishes.summary", { portions: tn("dish.portions", dish.portions), cost: money(dish.costPerPortionCents), days: dish.repeatIntervalDays, last: t("dishes.never") })}
           </p>
         </div>
@@ -158,7 +158,7 @@ function DishReview({
           <li key={i.ingredientId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span>
               <span className="font-medium">{i.name}</span>{" "}
-              <span className="text-cafe-soft">
+              <span className="text-tinta-soft">
                 {i.quantity} {t(`unit.${i.unit}`)}
               </span>
             </span>
@@ -193,10 +193,10 @@ function AllReviewed() {
   const { t } = useI18n();
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-linha px-6 py-14 text-center">
-      <span className="grid size-14 place-items-center rounded-full bg-salva-soft text-2xl text-salva" aria-hidden>
+      <span className="grid size-14 place-items-center rounded-full bg-mar-soft text-2xl text-mar" aria-hidden>
         ✓
       </span>
-      <p className="max-w-sm text-cafe-soft">{t("review.empty")}</p>
+      <p className="max-w-sm text-tinta-soft">{t("review.empty")}</p>
       <Link to={{ page: "week" }} className="font-semibold">
         {t("nav.week")}
       </Link>

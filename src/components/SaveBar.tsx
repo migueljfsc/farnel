@@ -24,8 +24,8 @@ export function SaveBar({
 }) {
   const { t } = useI18n();
   return (
-    <div className="animate-toast sticky bottom-20 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-linha bg-louca/95 px-4 py-3 shadow-tin backdrop-blur sm:bottom-4">
-      <span role="status" className={cx("mr-auto text-sm font-semibold", warning ? "text-rosa" : "text-cafe")}>
+    <div className="animate-toast sticky bottom-20 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-linha bg-raised/95 px-4 py-3 shadow-tin backdrop-blur sm:bottom-4">
+      <span role="status" className={cx("mr-auto text-sm font-semibold", warning ? "text-tomate" : "text-tinta")}>
         {message}
       </span>
       {onDiscard && (
