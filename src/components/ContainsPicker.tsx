@@ -11,20 +11,18 @@ import { cx } from "./styles";
 /**
  * "Contains:" and one chip per restriction in use. While the ingredient is undecided, chips are
  * picked and confirmed together (nothing picked means it contains none of them); once decided,
- * each chip saves as it is tapped. With `onEdit`, the decisions go there instead of being saved.
+ * each chip saves as it is tapped.
  */
 export function ContainsPicker({
   ingredientId,
   statuses,
   restrictions,
   onChange,
-  onEdit,
 }: {
   ingredientId: number;
   statuses: Record<number, RestrictionStatus>;
   restrictions: Restriction[];
-  onChange?: () => void;
-  onEdit?: (statuses: Record<number, DecidedStatus>) => void;
+  onChange: () => void;
 }) {
   const { t } = useI18n();
   const { refreshMe } = useApp();
@@ -35,16 +33,11 @@ export function ContainsPicker({
 
   const save = async (next: Set<number>) => {
     const decided: Record<number, DecidedStatus> = Object.fromEntries(restrictions.map((r) => [r.id, next.has(r.id) ? "forbidden" : "safe"]));
-    if (onEdit) {
-      setPending(false);
-      onEdit(decided);
-      return;
-    }
     setBusy(true);
     try {
       await api.put(`/api/ingredients/${ingredientId}`, { statuses: decided });
       setPending(false);
-      onChange?.();
+      onChange();
       refreshMe();
     } catch (error) {
       toast({ message: errorMessage(t, error), tone: "error" });
