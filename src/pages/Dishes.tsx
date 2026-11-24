@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DishStatus, DishSummary, Settings } from "../../shared/types";
-import { Badge, Button, CatalogueTabs, Link, Loaded, Page, List, Row } from "../components/ui";
+import { Badge, Button, Link, Loaded, Page, List, Row } from "../components/ui";
 import { cx, inputClass } from "../components/styles";
 import { useApi } from "../lib/api";
 import { useApp } from "../lib/app-context";
@@ -32,7 +32,6 @@ export function Dishes({ filter }: { filter: Filter }) {
   const bulk = useBulk(selection, reload);
   return (
     <Page title={t("nav.dishes")} actions={<Button onClick={() => navigate({ page: "dish", id: "new" })}>{t("dishes.new")}</Button>}>
-      <CatalogueTabs current="dishes" />
       <div className="flex flex-wrap items-center gap-2">
         {TABS.map((option) => (
           <Button key={option.label} variant={option === tab ? "primary" : "secondary"} onClick={() => navigate({ page: "dishes", filter: option.filter })}>

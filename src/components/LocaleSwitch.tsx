@@ -1,28 +1,21 @@
-/**
- * The language, as one small button: it shows the one in use and switches to the other. The
- * tooltip names the language it goes to in that language's own words.
- */
+/** The language, as side-by-side choices each named in its own language. */
 
 import { LOCALES, type Locale } from "../i18n/core";
 import { useI18n } from "../i18n/context";
+import { Segmented } from "./Segmented";
 
 /** What each locale calls itself; never translated. */
 const LABEL: Record<Locale, string> = { en: "EN", pt: "PT" };
-const NAME: Record<Locale, string> = { en: "English", pt: "Português" };
 
-export function LocaleSwitch() {
+export function LocaleSwitch({ onMar = false }: { onMar?: boolean }) {
   const { locale, setLocale, t } = useI18n();
-  const next = LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length];
   return (
-    <button
-      type="button"
-      lang={next}
-      onClick={() => setLocale(next)}
-      aria-label={`${t("app.locale")}: ${NAME[locale]}. ${NAME[next]}`}
-      title={NAME[next]}
-      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold text-tinta-soft ring-1 ring-linha transition hover:text-mar hover:ring-mar/50"
-    >
-      {LABEL[locale]}
-    </button>
+    <Segmented
+      label={t("app.locale")}
+      onMar={onMar}
+      value={locale}
+      options={LOCALES.map((l) => ({ value: l, label: LABEL[l], lang: l }))}
+      onChange={setLocale}
+    />
   );
 }

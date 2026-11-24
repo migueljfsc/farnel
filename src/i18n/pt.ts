@@ -12,6 +12,8 @@ export const pt: Dictionary = {
   "theme.label": "Tema",
   "theme.system": "Seguir o sistema",
   "theme.light": "Claro",
+  "theme.auto": "Auto",
+  "nav.label": "Secções",
   "theme.dark": "Escuro",
   "nav.week": "Semana",
   "nav.history": "Histórico",

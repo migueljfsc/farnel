@@ -56,26 +56,6 @@ export const Row = ({ children, className }: { children: ReactNode; className?: 
   <li className={cx("px-2 py-3 transition-colors hover:bg-mar-soft/40 sm:px-3", className)}>{children}</li>
 );
 
-/** Switches between the two halves of the catalogue: dishes and their ingredients. */
-export function CatalogueTabs({ current }: { current: "dishes" | "ingredients" }) {
-  const { t } = useI18n();
-  const tab = (page: "dishes" | "ingredients", label: "nav.dishes" | "nav.ingredients") => (
-    <Link
-      to={{ page }}
-      aria-current={current === page ? "page" : undefined}
-      className={cx("py-2 text-sm font-semibold no-underline transition hover:no-underline", current === page ? "text-tinta! shadow-[inset_0_-3px_0_var(--mar)]" : "text-tinta-soft! hover:text-tinta!")}
-    >
-      {t(label)}
-    </Link>
-  );
-  return (
-    <div className="flex gap-5 border-b border-linha">
-      {tab("dishes", "nav.dishes")}
-      {tab("ingredients", "nav.ingredients")}
-    </div>
-  );
-}
-
 /** How the last autosave went, next to what was saved. */
 export function SaveStatus({ state }: { state: SaveState }) {
   const { t } = useI18n();

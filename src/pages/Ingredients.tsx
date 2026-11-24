@@ -6,7 +6,7 @@ import { ContainsPicker } from "../components/ContainsPicker";
 import { NewIngredientForm } from "../components/NewIngredientForm";
 import { SaveBar } from "../components/SaveBar";
 import { Check, SelectionBar } from "../components/SelectionBar";
-import { Button, CatalogueTabs, Loaded, Page, List, Row } from "../components/ui";
+import { Button, Loaded, Page, List, Row } from "../components/ui";
 import { cx, inputBase } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useBulk } from "../lib/bulk";
@@ -72,7 +72,6 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
         </>
       }
     >
-      <CatalogueTabs current="ingredients" />
       {adding && (
         <NewIngredientForm
           onCancel={() => setAdding(false)}

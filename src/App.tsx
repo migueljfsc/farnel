@@ -58,71 +58,125 @@ interface NavItem {
   to: Route;
   label: MessageKey;
   icon: IconName;
-  count?: number;
   active: (route: Route) => boolean;
 }
 
+const PLACES: NavItem[] = [
+  { to: { page: "week" }, label: "nav.week", icon: "week", active: (r) => r.page === "week" },
+  { to: { page: "dishes" }, label: "nav.dishes", icon: "dishes", active: (r) => r.page === "dishes" || r.page === "dish" },
+  { to: { page: "ingredients" }, label: "nav.ingredients", icon: "ingredients", active: (r) => r.page === "ingredients" },
+  { to: { page: "history" }, label: "nav.history", icon: "history", active: (r) => r.page === "history" },
+];
+
+/** How many things wait for a person: dishes to validate and ingredients to decide. */
+const Count = ({ n }: { n: number }) => <span className="rounded-[2px] bg-mostarda px-1.5 text-[11px] font-bold leading-[18px] text-[#17201e]">{n}</span>;
+
+/**
+ * A teal rail down the left on wider screens (the places, then what waits for review, then the
+ * settings); on phones a top strip and a bottom bar of the four places.
+ */
 function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Route; refreshMe: () => void; navigate: (r: Route) => void; children: React.ReactNode }) {
   const { t } = useI18n();
   const ctx = useMemo(() => ({ me, refreshMe, navigate }), [me, refreshMe, navigate]);
-  const items: NavItem[] = [
-    { to: { page: "week" }, label: "nav.week", icon: "week", active: (r) => r.page === "week" },
-    { to: { page: "history" }, label: "nav.history", icon: "history", active: (r) => r.page === "history" },
-    { to: { page: "dishes" }, label: "nav.dishes", icon: "dishes", active: (r) => r.page === "dishes" || r.page === "dish" || r.page === "ingredients" },
-    { to: { page: "review" }, label: "nav.review", icon: "review", count: me.pendingDishes + me.undecided, active: (r) => r.page === "review" },
-    { to: { page: "settings" }, label: "nav.settings", icon: "settings", active: (r) => r.page === "settings" },
-  ];
-  const count = (n?: number) =>
-    !!n && <span className="rounded-full bg-tomate px-1.5 text-[11px] font-bold leading-4 text-on-mar">{n}</span>;
+  const waiting = me.pendingDishes + me.undecided;
+  const railLink = (to: Route, active: boolean, content: React.ReactNode, key?: string) => (
+    <Link
+      key={key}
+      to={to}
+      aria-current={active ? "page" : undefined}
+      className={cx(
+        "flex items-center gap-3 px-5 py-2.5 text-sm font-semibold no-underline transition hover:no-underline",
+        active ? "-mr-px bg-papel text-mar!" : "text-on-mar/80! hover:bg-on-mar/10 hover:text-on-mar!",
+      )}
+    >
+      {content}
+    </Link>
+  );
 
   return (
     <AppCtx.Provider value={ctx}>
       <ToastProvider>
-        <div className="min-h-dvh pb-24 sm:pb-0">
-          <header className="sticky top-0 z-20 border-b border-linha bg-papel/85 backdrop-blur">
-            <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-              <span className="display text-2xl text-mar">{APP_NAME}</span>
-              <nav className="hidden flex-1 gap-1 text-sm sm:flex">
-                {items.map((item) => (
-                  <Link
-                    key={item.label}
-                    to={item.to}
-                    aria-current={item.active(route) ? "page" : undefined}
-                    className={cx(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1 font-medium no-underline transition hover:no-underline",
-                      item.active(route) ? "bg-mar text-on-mar!" : "text-tinta-soft! hover:bg-mar-soft hover:text-mar!",
-                    )}
-                  >
+        <div className="min-h-dvh sm:grid sm:grid-cols-[13rem_minmax(0,1fr)]">
+          <aside className="sticky top-0 hidden h-dvh flex-col bg-mar py-6 text-on-mar sm:flex">
+            <span className="wordmark px-5 pb-6 text-3xl">{APP_NAME}</span>
+            <nav aria-label={t("nav.label")} className="flex flex-col">
+              {PLACES.map((item) =>
+                railLink(
+                  item.to,
+                  item.active(route),
+                  <>
+                    <Icon name={item.icon} />
                     {t(item.label)}
-                    {count(item.count)}
-                  </Link>
-                ))}
-              </nav>
-              <span className="ml-auto hidden text-sm text-tinta-soft md:inline">{me.person.name}</span>
-              <span className="ml-auto flex items-center gap-2 md:ml-0">
-                <ThemeSwitch />
-                <LocaleSwitch />
-              </span>
+                  </>,
+                  item.label,
+                ),
+              )}
+              {(waiting > 0 || route.page === "review") &&
+                railLink(
+                  { page: "review" },
+                  route.page === "review",
+                  <>
+                    <Icon name="review" />
+                    {t("nav.review")}
+                    {waiting > 0 && (
+                      <span className="ml-auto">
+                        <Count n={waiting} />
+                      </span>
+                    )}
+                  </>,
+                )}
+            </nav>
+            <div className="mt-auto space-y-3 border-t border-on-mar/20 pt-4">
+              {railLink(
+                { page: "settings" },
+                route.page === "settings",
+                <>
+                  <Icon name="settings" />
+                  {t("nav.settings")}
+                </>,
+              )}
+              <div className="space-y-2 px-5">
+                <ThemeSwitch onMar />
+                <LocaleSwitch onMar />
+                <p className="text-xs text-on-mar/75">{me.person.name}</p>
+              </div>
             </div>
-          </header>
-          <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
-          <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-linha bg-raised/90 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
-            <div className="grid grid-cols-5">
-              {items.map((item) => (
+          </aside>
+
+          <div className="min-w-0 pb-24 sm:pb-0">
+            <header className="sticky top-0 z-20 flex items-center gap-3 border-b-2 border-tinta bg-papel px-4 py-2.5 sm:hidden">
+              <span className="wordmark mr-auto text-2xl text-mar">{APP_NAME}</span>
+              {waiting > 0 && (
+                <Link to={{ page: "review" }} aria-label={`${t("nav.review")}: ${waiting}`} className="flex items-center gap-1 no-underline hover:no-underline">
+                  <Count n={waiting} />
+                </Link>
+              )}
+              <Link
+                to={{ page: "settings" }}
+                aria-label={t("nav.settings")}
+                aria-current={route.page === "settings" ? "page" : undefined}
+                className={cx("grid size-9 place-items-center rounded-[3px] no-underline", route.page === "settings" ? "bg-mar text-on-mar!" : "text-tinta!")}
+              >
+                <Icon name="settings" />
+              </Link>
+            </header>
+            <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+          </div>
+
+          <nav aria-label={t("nav.label")} className="fixed inset-x-0 bottom-0 z-20 border-t-2 border-tinta bg-papel pb-[env(safe-area-inset-bottom)] sm:hidden">
+            <div className="grid grid-cols-4">
+              {PLACES.map((item) => (
                 <Link
                   key={item.label}
                   to={item.to}
                   aria-current={item.active(route) ? "page" : undefined}
                   className={cx(
-                    "relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold no-underline hover:no-underline",
-                    item.active(route) ? "text-mar!" : "text-tinta-soft!",
+                    "relative flex flex-col items-center gap-0.5 pb-2 pt-2.5 text-[11px] font-semibold no-underline hover:no-underline",
+                    item.active(route) ? "text-mar! before:absolute before:inset-x-[22%] before:-top-0.5 before:h-1 before:bg-mar" : "text-tinta-soft!",
                   )}
                 >
-                  <span className={cx("grid h-7 w-12 place-items-center rounded-full transition", item.active(route) && "bg-mar-soft")}>
-                    <Icon name={item.icon} />
-                  </span>
+                  <Icon name={item.icon} />
                   {t(item.label)}
-                  {!!item.count && <span className="absolute right-[18%] top-1">{count(item.count)}</span>}
                 </Link>
               ))}
             </div>

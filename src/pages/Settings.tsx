@@ -7,6 +7,8 @@ import { inputBase, inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
 import { useAutosave } from "../lib/autosave";
 import { useApp } from "../lib/app-context";
+import { LocaleSwitch } from "../components/LocaleSwitch";
+import { ThemeSwitch } from "../components/ThemeSwitch";
 import { useI18n } from "../i18n/context";
 
 export function Settings() {
@@ -22,6 +24,10 @@ export function Settings() {
       >
         {(data) => (
           <>
+            <div className="flex flex-wrap items-center gap-3 sm:hidden">
+              <ThemeSwitch />
+              <LocaleSwitch />
+            </div>
             <HouseholdForm settings={data.settings} />
             {data.people.map((p) => (
               <PersonForm key={p.id} person={p} ingredientNames={data.ingredients.map((i) => i.name)} />

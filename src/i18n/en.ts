@@ -13,6 +13,8 @@ export const en = {
   "theme.system": "Follow the system",
   "theme.light": "Light",
   "theme.dark": "Dark",
+  "theme.auto": "Auto",
+  "nav.label": "Places",
   "nav.week": "Week",
   "nav.history": "History",
   "nav.dishes": "Dishes",
