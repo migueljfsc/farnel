@@ -65,7 +65,7 @@ export function ContainsPicker({
           disabled={busy}
           onClick={() => toggle(r.id)}
           className={cx(
-            "rounded-full px-2.5 py-0.5 font-semibold transition",
+            "rounded-[3px] px-2.5 py-0.5 font-semibold transition",
             contains.has(r.id) ? "bg-tomate text-on-mar" : "text-tinta-soft ring-1 ring-linha hover:text-tinta",
           )}
         >
@@ -73,7 +73,7 @@ export function ContainsPicker({
         </button>
       ))}
       {pending ? (
-        <button type="button" disabled={busy} onClick={() => save(contains)} className="rounded-full bg-mar px-3 py-0.5 font-semibold text-on-mar transition hover:brightness-110">
+        <button type="button" disabled={busy} onClick={() => save(contains)} className="rounded-[3px] bg-mar px-3 py-0.5 font-semibold text-on-mar transition hover:brightness-110">
           {t(contains.size === 0 ? "contains.none" : "contains.confirm")}
         </button>
       ) : (

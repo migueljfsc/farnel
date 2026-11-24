@@ -188,7 +188,7 @@ function DishForm({
       </Card>
 
       <Card className="space-y-2">
-        <h2 className="font-medium">{t("nav.ingredients")}</h2>
+        <h2 className="display text-2xl text-mar">{t("nav.ingredients")}</h2>
         {form.lines.map((line, index) => {
           const ingredient = line.ingredientId === null ? undefined : byId.get(line.ingredientId);
           return (
@@ -240,7 +240,7 @@ function DishForm({
 
       {dish && dish.ingredients.length > 0 && (
         <Card className="space-y-2">
-          <h2 className="font-medium">{t("dish.restrictions")}</h2>
+          <h2 className="display text-2xl text-mar">{t("dish.restrictions")}</h2>
           {dish.ingredients.map((i) => (
             <div key={i.ingredientId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>{i.name}</span>
@@ -256,7 +256,7 @@ function DishForm({
 
       {dish && dish.feedback.length > 0 && (
         <Card className="space-y-1">
-          <h2 className="font-medium">{t("dish.feedback")}</h2>
+          <h2 className="display text-2xl text-mar">{t("dish.feedback")}</h2>
           {dish.feedback.map((f) => (
             <p key={`${f.cookingId}-${f.personId}`} className="text-sm">
               <span className="text-tinta-soft">{day(f.date)}</span> {f.person} <Stars value={f.rating} /> {f.comment}

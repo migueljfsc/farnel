@@ -86,7 +86,7 @@ function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Ro
       aria-current={active ? "page" : undefined}
       className={cx(
         "flex items-center gap-3 px-5 py-2.5 text-sm font-semibold no-underline transition hover:no-underline",
-        active ? "-mr-px bg-papel text-mar!" : "text-on-mar/80! hover:bg-on-mar/10 hover:text-on-mar!",
+        active ? "-mr-px bg-papel text-mar!" : "text-on-rail/80! hover:bg-on-rail/10 hover:text-on-rail!",
       )}
     >
       {content}
@@ -97,7 +97,7 @@ function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Ro
     <AppCtx.Provider value={ctx}>
       <ToastProvider>
         <div className="min-h-dvh sm:grid sm:grid-cols-[13rem_minmax(0,1fr)]">
-          <aside className="sticky top-0 hidden h-dvh flex-col bg-mar py-6 text-on-mar sm:flex">
+          <aside className="sticky top-0 hidden h-dvh flex-col bg-rail py-6 text-on-rail sm:flex">
             <span className="wordmark px-5 pb-6 text-3xl">{APP_NAME}</span>
             <nav aria-label={t("nav.label")} className="flex flex-col">
               {PLACES.map((item) =>
@@ -126,7 +126,7 @@ function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Ro
                   </>,
                 )}
             </nav>
-            <div className="mt-auto space-y-3 border-t border-on-mar/20 pt-4">
+            <div className="mt-auto space-y-3 border-t border-on-rail/20 pt-4">
               {railLink(
                 { page: "settings" },
                 route.page === "settings",
@@ -138,7 +138,7 @@ function Shell({ me, route, refreshMe, navigate, children }: { me: Me; route: Ro
               <div className="space-y-2 px-5">
                 <ThemeSwitch onMar />
                 <LocaleSwitch onMar />
-                <p className="text-xs text-on-mar/75">{me.person.name}</p>
+                <p className="text-xs text-on-rail/75">{me.person.name}</p>
               </div>
             </div>
           </aside>

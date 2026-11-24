@@ -13,7 +13,7 @@ export function Check({ checked, onChange, label }: { checked: boolean; onChange
       <span
         aria-hidden
         className={cx(
-          "grid size-5 place-items-center rounded-md border-2 text-[11px] font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-mar",
+          "grid size-5 place-items-center rounded-[3px] border-2 text-[11px] font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-mar",
           checked ? "border-mar bg-mar text-on-mar" : "border-linha bg-raised hover:border-mar/60",
         )}
       >
@@ -45,7 +45,7 @@ export function SelectionBar({
   const count = selection.selected.size;
   const all = visible.length > 0 && visible.every((id) => selection.selected.has(id));
   return (
-    <div className="sticky top-16 z-10 flex min-h-12 flex-wrap items-center gap-2 rounded-2xl border border-linha bg-raised/95 px-3 py-2 shadow-tin backdrop-blur">
+    <div className="sticky top-16 z-10 flex min-h-12 flex-wrap items-center gap-2 rounded-[3px] border-2 border-tinta bg-raised px-3 py-2 shadow-tin">
       <Check checked={all} onChange={() => selection.toggleAll(visible)} label={t("selection.all")} />
       {count === 0 ? (
         <span className="text-sm text-tinta-soft">{t("selection.all")}</span>

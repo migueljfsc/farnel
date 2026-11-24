@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { useI18n } from "../i18n/context";
 import { cx } from "./styles";
-import { Button } from "./ui";
+
+const BUTTON = "inline-flex items-center rounded-[3px] px-3.5 py-1.5 text-sm font-semibold transition active:translate-y-px disabled:pointer-events-none disabled:opacity-40";
 
 /** Floats at the bottom of the page while there are unsaved changes: what is pending, Discard and Save. */
 export function SaveBar({
@@ -24,18 +25,18 @@ export function SaveBar({
 }) {
   const { t } = useI18n();
   return (
-    <div className="animate-toast sticky bottom-20 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-linha bg-raised/95 px-4 py-3 shadow-tin backdrop-blur sm:bottom-4">
-      <span role="status" className={cx("mr-auto text-sm font-semibold", warning ? "text-tomate" : "text-tinta")}>
+    <div className="animate-toast sticky bottom-20 z-20 flex flex-wrap items-center gap-2 rounded-[3px] bg-tinta px-4 py-3 text-papel sm:bottom-4">
+      <span role="status" className={cx("mr-auto text-sm font-semibold", warning && "text-mostarda")}>
         {message}
       </span>
       {onDiscard && (
-        <Button variant="secondary" disabled={busy} onClick={onDiscard}>
+        <button type="button" className={cx(BUTTON, "text-papel shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--papel)_45%,transparent)] hover:bg-papel/10")} disabled={busy} onClick={onDiscard}>
           {t("common.discard")}
-        </Button>
+        </button>
       )}
-      <Button disabled={busy || !canSave} onClick={onSave}>
+      <button type="button" className={cx(BUTTON, "bg-mostarda text-[#17201e] hover:brightness-105")} disabled={busy || !canSave} onClick={onSave}>
         {saveLabel ?? t("common.save")}
-      </Button>
+      </button>
     </div>
   );
 }

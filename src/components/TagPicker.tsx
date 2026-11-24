@@ -25,7 +25,7 @@ export function TagPicker({ tags, onChange }: { tags: string[]; onChange: (tags:
             type="button"
             aria-pressed={fixed.includes(tag)}
             onClick={() => toggle(tag)}
-            className={cx("rounded-full px-3 py-1 text-sm font-semibold transition", fixed.includes(tag) ? "bg-mar text-on-mar" : "ring-1 ring-linha hover:bg-mar-soft")}
+            className={cx("rounded-[3px] px-3 py-1 text-sm font-semibold transition", fixed.includes(tag) ? "bg-mar text-on-mar" : "ring-1 ring-linha hover:bg-mar-soft")}
           >
             {t(`tag.${tag}`)}
           </button>

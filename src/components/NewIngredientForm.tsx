@@ -41,7 +41,7 @@ export function NewIngredientForm({ initialName = "", onCreated, onCancel }: { i
   };
 
   return (
-    <div className="animate-expand space-y-3 rounded-xl border border-linha bg-papel/60 p-3">
+    <div className="animate-expand space-y-3 rounded-[3px] border border-linha bg-papel/60 p-3">
       <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1.4fr]">
         <Field label={t("dish.name")}>
           <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} autoFocus={!initialName} />

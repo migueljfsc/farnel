@@ -609,7 +609,7 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
           <h2 className="display text-3xl text-mar">{t("shopping.title")}</h2>
           <p className="text-sm text-tinta-soft">
             {t("shopping.estimate", { total: money(list.totalCents), budget: money(plan.budgetCents) })}
-            {list.missingPrices > 0 && <> · {tn("shopping.missing", list.missingPrices)}</>}
+            {list.missingPrices > 0 && <>, {tn("shopping.missing", list.missingPrices)}</>}
           </p>
         </div>
         <div className="flex items-center gap-3">

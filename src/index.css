@@ -92,6 +92,8 @@
   --tomate-soft: light-dark(#f8e1db, #4a2a24);
   --mostarda: #e8b23a;
   --on-mar: light-dark(#fbfaf7, #17201e);
+  --rail: light-dark(#0f5257, #17403f);
+  --on-rail: #f2efe6;
   --tin-carne: #d2452c;
   --tin-peixe: #234e70;
   --tin-marisco: #6d3a5c;
@@ -122,6 +124,8 @@
   --color-tomate-soft: var(--tomate-soft);
   --color-mostarda: var(--mostarda);
   --color-on-mar: var(--on-mar);
+  --color-rail: var(--rail);
+  --color-on-rail: var(--on-rail);
   --color-tin-carne: var(--tin-carne);
   --color-tin-peixe: var(--tin-peixe);
   --color-tin-marisco: var(--tin-marisco);

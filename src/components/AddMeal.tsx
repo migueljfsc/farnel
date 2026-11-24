@@ -85,7 +85,7 @@ export function AddMeal({
         <span className="font-semibold">{d.name}</span>
         <span className="text-xs text-tinta-soft">
           {t("add.meta", { cost: money(d.costPerPortionCents), portions: tn("dish.portions", d.portions) })}
-          {d.lastCooked && ` · ${t("add.last", { day: day(d.lastCooked) })}`}
+          {d.lastCooked && `, ${t("add.last", { day: day(d.lastCooked) })}`}
         </span>
       </button>
     </li>
@@ -94,7 +94,7 @@ export function AddMeal({
   return (
     <Sheet labelledBy="add-meal" onClose={onClose}>
       <div className="flex items-center justify-between gap-2">
-        <h2 id="add-meal" className="display text-xl">
+        <h2 id="add-meal" className="display text-2xl text-mar">
           {label(meal)}
         </h2>
         <CloseButton onClose={onClose} />
@@ -112,9 +112,8 @@ export function AddMeal({
               <ul className="space-y-0.5">{fresh.map(option)}</ul>
               {recent.length > 0 && (
                 <div className="space-y-1">
-                  <p className="px-3 text-xs font-semibold text-tinta-soft">
-                    {t("add.recent")} <span className="font-normal">· {t("add.recentNote")}</span>
-                  </p>
+                  <p className="px-3 text-xs font-semibold uppercase tracking-wide text-tinta-soft">{t("add.recent")}</p>
+                  <p className="px-3 text-xs text-tinta-soft">{t("add.recentNote")}</p>
                   <ul className="space-y-0.5 opacity-75">{recent.map(option)}</ul>
                 </div>
               )}

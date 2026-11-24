@@ -34,7 +34,7 @@ export function useBulk(selection: Selection, refresh: () => void) {
     remove: (path: string, kept: PluralKey) =>
       run(async () => {
         const { deleted, blocked } = await api.post<{ deleted: number[]; blocked: number[] }>(path, { ids });
-        return [deleted.length && tn("delete.done", deleted.length), blocked.length && tn(kept, blocked.length)].filter(Boolean).join(" · ");
+        return [deleted.length && tn("delete.done", deleted.length), blocked.length && tn(kept, blocked.length)].filter(Boolean).join(". ");
       }),
   };
 }

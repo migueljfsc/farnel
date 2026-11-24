@@ -112,7 +112,7 @@ function PersonForm({ person, ingredientNames }: { person: PersonView; ingredien
   return (
     <Card className="space-y-3">
       <h2 className="flex flex-wrap items-baseline gap-2">
-        <span className="display text-2xl">{person.name}</span> <span className="text-sm text-tinta-soft">{person.email}</span>
+        <span className="display text-3xl text-mar">{person.name}</span> <span className="text-sm text-tinta-soft">{person.email}</span>
       </h2>
       <div className={SECTION}>
         <h3 className={HEADING}>{t("dish.restrictions")}</h3>

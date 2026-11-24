@@ -32,7 +32,7 @@ export function Button({ variant = "primary", className, ...props }: ButtonHTMLA
 
 export function Page({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
   return (
-    <section className="space-y-5">
+    <section className="space-y-5 [&>header+*]:border-t-0 [&>header+*]:pt-0">
       <header className="flex flex-wrap items-end justify-between gap-3 border-b-2 border-tinta pb-3">
         <h1 className="display text-4xl text-mar sm:text-5xl">{title}</h1>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -121,8 +121,8 @@ export function Stars({ value, onChange }: { value: number | undefined; onChange
           }}
           className={cx(
             "px-0.5 text-xl leading-none transition-colors",
-            n <= (value ?? 0) ? "text-tomate" : "text-tinta-soft/35",
-            onChange ? "hover:text-tomate/70" : "cursor-default",
+            n <= (value ?? 0) ? "text-mostarda" : "text-tinta-soft/35",
+            onChange ? "hover:text-mostarda/70" : "cursor-default",
             popped === n && "animate-pop",
           )}
         >
