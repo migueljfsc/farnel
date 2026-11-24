@@ -91,6 +91,12 @@ export const en = {
   "week.emptyFuture": "Nothing planned yet. Tap a meal to add a dish, or plan the week with Claude.",
 
   // -------------------------------------------------------------- shopping
+  "shopping.toNotes": "Send to Notes",
+  "shopping.notesHelp": "Set up Send to Notes",
+  "shopping.notesStep1": "Open the Shortcuts app and create a new shortcut named “{name}”.",
+  "shopping.notesStep2": "In its details (ⓘ), turn on Show in Share Sheet and set it to receive Text.",
+  "shopping.notesStep3": "Add the action Append to Note, pick your shared shopping list note, and use Shortcut Input as the text.",
+  "shopping.notesStep4": "Do this once on each phone. Then Send to Notes adds what is still to buy, one bullet per item.",
   "shopping.share": "Share",
   "shopping.copy": "Copy",
   "shopping.copied": "Copied",
