@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addDish, addHousehold, addIngredient, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId, setMinProtein } from "../../test/fixtures";
 import type { PlanInput } from "../rules";
+import { updatePerson } from "./people";
 import { addCooking, getPlan, removeCooking, history, listCandidates, mealOptions, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
 
 const db = env.DB;
@@ -113,6 +114,22 @@ describe("minimum protein", () => {
     const plan: PlanInput = { weekStart: "2026-11-23", cookings: [{ dishId: lean, cookDate: "2026-11-23", portions: 4, meals: [lunch("2026-11-23"), lunch("2026-11-24")] }] };
     expect(await savePlan(db, plan, TODAY, NOW)).toMatchObject({ ok: false, errors: [{ code: "low_protein", dishId: lean }] });
     expect(await addCooking(db, { weekStart: "2026-11-23", dishId: lean, meals: [lunch("2026-11-25")] }, TODAY, NOW)).toMatchObject({ ok: false, errors: [{ code: "low_protein" }] });
+  });
+});
+
+describe("ingredients someone never eats", () => {
+  it("leaves dishes with them out only when that person eats, and rejects them in a plan", async () => {
+    const [one, two] = await addHousehold(db);
+    await updatePerson(db, one, { restrictions: [], preferences: "", never: ["Polvo"] });
+    const octopus = await addIngredient(db, "Polvo");
+    const dish = await addDish(db, "Polvo à lagareiro", { ingredients: [[octopus, 800]] });
+    const other = await addDish(db, "Outro");
+    expect((await listCandidates(db, "2026-11-23", TODAY)).map((c) => c.id)).toEqual([other]);
+    expect((await listCandidates(db, "2026-11-23", TODAY, [], [two])).map((c) => c.id).sort()).toEqual([dish, other].sort());
+    expect((await mealOptions(db, "2026-11-23", "2026-11-24", TODAY)).dishes.map((d) => d.id)).toEqual([other]);
+    const plan: PlanInput = { weekStart: "2026-11-23", cookings: [{ dishId: dish, cookDate: "2026-11-23", portions: 2, meals: [lunch("2026-11-23")] }] };
+    expect(await savePlan(db, plan, TODAY, NOW)).toMatchObject({ ok: false, errors: [{ code: "never_eaten", dishId: dish }] });
+    expect(await addCooking(db, { weekStart: "2026-11-23", dishId: dish, meals: [lunch("2026-11-25")] }, TODAY, NOW)).toMatchObject({ ok: false, errors: [{ code: "never_eaten" }] });
   });
 });
 

@@ -121,6 +121,7 @@ week) is left to Claude through tags and soft preferences.
    - status `validated`, and
    - for every hard restriction of *any person eating the plan*, every ingredient of the dish is
      `safe` for it (a `forbidden` or `unknown` ingredient excludes the dish), and
+   - no ingredient is one that *any person eating the plan* never eats (rule 9), and
    - one portion holds at least the household's minimum raw protein (rule 8), and
    - `last_cooked(dish)` is null, or `last_cooked + repeat_interval_days <= first cook date in the
      proposed plan` — where `last_cooked` is the latest cook date among cookings of that dish
@@ -146,6 +147,10 @@ week) is left to Claude through tags and soft preferences.
    weighed in grams, about 60 for an egg); null means not a protein and counts as nothing. A
    person sets it in the web UI; Claude may give it for an ingredient it creates. Validating a
    dish does not check it; planning does.
+9. **Never eaten**: each person keeps a list of ingredient names they never eat, set in the web UI.
+   An ingredient matches when its name holds a listed name as whole words, ignoring case and
+   accents ("polvo" matches "Polvo" and "Salada de polvo", not "Ovo"). A name with no matching
+   ingredient yet applies as soon as one exists.
 
 ### 5.3 Cost
 - Dish cost per portion = Σ(quantity × ingredient price per unit) ÷ dish portions.

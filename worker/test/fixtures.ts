@@ -16,6 +16,7 @@ export async function resetDb(db: D1Database): Promise<void> {
     "ingredients",
     "person_restrictions",
     "person_preferences",
+    "person_never_eaten",
     "people",
   ];
   await db.batch([

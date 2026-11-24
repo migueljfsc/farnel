@@ -9,6 +9,7 @@ Start with get_context. A plan is for the people the person asks for (everyone u
 Then list_candidates for the week. Only dishes returned by list_candidates can be saved; save_plan re-checks every rule and rejects the whole plan with reasons. Fix and retry.
 Stay within the weekly budget. Use ratings and comments: avoid low-rated dishes, apply comments as adjustments. Every dish has a protein tag (${PROTEIN_TAGS.join(", ")}) and a base tag (${BASE_TAGS.join(", ")}): vary both across the week.
 The household strongly prefers low-carb dishes: favour them when planning and suggesting, and keep rice, pasta, potato and bread to small amounts. Every portion needs at least the household's minimum raw protein (settings.minProteinGrams in get_context: the uncooked weight of its meat, fish, seafood, eggs or other protein). list_candidates only returns dishes that meet it and save_plan rejects the rest as low_protein; size new recipes to meet it, and give each new protein ingredient its proteinGrams.
+Never suggest a dish with an ingredient someone eating never eats (people[].never in get_context); list_candidates leaves those out and save_plan rejects them as never_eaten.
 To suggest something new, call add_dish; it waits for a person to validate it in the web app and cannot be planned until then.
 Dates are YYYY-MM-DD (Europe/Lisbon), weeks start on Monday, money is integer cents. Reply in the language the person writes in.`;
 

@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addIngredient, addPerson, addPersonRestriction, resetDb, restrictionId } from "../../test/fixtures";
 import { listIngredients } from "./catalogue";
-import { createPerson, findPersonByEmail, getSettings, hardRestrictionIds, listPeople, setPersonRestrictions, setPreferences, updatePerson, updateSettings } from "./people";
+import { createPerson, findPersonByEmail, getSettings, hardRestrictionIds, listPeople, neverEaten, setPersonRestrictions, setPreferences, updatePerson, updateSettings } from "./people";
 
 const db = env.DB;
 
@@ -22,7 +22,7 @@ describe("people", () => {
     await setPreferences(db, id, "likes fish");
     await setPersonRestrictions(db, id, [{ restrictionId: gluten, kind: "soft", weight: 3 }]);
     expect(await listPeople(db)).toEqual([
-      { id, email: "a@example.com", name: "Ana", preferences: "likes fish", restrictions: [{ restrictionId: gluten, name: "gluten", kind: "soft", weight: 3 }] },
+      { id, email: "a@example.com", name: "Ana", preferences: "likes fish", restrictions: [{ restrictionId: gluten, name: "gluten", kind: "soft", weight: 3 }], never: [] },
     ]);
   });
 
@@ -57,6 +57,18 @@ describe("people", () => {
     expect(await hardRestrictionIds(db)).toEqual([gluten]);
     expect(await hardRestrictionIds(db, [ana])).toEqual([gluten]);
     expect(await hardRestrictionIds(db, [bea])).toEqual([]);
+  });
+
+  it("keeps the ingredients each person never eats, once per name, and collects them for the people eating", async () => {
+    const ana = await addPerson(db, "a@example.com", "Ana");
+    const bea = await addPerson(db, "b@example.com", "Bea");
+    expect(await updatePerson(db, ana, { restrictions: [], preferences: "", never: ["Polvo", " polvo", "Lulas"] })).toBe("ok");
+    await updatePerson(db, bea, { restrictions: [], preferences: "", never: ["Coentros"] });
+    expect((await listPeople(db)).map((p) => p.never)).toEqual([["Lulas", "Polvo"], ["Coentros"]]);
+    expect(await neverEaten(db, [ana])).toEqual(["lulas", "polvo"]);
+    expect(await neverEaten(db)).toEqual(["coentros", "lulas", "polvo"]);
+    await updatePerson(db, ana, { restrictions: [], preferences: "likes fish" });
+    expect((await listPeople(db))[0].never).toEqual(["Lulas", "Polvo"]);
   });
 
   it("reads and writes settings", async () => {

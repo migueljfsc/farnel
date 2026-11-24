@@ -1,4 +1,5 @@
 import type { PersonView, RestrictionKind, Settings } from "../../../shared/types";
+import { nameKey } from "../../../shared/names";
 import { idList, isUniqueViolation, rows } from "../db";
 import { restrictionByName } from "./catalogue";
 
@@ -36,7 +37,7 @@ export async function createPerson(db: D1Database, person: { email: string; name
 }
 
 export async function listPeople(db: D1Database): Promise<PersonView[]> {
-  const [people, restrictions] = await Promise.all([
+  const [people, restrictions, never] = await Promise.all([
     rows<Person & { preferences: string | null }>(
       db.prepare("SELECT p.id, p.email, p.name, pp.text AS preferences FROM people p LEFT JOIN person_preferences pp ON pp.person_id = p.id ORDER BY p.id"),
     ),
@@ -46,6 +47,7 @@ export async function listPeople(db: D1Database): Promise<PersonView[]> {
          FROM person_restrictions pr JOIN restrictions r ON r.id = pr.restriction_id ORDER BY r.name`,
       ),
     ),
+    rows<{ personId: number; name: string }>(db.prepare("SELECT person_id AS personId, name FROM person_never_eaten ORDER BY name_key")),
   ]);
   return people.map((p) => ({
     id: p.id,
@@ -53,6 +55,7 @@ export async function listPeople(db: D1Database): Promise<PersonView[]> {
     name: p.name,
     preferences: p.preferences ?? "",
     restrictions: restrictions.filter((r) => r.personId === p.id).map(({ restrictionId, name, kind, weight }) => ({ restrictionId, name, kind, weight })),
+    never: never.filter((n) => n.personId === p.id).map((n) => n.name),
   }));
 }
 
@@ -64,11 +67,11 @@ export async function setPersonRestrictions(
   await db.batch(restrictionStatements(db, personId, items));
 }
 
-/** Replaces a person's restrictions and preferences in one batch. */
+/** Replaces a person's restrictions and preferences, and the ingredients they never eat when given, in one batch. */
 export async function updatePerson(
   db: D1Database,
   personId: number,
-  update: { restrictions: NamedRestriction[]; preferences: string },
+  update: { restrictions: NamedRestriction[]; preferences: string; never?: string[] },
 ): Promise<"ok" | "not_found"> {
   const exists = await db.prepare("SELECT 1 FROM people WHERE id = ?1").bind(personId).first();
   if (!exists) return "not_found";
@@ -77,8 +80,34 @@ export async function updatePerson(
     const restrictionId = await restrictionByName(db, r.name);
     choices.set(restrictionId, { restrictionId, kind: r.kind, weight: r.weight });
   }
-  await db.batch([...restrictionStatements(db, personId, [...choices.values()]), preferencesStatement(db, personId, update.preferences)]);
+  await db.batch([
+    ...restrictionStatements(db, personId, [...choices.values()]),
+    preferencesStatement(db, personId, update.preferences),
+    ...(update.never ? neverStatements(db, personId, update.never) : []),
+  ]);
   return "ok";
+}
+
+function neverStatements(db: D1Database, personId: number, names: string[]): D1PreparedStatement[] {
+  const byKey = new Map<string, string>();
+  for (const name of names) if (!byKey.has(nameKey(name))) byKey.set(nameKey(name), name.trim());
+  return [
+    db.prepare("DELETE FROM person_never_eaten WHERE person_id = ?1").bind(personId),
+    ...[...byKey].map(([key, name]) => db.prepare("INSERT INTO person_never_eaten (person_id, name_key, name) VALUES (?1, ?2, ?3)").bind(personId, key, name)),
+  ];
+}
+
+/** Name keys of the ingredients any of the people (everyone when not given) never eat. */
+export async function neverEaten(db: D1Database, personIds?: number[]): Promise<string[]> {
+  const result = await rows<{ key: string }>(
+    db
+      .prepare(
+        `SELECT DISTINCT name_key AS key FROM person_never_eaten
+         WHERE ?1 IS NULL OR person_id IN (SELECT value FROM json_each(?1)) ORDER BY name_key`,
+      )
+      .bind(personIds ? idList(personIds) : null),
+  );
+  return result.map((r) => r.key);
 }
 
 function restrictionStatements(db: D1Database, personId: number, items: RestrictionChoice[]): D1PreparedStatement[] {

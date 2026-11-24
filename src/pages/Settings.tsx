@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { parseMoney } from "../../shared/format";
-import type { PersonView, RestrictionKind, Settings as SettingsData } from "../../shared/types";
+import { holdsName } from "../../shared/names";
+import type { IngredientView, PersonView, RestrictionKind, Settings as SettingsData } from "../../shared/types";
 import { Button, Card, ErrorText, Field, Loaded, Page, SaveStatus } from "../components/ui";
 import { inputBase, inputClass } from "../components/styles";
 import { api, useApi } from "../lib/api";
@@ -12,14 +13,18 @@ export function Settings() {
   const { t } = useI18n();
   const settings = useApi<{ settings: SettingsData }>("/api/settings");
   const people = useApi<{ people: PersonView[] }>("/api/people");
+  const ingredients = useApi<{ ingredients: IngredientView[] }>("/api/ingredients");
   return (
     <Page title={t("nav.settings")}>
-      <Loaded data={settings.data && people.data ? { ...settings.data, ...people.data } : undefined} error={settings.error ?? people.error}>
+      <Loaded
+        data={settings.data && people.data && ingredients.data ? { ...settings.data, ...people.data, ...ingredients.data } : undefined}
+        error={settings.error ?? people.error ?? ingredients.error}
+      >
         {(data) => (
           <>
             <HouseholdForm settings={data.settings} />
             {data.people.map((p) => (
-              <PersonForm key={p.id} person={p} />
+              <PersonForm key={p.id} person={p} ingredientNames={data.ingredients.map((i) => i.name)} />
             ))}
             <NewPerson onCreated={people.reload} />
           </>
@@ -76,13 +81,14 @@ interface RestrictionRow {
   weight: number;
 }
 
-function PersonForm({ person }: { person: PersonView }) {
+function PersonForm({ person, ingredientNames }: { person: PersonView; ingredientNames: string[] }) {
   const { refreshMe } = useApp();
   const { t } = useI18n();
   const [rows, setRows] = useState<RestrictionRow[]>(person.restrictions.map(({ name, kind, weight }) => ({ name, kind, weight })));
   const [adding, setAdding] = useState("");
   const [preferences, setPreferences] = useState(person.preferences);
-  const state = useAutosave({ restrictions: rows, preferences }, async (body) => {
+  const [never, setNever] = useState(person.never);
+  const state = useAutosave({ restrictions: rows, preferences, never }, async (body) => {
     await api.put(`/api/people/${person.id}`, body);
     refreshMe();
   });
@@ -128,11 +134,55 @@ function PersonForm({ person }: { person: PersonView }) {
           <Button variant="secondary" disabled={!adding.trim()} onClick={add}>{t("settings.addRestriction")}</Button>
         </div>
       </div>
+      <NeverEats names={never} ingredientNames={ingredientNames} onChange={setNever} />
       <Field label={t("settings.preferences")}>
         <textarea className={inputClass} rows={2} value={preferences} onChange={(e) => setPreferences(e.target.value)} />
       </Field>
       <SaveStatus state={state} />
     </Card>
+  );
+}
+
+/** Ingredients the person never eats, each with the catalogue ingredients its name catches. */
+function NeverEats({ names, ingredientNames, onChange }: { names: string[]; ingredientNames: string[]; onChange: (names: string[]) => void }) {
+  const { t } = useI18n();
+  const [adding, setAdding] = useState("");
+  const add = () => {
+    const name = adding.trim();
+    if (name && !names.some((n) => holdsName(n, name) && holdsName(name, n))) onChange([...names, name]);
+    setAdding("");
+  };
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-cafe-soft">{t("settings.never")}</p>
+      {names.length === 0 && <p className="text-sm text-cafe-soft">{t("settings.none")}</p>}
+      {names.map((name) => {
+        const caught = ingredientNames.filter((i) => holdsName(i, name));
+        return (
+          <div key={name} className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="w-24">{name}</span>
+            <span className="min-w-0 flex-1 text-xs text-cafe-soft">
+              {caught.length ? t("settings.neverCatches", { names: caught.join(", ") }) : t("settings.neverNoMatch")}
+            </span>
+            <Button variant="secondary" aria-label={t("common.remove", { name })} onClick={() => onChange(names.filter((n) => n !== name))}>
+              ✕
+            </Button>
+          </div>
+        );
+      })}
+      <div className="flex flex-wrap gap-2">
+        <input
+          className={`${inputClass} max-w-48`}
+          placeholder={t("settings.neverHint")}
+          value={adding}
+          onChange={(e) => setAdding(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <Button variant="secondary" disabled={!adding.trim()} onClick={add}>
+          {t("settings.addNever")}
+        </Button>
+      </div>
+    </div>
   );
 }
 

@@ -48,6 +48,21 @@ describe("proteinPerPortionGrams", () => {
 });
 
 describe("eligibility", () => {
+  it("excludes a dish with an ingredient someone eating never eats, whatever its case or accents", () => {
+    const octopus = dish({ ingredients: [{ name: "Polvo ", quantity: 500, unit: "g", priceCents: 1, statuses: {} }] });
+    expect(eligibility(octopus, [], "2026-11-23", 0, ["polvo"])).toEqual(["never_eaten"]);
+    expect(eligibility(dish({ ingredients: [{ name: "Pólvo", quantity: 1, unit: "g", priceCents: 1, statuses: {} }] }), [], "2026-11-23", 0, ["polvo"])).toEqual(["never_eaten"]);
+    expect(eligibility(octopus, [], "2026-11-23", 0, ["lulas"])).toEqual([]);
+  });
+
+  it("matches a never-eaten name as a whole word inside an ingredient's name", () => {
+    const named = (name: string) => dish({ ingredients: [{ name, quantity: 1, unit: "g", priceCents: 1, statuses: {} }] });
+    expect(eligibility(named("Polvo cozido"), [], "2026-11-23", 0, ["polvo"])).toEqual(["never_eaten"]);
+    expect(eligibility(named("Salada de polvo"), [], "2026-11-23", 0, ["polvo"])).toEqual(["never_eaten"]);
+    expect(eligibility(named("Leite de coco"), [], "2026-11-23", 0, ["leite de coco"])).toEqual(["never_eaten"]);
+    expect(eligibility(named("Polvo"), [], "2026-11-23", 0, ["ovo"])).toEqual([]);
+  });
+
   it("needs the minimum protein per portion", () => {
     const meat = (quantity: number) => dish({ portions: 2, ingredients: [{ quantity, unit: "g", priceCents: 1, statuses: {}, proteinGrams: 1 }] });
     expect(eligibility(meat(399), [], "2026-11-23", 200)).toEqual(["low_protein"]);
@@ -162,6 +177,12 @@ describe("validatePlan", () => {
     ]);
     const cooled = facts({ dishes: new Map([[1, dish({ id: 1, lastCooked: "2026-11-10" })], [2, dish({ id: 2 })]]) });
     expect(validatePlan(input, cooled)).toEqual([{ code: "cooldown", cooking: 1, dishId: 1 }]);
+  });
+
+  it("rejects a dish with an ingredient someone eating never eats", () => {
+    const input = plan([{ dishId: 1, cookDate: "2026-11-23", portions: 2, meals: [lunch("2026-11-23")] }]);
+    const octopus = facts({ dishes: new Map([[1, dish({ id: 1, ingredients: [{ name: "Polvo", quantity: 1, unit: "g", priceCents: 1, statuses: { [GLUTEN]: "safe" } }] })]]), neverEaten: ["polvo"] });
+    expect(validatePlan(input, octopus)).toEqual([{ code: "never_eaten", cooking: 0, dishId: 1 }]);
   });
 
   it("rejects a dish below the minimum protein per portion", () => {

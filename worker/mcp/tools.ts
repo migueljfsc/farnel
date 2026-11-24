@@ -33,7 +33,7 @@ const weekArgs = z.object({ weekStart: date.describe("Monday of the week, YYYY-M
 export const TOOLS: Tool[] = [
   tool({
     name: "get_context",
-    description: "Household settings, people with their hard and soft restrictions and preferences, today's date, and whether this and next week have plans. Call first.",
+    description: "Household settings, people with their hard and soft restrictions, the ingredients they never eat, and preferences, today's date, and whether this and next week have plans. Call first.",
     input: z.object({}),
     async run(db, _args, { today }) {
       const current = weekStartOf(today);
@@ -53,6 +53,7 @@ export const TOOLS: Tool[] = [
           name: p.name,
           hard: p.restrictions.filter((r) => r.kind === "hard").map((r) => r.name),
           soft: p.restrictions.filter((r) => r.kind === "soft").map((r) => ({ restriction: r.name, weight: r.weight })),
+          never: p.never,
           preferences: p.preferences,
         })),
         weeks: { current: { weekStart: current, hasPlan: currentPlan !== null }, next: { weekStart: next, hasPlan: nextPlan !== null } },
@@ -65,7 +66,7 @@ export const TOOLS: Tool[] = [
   tool({
     name: "list_candidates",
     description:
-      "Dishes that can be planned for the week: validated, safe for every hard restriction of the people eating, with the household's minimum raw protein per portion, and past their repeat interval. With cost and protein per portion, ratings, recent comments and the eaters' soft-restriction flags.",
+      "Dishes that can be planned for the week: validated, safe for every hard restriction of the people eating, without any ingredient they never eat, with the household's minimum raw protein per portion, and past their repeat interval. With cost and protein per portion, ratings, recent comments and the eaters' soft-restriction flags.",
     input: weekArgs.extend({
       tags: z.array(z.string()).optional().describe("Only dishes with any of these tags"),
       peopleIds: planInput.shape.peopleIds,

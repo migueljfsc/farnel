@@ -146,6 +146,8 @@ export interface PersonView {
   email: string;
   name: string;
   restrictions: PersonRestriction[];
+  /** Ingredients they never eat, by name. */
+  never: string[];
   preferences: string;
 }
 

@@ -86,6 +86,7 @@ export const feedback = z.object({ rating, comment: z.string().max(MAX_COMMENT).
 export const personUpdate = z.object({
   restrictions: z.array(z.object({ name: z.string().trim().min(1).max(40), kind: z.enum(["hard", "soft"]), weight: z.number().int().min(1).max(5) })).max(20),
   preferences: z.string().max(2000),
+  never: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
 });
 
 export const personCreate = z.object({ email: z.email().max(254), name: z.string().trim().min(1).max(60) });

@@ -48,6 +48,10 @@ describe("mcp endpoint", () => {
     expect(text).toContain("minProteinGrams");
   });
 
+  it("tells Claude to keep away from ingredients someone never eats", async () => {
+    expect(await (await rpc("localhost", INITIALIZE)).text()).toContain("never_eaten");
+  });
+
   it("refuses a caller without an Access token", async () => {
     expect((await rpc("farnel.example.com", INITIALIZE)).status).toBe(401);
   });
