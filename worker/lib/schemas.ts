@@ -13,6 +13,7 @@ export const unit = z.enum(["g", "ml", "un"]);
 export const slot = z.enum(["lunch", "dinner"]);
 export const cents = z.number().int().nonnegative();
 export const aisle = z.enum(AISLES);
+export const proteinGrams = z.number().positive().max(5000).nullable();
 const decided = z.record(z.string().regex(/^\d+$/), z.enum(["safe", "forbidden"]));
 
 export const ingredientLine = z.object({
@@ -21,6 +22,7 @@ export const ingredientLine = z.object({
   unit,
   priceCents: cents.nullable().optional().describe("Estimated price of 1000 g, 1000 ml or 1 un, for a new ingredient"),
   aisle: aisle.optional().describe("Supermarket aisle, for a new ingredient"),
+  proteinGrams: proteinGrams.optional().describe("For a new protein ingredient (meat, fish, eggs, tofu…): its raw weight in grams per 1 g, 1 ml or 1 un, e.g. 1 for chicken in g, 60 for an egg in un"),
 });
 
 export const dishInput = z.object({
@@ -53,6 +55,7 @@ export const ingredientPatch = z.object({
   unit: unit.optional(),
   priceCents: cents.nullable().optional(),
   aisle: aisle.optional(),
+  proteinGrams: proteinGrams.optional(),
   statuses: decided.optional(),
 });
 
@@ -61,6 +64,7 @@ export const ingredientCreate = z.object({
   unit,
   priceCents: cents.nullable().optional(),
   aisle,
+  proteinGrams: proteinGrams.optional(),
   statuses: decided.default({}),
 });
 
@@ -89,4 +93,4 @@ export const personCreate = z.object({ email: z.email().max(254), name: z.string
 /** A selection of rows for a bulk action. */
 export const ids = z.object({ ids: z.array(id).min(1).max(200) });
 
-export const settings = z.object({ weeklyBudgetCents: cents, lunchesPerWeek: z.number().int().min(0).max(14) });
+export const settings = z.object({ weeklyBudgetCents: cents, lunchesPerWeek: z.number().int().min(0).max(14), minProteinGrams: z.number().int().min(0).max(1000) });

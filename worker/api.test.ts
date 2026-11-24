@@ -121,8 +121,8 @@ describe("api", () => {
   });
 
   it("reads and writes settings", async () => {
-    expect((await call("PUT", "/api/settings", { weeklyBudgetCents: 5000, lunchesPerWeek: 6 })).status).toBe(204);
-    expect(await (await call("GET", "/api/settings")).json()).toEqual({ settings: { weeklyBudgetCents: 5000, lunchesPerWeek: 6 } });
+    expect((await call("PUT", "/api/settings", { weeklyBudgetCents: 5000, lunchesPerWeek: 6, minProteinGrams: 180 })).status).toBe(204);
+    expect(await (await call("GET", "/api/settings")).json()).toEqual({ settings: { weeklyBudgetCents: 5000, lunchesPerWeek: 6, minProteinGrams: 180 } });
   });
 
   it("answers unknown ids with 404", async () => {

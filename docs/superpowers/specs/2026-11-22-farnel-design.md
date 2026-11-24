@@ -121,6 +121,7 @@ week) is left to Claude through tags and soft preferences.
    - status `validated`, and
    - for every hard restriction of *any person eating the plan*, every ingredient of the dish is
      `safe` for it (a `forbidden` or `unknown` ingredient excludes the dish), and
+   - one portion holds at least the household's minimum raw protein (rule 8), and
    - `last_cooked(dish)` is null, or `last_cooked + repeat_interval_days <= first cook date in the
      proposed plan` — where `last_cooked` is the latest cook date among cookings of that dish
      with status `planned` or `done` (skipped and replaced cookings do not count), excluding the
@@ -139,6 +140,12 @@ week) is left to Claude through tags and soft preferences.
    by rule 1 until a person decides.
 7. For a soft restriction, a `forbidden` ingredient does not exclude the dish; `list_candidates`
    reports it so Claude can weigh it.
+8. **Protein per portion** is the sum of `quantity × protein_grams` over a dish's ingredients,
+   divided by its portions, and must reach `settings.min_protein_grams` (200 g to start).
+   `protein_grams` is the raw protein weight in 1 g, 1 ml or 1 un of an ingredient (1 for meat
+   weighed in grams, about 60 for an egg); null means not a protein and counts as nothing. A
+   person sets it in the web UI; Claude may give it for an ingredient it creates. Validating a
+   dish does not check it; planning does.
 
 ### 5.3 Cost
 - Dish cost per portion = Σ(quantity × ingredient price per unit) ÷ dish portions.

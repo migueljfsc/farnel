@@ -17,7 +17,7 @@ import type {
 import type { Aisle } from "../../../shared/aisles";
 import { idList, isUniqueViolation, rows } from "../db";
 import { nameKey } from "../../../shared/names";
-import { costPerPortionCents, type DishFacts } from "../rules";
+import { costPerPortionCents, proteinPerPortionGrams, type DishFacts } from "../rules";
 import { weekStartOf } from "../../../shared/time";
 
 export interface IngredientLine {
@@ -26,6 +26,7 @@ export interface IngredientLine {
   unit: Unit;
   priceCents?: number | null;
   aisle?: Aisle;
+  proteinGrams?: number | null;
 }
 
 export interface DishInput {
@@ -130,7 +131,7 @@ async function loadDishRecords(db: D1Database, query: DishQuery = {}): Promise<D
     rows<Omit<DishIngredient, "statuses"> & { dishId: number }>(
       db
         .prepare(
-          `SELECT di.dish_id AS dishId, i.id AS ingredientId, i.name, di.quantity, i.unit, i.price_cents AS priceCents
+          `SELECT di.dish_id AS dishId, i.id AS ingredientId, i.name, di.quantity, i.unit, i.price_cents AS priceCents, i.protein_grams AS proteinGrams
            FROM dish_ingredients di JOIN ingredients i ON i.id = di.ingredient_id
            WHERE di.dish_id IN (SELECT value FROM json_each(?1)) ORDER BY i.name COLLATE NOCASE`,
         )
@@ -149,7 +150,15 @@ async function loadDishRecords(db: D1Database, query: DishQuery = {}): Promise<D
     lastCooked: lastCooked.get(d.id) ?? null,
     ingredients: lines
       .filter((l) => l.dishId === d.id)
-      .map((l) => ({ ingredientId: l.ingredientId, name: l.name, quantity: l.quantity, unit: l.unit, priceCents: l.priceCents, statuses: statuses.get(l.ingredientId) ?? {} })),
+      .map((l) => ({
+        ingredientId: l.ingredientId,
+        name: l.name,
+        quantity: l.quantity,
+        unit: l.unit,
+        priceCents: l.priceCents,
+        proteinGrams: l.proteinGrams,
+        statuses: statuses.get(l.ingredientId) ?? {},
+      })),
   }));
 }
 
@@ -163,7 +172,8 @@ const toFacts = (d: DishRecord): DishFacts => ({
 });
 
 function toSummary(d: DishRecord): DishSummary {
-  const cost = costPerPortionCents(toFacts(d));
+  const facts = toFacts(d);
+  const cost = costPerPortionCents(facts);
   return {
     id: d.id,
     name: d.name,
@@ -174,6 +184,7 @@ function toSummary(d: DishRecord): DishSummary {
     tags: d.tags,
     costPerPortionCents: cost.cents,
     missingPrice: cost.missingPrice,
+    proteinPerPortionGrams: proteinPerPortionGrams(facts),
     lastCooked: d.lastCooked,
   };
 }
@@ -237,7 +248,12 @@ async function resolveLines(
   for (const [i, line] of lines.entries()) {
     let id = existing.get(keys[i])?.id;
     if (id === undefined) {
-      id = await insertIngredient(db, { name: line.name, unit: line.unit, priceCents: line.priceCents ?? null, aisle: line.aisle ?? "misc" }, {}, now);
+      id = await insertIngredient(
+        db,
+        { name: line.name, unit: line.unit, priceCents: line.priceCents ?? null, aisle: line.aisle ?? "misc", proteinGrams: line.proteinGrams ?? null },
+        {},
+        now,
+      );
       existing.set(keys[i], { id, key: keys[i], unit: line.unit });
       newIngredients.push(id);
     }
@@ -252,15 +268,15 @@ async function resolveLines(
  */
 async function insertIngredient(
   db: D1Database,
-  input: { name: string; unit: Unit; priceCents: number | null; aisle: Aisle },
+  input: { name: string; unit: Unit; priceCents: number | null; aisle: Aisle; proteinGrams: number | null },
   decided: Record<number, DecidedStatus>,
   now: string,
 ): Promise<number> {
   const key = nameKey(input.name);
   const [, , created] = await db.batch<{ id: number }>([
     db
-      .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents, price_updated_at, aisle) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
-      .bind(input.name.trim(), key, input.unit, input.priceCents, input.priceCents === null ? null : now, input.aisle),
+      .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents, price_updated_at, aisle, protein_grams) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+      .bind(input.name.trim(), key, input.unit, input.priceCents, input.priceCents === null ? null : now, input.aisle, input.proteinGrams),
     db
       .prepare(
         `INSERT INTO ingredient_restrictions (ingredient_id, restriction_id, status)
@@ -274,11 +290,12 @@ async function insertIngredient(
 
 export async function createIngredient(
   db: D1Database,
-  input: { name: string; unit: Unit; priceCents?: number | null; aisle: Aisle; statuses?: Record<number, DecidedStatus> },
+  input: { name: string; unit: Unit; priceCents?: number | null; aisle: Aisle; proteinGrams?: number | null; statuses?: Record<number, DecidedStatus> },
   now: string,
 ): Promise<{ id: number } | "name_taken"> {
   try {
-    return { id: await insertIngredient(db, { name: input.name, unit: input.unit, priceCents: input.priceCents ?? null, aisle: input.aisle }, input.statuses ?? {}, now) };
+    const fields = { name: input.name, unit: input.unit, priceCents: input.priceCents ?? null, aisle: input.aisle, proteinGrams: input.proteinGrams ?? null };
+    return { id: await insertIngredient(db, fields, input.statuses ?? {}, now) };
   } catch (error) {
     if (isUniqueViolation(error)) return "name_taken";
     throw error;
@@ -368,7 +385,7 @@ export async function listIngredients(db: D1Database): Promise<IngredientView[]>
   const [ingredients, statuses] = await Promise.all([
     rows<Omit<IngredientView, "statuses">>(
       db.prepare(
-        `SELECT id, name, unit, aisle, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt
+        `SELECT id, name, unit, aisle, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt, protein_grams AS proteinGrams
          FROM ingredients ORDER BY name COLLATE NOCASE`,
       ),
     ),
@@ -380,7 +397,7 @@ export async function listIngredients(db: D1Database): Promise<IngredientView[]>
 export async function updateIngredient(
   db: D1Database,
   id: number,
-  patch: { name?: string; unit?: Unit; priceCents?: number | null; aisle?: Aisle; statuses?: Record<number, DecidedStatus> },
+  patch: { name?: string; unit?: Unit; priceCents?: number | null; aisle?: Aisle; proteinGrams?: number | null; statuses?: Record<number, DecidedStatus> },
   now: string,
 ): Promise<"ok" | "not_found" | "name_taken" | "in_use"> {
   const current = await db.prepare("SELECT unit FROM ingredients WHERE id = ?1").bind(id).first<{ unit: Unit }>();
@@ -396,6 +413,7 @@ export async function updateIngredient(
   }
   if (patch.unit !== undefined) statements.push(db.prepare("UPDATE ingredients SET unit = ?2 WHERE id = ?1").bind(id, patch.unit));
   if (patch.aisle !== undefined) statements.push(db.prepare("UPDATE ingredients SET aisle = ?2 WHERE id = ?1").bind(id, patch.aisle));
+  if (patch.proteinGrams !== undefined) statements.push(db.prepare("UPDATE ingredients SET protein_grams = ?2 WHERE id = ?1").bind(id, patch.proteinGrams));
   if (patch.priceCents !== undefined) {
     statements.push(
       db.prepare("UPDATE ingredients SET price_cents = ?2, price_source = 'estimated', price_updated_at = ?3 WHERE id = ?1").bind(id, patch.priceCents, now),

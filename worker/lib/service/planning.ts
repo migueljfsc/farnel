@@ -23,7 +23,7 @@ export async function listCandidates(db: D1Database, weekStart: string, today: s
   const people = peopleIds ? idList(peopleIds) : null;
   const excludePlanId = await planIdForWeek(db, weekStart);
   const onDate = weekStart > today ? weekStart : today;
-  const [dishes, hard, ratings, comments, soft] = await Promise.all([
+  const [dishes, hard, ratings, comments, soft, settings] = await Promise.all([
     loadDishes(db, { status: "validated", excludePlanId }),
     hardRestrictionIds(db, peopleIds),
     rows<{ dishId: number; personId: number; person: string; average: number; count: number }>(
@@ -49,10 +49,11 @@ export async function listCandidates(db: D1Database, weekStart: string, today: s
         )
         .bind(people),
     ),
+    getSettings(db),
   ]);
 
   return dishes
-    .filter(({ facts, summary }) => eligibility(facts, hard, onDate).length === 0 && (tags.length === 0 || tags.some((t) => summary.tags.includes(t))))
+    .filter(({ facts, summary }) => eligibility(facts, hard, onDate, settings.minProteinGrams).length === 0 && (tags.length === 0 || tags.some((t) => summary.tags.includes(t))))
     .map(({ facts, summary }) => ({
       id: summary.id,
       name: summary.name,
@@ -62,6 +63,7 @@ export async function listCandidates(db: D1Database, weekStart: string, today: s
       lastCooked: summary.lastCooked,
       costPerPortionCents: summary.costPerPortionCents,
       missingPrice: summary.missingPrice,
+      proteinPerPortionGrams: summary.proteinPerPortionGrams,
       ratings: ratings.filter((r) => r.dishId === summary.id).map(({ personId, person, average, count }) => ({ personId, person, average, count })),
       recentComments: comments
         .filter((c) => c.dishId === summary.id)
@@ -104,7 +106,14 @@ export async function savePlan(
     ),
     getSettings(db),
   ]);
-  const errors = validatePlan(input, { dishes, hardRestrictionIds: hard, eaters: eaters.length, today, takenMeals: new Set(taken.map(mealKey)) });
+  const errors = validatePlan(input, {
+    dishes,
+    hardRestrictionIds: hard,
+    minProteinGrams: settings.minProteinGrams,
+    eaters: eaters.length,
+    today,
+    takenMeals: new Set(taken.map(mealKey)),
+  });
   if (errors.length) return { ok: false, errors };
 
   const costs = input.cookings.map((c) => costPerPortionCents(dishes.get(c.dishId)!).cents * c.portions);
@@ -144,10 +153,10 @@ async function weekEaters(db: D1Database, weekStart: string): Promise<number[]> 
 /** Validated dishes every eater of the week can have on `date`, cheapest first; the ones eaten too recently last. */
 export async function mealOptions(db: D1Database, weekStart: string, date: string, today: string): Promise<{ eaters: number; dishes: MealOption[] }> {
   const eaters = await weekEaters(db, weekStart);
-  const [dishes, hard] = await Promise.all([loadDishes(db, { status: "validated" }), hardRestrictionIds(db, eaters)]);
+  const [dishes, hard, settings] = await Promise.all([loadDishes(db, { status: "validated" }), hardRestrictionIds(db, eaters), getSettings(db)]);
   const onDate = date > today ? date : today;
   const options = dishes.flatMap(({ facts, summary }) => {
-    const codes = eligibility(facts, hard, onDate);
+    const codes = eligibility(facts, hard, onDate, settings.minProteinGrams);
     if (codes.some((code) => code !== "cooldown")) return [];
     const { id, name, tags, portions, costPerPortionCents, missingPrice, lastCooked } = summary;
     return [{ id, name, tags, portions, costPerPortionCents, missingPrice, lastCooked, tooSoon: codes.includes("cooldown") }];
@@ -183,7 +192,7 @@ export async function addCooking(db: D1Database, input: CookingInput, today: str
   const cooking = { dishId: input.dishId, cookDate, portions, meals };
   const errors = validatePlan(
     { weekStart: input.weekStart, cookings: [cooking] },
-    { dishes, hardRestrictionIds: hard, eaters: eaters.length, today, takenMeals: new Set(taken.map(mealKey)) },
+    { dishes, hardRestrictionIds: hard, minProteinGrams: settings.minProteinGrams, eaters: eaters.length, today, takenMeals: new Set(taken.map(mealKey)) },
   ).filter((e) => e.code !== "cooldown");
   if (errors.length) return { ok: false, errors };
 

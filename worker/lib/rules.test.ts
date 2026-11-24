@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { costPerPortionCents, eligibility, lineCostCents, validatePlan, type DishFacts, type PlanInput } from "./rules";
+import { costPerPortionCents, eligibility, lineCostCents, proteinPerPortionGrams, validatePlan, type DishFacts, type PlanInput } from "./rules";
 
 const GLUTEN = 1;
 
@@ -29,7 +29,32 @@ describe("lineCostCents", () => {
   });
 });
 
+describe("proteinPerPortionGrams", () => {
+  it("adds the raw weight of protein ingredients and divides it by the portions", () => {
+    const facts = dish({
+      portions: 4,
+      ingredients: [
+        { quantity: 600, unit: "g", priceCents: 1, statuses: {}, proteinGrams: 1 },
+        { quantity: 4, unit: "un", priceCents: 1, statuses: {}, proteinGrams: 60 },
+        { quantity: 300, unit: "g", priceCents: 1, statuses: {}, proteinGrams: null },
+      ],
+    });
+    expect(proteinPerPortionGrams(facts)).toBe(210);
+  });
+
+  it("counts nothing for unmarked ingredients", () => {
+    expect(proteinPerPortionGrams(dish())).toBe(0);
+  });
+});
+
 describe("eligibility", () => {
+  it("needs the minimum protein per portion", () => {
+    const meat = (quantity: number) => dish({ portions: 2, ingredients: [{ quantity, unit: "g", priceCents: 1, statuses: {}, proteinGrams: 1 }] });
+    expect(eligibility(meat(399), [], "2026-11-23", 200)).toEqual(["low_protein"]);
+    expect(eligibility(meat(400), [], "2026-11-23", 200)).toEqual([]);
+    expect(eligibility(dish(), [], "2026-11-23", 0)).toEqual([]);
+  });
+
   it("needs a validated dish", () => {
     expect(eligibility(dish({ status: "pending" }), [], "2026-11-23")).toEqual(["not_validated"]);
   });
@@ -137,5 +162,10 @@ describe("validatePlan", () => {
     ]);
     const cooled = facts({ dishes: new Map([[1, dish({ id: 1, lastCooked: "2026-11-10" })], [2, dish({ id: 2 })]]) });
     expect(validatePlan(input, cooled)).toEqual([{ code: "cooldown", cooking: 1, dishId: 1 }]);
+  });
+
+  it("rejects a dish below the minimum protein per portion", () => {
+    const input = plan([{ dishId: 1, cookDate: "2026-11-23", portions: 2, meals: [lunch("2026-11-23")] }]);
+    expect(validatePlan(input, facts({ minProteinGrams: 200 }))).toEqual([{ code: "low_protein", cooking: 0, dishId: 1 }]);
   });
 });

@@ -9,7 +9,13 @@ describe("initial schema", () => {
 
   it("seeds the settings row", async () => {
     const row = await env.DB.prepare("SELECT * FROM settings").first();
-    expect(row).toEqual({ id: 1, weekly_budget_cents: 3000, lunches_per_week: 5 });
+    expect(row).toEqual({ id: 1, weekly_budget_cents: 3000, lunches_per_week: 5, min_protein_grams: 200 });
+  });
+
+  it("stores a positive protein weight per ingredient", async () => {
+    await env.DB.prepare("INSERT INTO ingredients (name, name_key, unit, aisle, protein_grams) VALUES ('Ovo', 'ovo-protein-test', 'un', 'dairy', 60)").run();
+    expect(await env.DB.prepare("SELECT protein_grams FROM ingredients WHERE name_key = 'ovo-protein-test'").first("protein_grams")).toBe(60);
+    await expect(env.DB.prepare("INSERT INTO ingredients (name, name_key, unit, protein_grams) VALUES ('X', 'x-protein-test', 'g', 0)").run()).rejects.toThrow();
   });
 
   it("puts new ingredients in the 'misc' aisle unless told otherwise", async () => {

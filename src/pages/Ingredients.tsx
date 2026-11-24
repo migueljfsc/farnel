@@ -18,7 +18,7 @@ import { errorMessage } from "../lib/errors";
 import { useToast } from "../lib/toast";
 
 /** Shared by the header and every row, so the columns line up whatever the name or save state. */
-const COLUMNS = "grid grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[1.5rem_minmax(0,1fr)_10rem_13rem]";
+const COLUMNS = "grid grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[1.5rem_minmax(0,1fr)_10rem_13rem_10rem]";
 
 export function Ingredients({ filter }: { filter?: "to-decide" }) {
   const { navigate, me } = useApp();
@@ -75,6 +75,7 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
                   <span>{t("ingredients.column.name")}</span>
                   <span>{t("ingredients.aisle")}</span>
                   <span>{t("ingredients.price")}</span>
+                  <span title={t("ingredients.proteinHint")}>{t("ingredients.protein")}</span>
                 </li>
                 {shown.map((i) => (
                   <Row key={i.id} className={cx(COLUMNS, selection.selected.has(i.id) && "bg-salva-soft/60")}>
@@ -85,8 +86,9 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
                     <div className="col-start-2 flex flex-wrap items-center gap-2 sm:contents">
                       <AisleSelect ingredient={i} />
                       <PriceEditor ingredient={i} />
+                      <ProteinEditor ingredient={i} />
                     </div>
-                    <div className="col-start-2 sm:col-span-3">
+                    <div className="col-start-2 sm:col-span-4">
                       <ContainsPicker ingredientId={i.id} statuses={i.statuses} restrictions={data.restrictions} onChange={ingredients.reload} />
                     </div>
                   </Row>
@@ -126,6 +128,50 @@ function AisleSelect({ ingredient }: { ingredient: IngredientView }) {
         </option>
       ))}
     </select>
+  );
+}
+
+/**
+ * Whether the ingredient counts as protein. Weighed ones are all-or-nothing; counted ones (eggs)
+ * take the raw weight of one unit. A change saves at once.
+ */
+function ProteinEditor({ ingredient }: { ingredient: IngredientView }) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const [checked, setChecked] = useState(ingredient.proteinGrams !== null);
+  const [text, setText] = useState(ingredient.proteinGrams === null ? "" : String(ingredient.proteinGrams));
+  const grams = text.trim() === "" ? null : Number(text);
+  const valid = grams === null || (Number.isFinite(grams) && grams > 0);
+  const state = useAutosave(grams, (g) => api.put(`/api/ingredients/${ingredient.id}`, { proteinGrams: g }), ingredient.unit === "un" && valid);
+
+  if (ingredient.unit === "un") {
+    return (
+      <span className="inline-flex items-center gap-2 text-sm" title={t("ingredients.proteinHint")}>
+        <input aria-label={t("ingredients.protein")} className={`${inputBase} w-16 py-1.5`} inputMode="decimal" placeholder="—" value={text} onChange={(e) => setText(e.target.value)} />
+        <span className="whitespace-nowrap text-cafe-soft">{t("ingredients.proteinEach")}</span>
+        {state !== "saved" && <SaveStatus state={state} />}
+      </span>
+    );
+  }
+  return (
+    <label className="inline-flex items-center gap-2 text-sm" title={t("ingredients.proteinHint")}>
+      <input
+        type="checkbox"
+        className="size-4 accent-salva"
+        checked={checked}
+        onChange={async (e) => {
+          const next = e.target.checked;
+          setChecked(next);
+          try {
+            await api.put(`/api/ingredients/${ingredient.id}`, { proteinGrams: next ? 1 : null });
+          } catch (error) {
+            setChecked(!next);
+            toast({ message: errorMessage(t, error), tone: "error" });
+          }
+        }}
+      />
+      <span className="sm:sr-only">{t("ingredients.protein")}</span>
+    </label>
   );
 }
 

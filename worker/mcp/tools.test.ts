@@ -26,10 +26,11 @@ describe("mcp tools", () => {
     const result = await runTool("get_context", db, {}, clock);
     expect(result.data).toMatchObject({
       today: "2026-11-22",
-      settings: { weeklyBudgetCents: 3000, lunchesPerWeek: 5 },
+      settings: { weeklyBudgetCents: 3000, lunchesPerWeek: 5, minProteinGrams: 0 },
       people: [{ name: "Ana", hard: ["gluten"], soft: [], preferences: "" }],
       weeks: { current: { weekStart: "2026-11-16", hasPlan: false }, next: { weekStart: "2026-11-23", hasPlan: false } },
     });
+    expect(result.summary).toContain("at least 0 g of raw protein per portion");
   });
 
   it("returns a rejected plan as an error with its reasons and saves nothing", async () => {

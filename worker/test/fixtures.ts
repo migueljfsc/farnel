@@ -21,7 +21,7 @@ export async function resetDb(db: D1Database): Promise<void> {
   await db.batch([
     ...tables.map((t) => db.prepare(`DELETE FROM ${t}`)),
     db.prepare("DELETE FROM restrictions WHERE name <> 'gluten'"),
-    db.prepare("UPDATE settings SET weekly_budget_cents = 3000, lunches_per_week = 5"),
+    db.prepare("UPDATE settings SET weekly_budget_cents = 3000, lunches_per_week = 5, min_protein_grams = 0"),
   ]);
 }
 
@@ -48,15 +48,20 @@ export async function addPersonRestriction(db: D1Database, personId: number, res
     .run();
 }
 
+/** Sets the household's minimum raw protein per portion. */
+export async function setMinProtein(db: D1Database, grams: number): Promise<void> {
+  await db.prepare("UPDATE settings SET min_protein_grams = ?1").bind(grams).run();
+}
+
 /** Every restriction not named in `statuses` gets `safe`. */
 export async function addIngredient(
   db: D1Database,
   name: string,
-  opts: { unit?: Unit; priceCents?: number | null; statuses?: Record<string, RestrictionStatus> } = {},
+  opts: { unit?: Unit; priceCents?: number | null; statuses?: Record<string, RestrictionStatus>; proteinGrams?: number } = {},
 ): Promise<number> {
   const row = await db
-    .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents) VALUES (?1, ?2, ?3, ?4) RETURNING id")
-    .bind(name, nameKey(name), opts.unit ?? "g", opts.priceCents === undefined ? 100 : opts.priceCents)
+    .prepare("INSERT INTO ingredients (name, name_key, unit, price_cents, protein_grams) VALUES (?1, ?2, ?3, ?4, ?5) RETURNING id")
+    .bind(name, nameKey(name), opts.unit ?? "g", opts.priceCents === undefined ? 100 : opts.priceCents, opts.proteinGrams ?? null)
     .first<{ id: number }>();
   const id = row!.id;
   const { results } = await db.prepare("SELECT id, name FROM restrictions").all<{ id: number; name: string }>();

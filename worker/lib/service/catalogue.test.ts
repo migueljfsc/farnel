@@ -96,6 +96,16 @@ describe("creating ingredients", () => {
     expect(await updateIngredient(db, fish.id, { aisle: "frozen" }, NOW)).toBe("ok");
     expect((await listIngredients(db))[0].aisle).toBe("frozen");
   });
+
+  it("marks an ingredient as protein with its raw weight per unit, and unmarks it", async () => {
+    await createDish(db, input("Omelete", [{ name: "Ovo", quantity: 4, unit: "un", proteinGrams: 60 }]), "claude", NOW);
+    const [egg] = await listIngredients(db);
+    expect(egg.proteinGrams).toBe(60);
+    expect(await updateIngredient(db, egg.id, { proteinGrams: null }, NOW)).toBe("ok");
+    expect((await listIngredients(db))[0].proteinGrams).toBeNull();
+    expect(await updateIngredient(db, egg.id, { proteinGrams: 55 }, NOW)).toBe("ok");
+    expect((await listIngredients(db))[0].proteinGrams).toBe(55);
+  });
 });
 
 describe("deleting", () => {
@@ -206,6 +216,13 @@ describe("dishes", () => {
     expect((await listDishes(db, { status: "archived" })).map((d) => d.id)).toEqual([dish]);
     expect(await unarchiveDish(db, dish)).toBe(true);
     expect((await getDish(db, dish))?.status).toBe("validated");
+  });
+
+  it("reports the raw protein per portion", async () => {
+    const chicken = await addIngredient(db, "Frango", { proteinGrams: 1 });
+    const rice = await addIngredient(db, "Arroz");
+    const dish = await addDish(db, "Frango com arroz", { portions: 4, ingredients: [[chicken, 900], [rice, 300]] });
+    expect((await getDish(db, dish))?.proteinPerPortionGrams).toBe(225);
   });
 
   it("lists by tag with cost per portion", async () => {

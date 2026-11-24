@@ -49,15 +49,19 @@ function HouseholdForm({ settings }: { settings: SettingsData }) {
   const { t } = useI18n();
   const [budget, setBudget] = useState((settings.weeklyBudgetCents / 100).toFixed(2));
   const [lunches, setLunches] = useState(String(settings.lunchesPerWeek));
-  const body = { weeklyBudgetCents: parseMoney(budget) ?? 0, lunchesPerWeek: Number(lunches) };
-  const state = useAutosave(body, (b) => api.put("/api/settings", b), parseMoney(budget) !== null && lunches.trim() !== "");
+  const [protein, setProtein] = useState(String(settings.minProteinGrams));
+  const body = { weeklyBudgetCents: parseMoney(budget) ?? 0, lunchesPerWeek: Number(lunches), minProteinGrams: Number(protein) };
+  const state = useAutosave(body, (b) => api.put("/api/settings", b), parseMoney(budget) !== null && lunches.trim() !== "" && protein.trim() !== "");
   return (
-    <Card className="grid gap-3 sm:grid-cols-3 sm:items-end">
+    <Card className="grid gap-3 sm:grid-cols-4 sm:items-end">
       <Field label={t("settings.budget")}>
         <input className={inputClass} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} />
       </Field>
       <Field label={t("settings.lunches")}>
         <input className={inputClass} type="number" min={0} max={14} value={lunches} onChange={(e) => setLunches(e.target.value)} />
+      </Field>
+      <Field label={t("settings.minProtein")}>
+        <input className={inputClass} type="number" min={0} max={1000} step={10} value={protein} onChange={(e) => setProtein(e.target.value)} />
       </Field>
       <div className="flex h-10 items-center">
         <SaveStatus state={state} />

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { DishStatus, DishSummary } from "../../shared/types";
+import type { DishStatus, DishSummary, Settings } from "../../shared/types";
 import { Badge, Button, CatalogueTabs, Link, Loaded, Page, List, Row } from "../components/ui";
 import { cx, inputClass } from "../components/styles";
 import { useApi } from "../lib/api";
@@ -27,6 +27,8 @@ export function Dishes({ filter }: { filter: Filter }) {
   const selection = useSelection(`${tab.status}:${tag.trim().toLowerCase()}`);
   const { data, error, reload } = useApi<{ dishes: DishSummary[] }>(`/api/dishes?status=${tab.status}${tag.trim() ? `&tag=${encodeURIComponent(tag.trim().toLowerCase())}` : ""}`);
 
+  const settings = useApi<{ settings: Settings }>("/api/settings");
+  const minProtein = settings.data?.settings.minProteinGrams ?? 0;
   const bulk = useBulk(selection, reload);
   return (
     <Page title={t("nav.dishes")} actions={<Button onClick={() => navigate({ page: "dish", id: "new" })}>{t("dishes.new")}</Button>}>
@@ -82,6 +84,7 @@ export function Dishes({ filter }: { filter: Filter }) {
                     </p>
                   </div>
                   <span className="flex flex-wrap justify-end gap-1">
+                    {d.proteinPerPortionGrams < minProtein && <Badge tone="rosa">{t("dishes.lowProtein", { grams: d.proteinPerPortionGrams })}</Badge>}
                     {d.createdBy === "claude" && <Badge>{t("dishes.byClaude")}</Badge>}
                     {d.tags.map((label) => (
                       <Badge key={label}>{label}</Badge>

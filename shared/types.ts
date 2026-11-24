@@ -25,6 +25,8 @@ export interface IngredientView {
   priceCents: number | null;
   priceSource: string;
   priceUpdatedAt: string | null;
+  /** Raw protein weight in 1 g, 1 ml or 1 un; null when it is not a protein. */
+  proteinGrams: number | null;
   /** By restriction id. */
   statuses: Record<number, RestrictionStatus>;
 }
@@ -39,6 +41,8 @@ export interface DishSummary {
   tags: string[];
   costPerPortionCents: number;
   missingPrice: boolean;
+  /** Raw weight of its protein ingredients in one portion. */
+  proteinPerPortionGrams: number;
   lastCooked: string | null;
 }
 
@@ -48,6 +52,7 @@ export interface DishIngredient {
   quantity: number;
   unit: Unit;
   priceCents: number | null;
+  proteinGrams: number | null;
   statuses: Record<number, RestrictionStatus>;
 }
 
@@ -122,6 +127,7 @@ export interface Candidate {
   lastCooked: string | null;
   costPerPortionCents: number;
   missingPrice: boolean;
+  proteinPerPortionGrams: number;
   ratings: { personId: number; person: string; average: number; count: number }[];
   recentComments: { date: string; person: string; rating: number; comment: string }[];
   /** Soft restrictions for which the dish has a forbidden ingredient. */
@@ -146,6 +152,8 @@ export interface PersonView {
 export interface Settings {
   weeklyBudgetCents: number;
   lunchesPerWeek: number;
+  /** Raw protein weight every portion needs. */
+  minProteinGrams: number;
 }
 
 export interface UndecidedItem {

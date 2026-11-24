@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { hasProteinAndBase } from "../../shared/tags";
-import type { DishDetail, IngredientView, Restriction } from "../../shared/types";
+import type { DishDetail, IngredientView, Restriction, Settings } from "../../shared/types";
 import { ContainsPicker } from "../components/ContainsPicker";
 import { IngredientPicker } from "../components/IngredientPicker";
 import { TagPicker } from "../components/TagPicker";
@@ -53,18 +53,52 @@ export function DishEditor({ id }: { id: number | "new" }) {
   const dish = useApi<{ dish: DishDetail }>(id === "new" ? null : `/api/dishes/${id}`);
   const ingredients = useApi<{ ingredients: IngredientView[] }>("/api/ingredients");
   const restrictions = useApi<{ restrictions: Restriction[] }>("/api/restrictions");
+  const settings = useApi<{ settings: Settings }>("/api/settings");
   const loaded = id === "new" ? {} : dish.data;
   return (
     <Loaded
-      data={loaded && ingredients.data && restrictions.data ? { dish: dish.data?.dish, ...ingredients.data, ...restrictions.data } : undefined}
-      error={dish.error ?? ingredients.error ?? restrictions.error}
+      data={loaded && ingredients.data && restrictions.data && settings.data ? { dish: dish.data?.dish, ...ingredients.data, ...restrictions.data, ...settings.data } : undefined}
+      error={dish.error ?? ingredients.error ?? restrictions.error ?? settings.error}
     >
-      {(data) => <DishForm key={data.dish?.id ?? "new"} dish={data.dish} known={data.ingredients} restrictions={data.restrictions} reload={dish.reload} />}
+      {(data) => (
+        <DishForm
+          key={data.dish?.id ?? "new"}
+          dish={data.dish}
+          known={data.ingredients}
+          restrictions={data.restrictions}
+          minProteinGrams={data.settings.minProteinGrams}
+          reload={dish.reload}
+        />
+      )}
     </Loaded>
   );
 }
 
-function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; known: IngredientView[]; restrictions: Restriction[]; reload: () => void }) {
+/** Raw protein weight in one portion of the form as it stands, rounded down like the server's. */
+function proteinPerPortion(form: Form, byId: Map<number, IngredientView>): number {
+  const portions = Number(form.portions);
+  if (!(portions > 0)) return 0;
+  const total = form.lines.reduce((sum, l) => {
+    const grams = l.ingredientId === null ? null : (byId.get(l.ingredientId)?.proteinGrams ?? null);
+    const quantity = Number(l.quantity);
+    return grams === null || !Number.isFinite(quantity) ? sum : sum + quantity * grams;
+  }, 0);
+  return Math.floor(total / portions);
+}
+
+function DishForm({
+  dish,
+  known,
+  restrictions,
+  minProteinGrams,
+  reload,
+}: {
+  dish?: DishDetail;
+  known: IngredientView[];
+  restrictions: Restriction[];
+  minProteinGrams: number;
+  reload: () => void;
+}) {
   const { navigate, refreshMe } = useApp();
   const { t, day, money } = useI18n();
   const [saved, setSaved] = useState<Form>(dish ? toForm(dish) : EMPTY);
@@ -79,6 +113,8 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
   const byId = new Map(ingredients.map((i) => [i.id, i]));
   const tagsOk = hasProteinAndBase(form.tags);
   const dirty = JSON.stringify(form) !== JSON.stringify(saved);
+  const protein = proteinPerPortion(form, byId);
+  const lowProtein = protein < minProteinGrams;
   const missing = !form.name.trim() ? t("dish.missingName") : !tagsOk ? t("tags.missing") : null;
 
   const run = async (action: () => Promise<void>) => {
@@ -177,6 +213,10 @@ function DishForm({ dish, known, restrictions, reload }: { dish?: DishDetail; kn
           );
         })}
         <Button variant="secondary" onClick={() => set({ lines: [...form.lines, EMPTY_LINE] })}>{t("dish.addIngredient")}</Button>
+        <p role="status" className={cx("text-sm", lowProtein ? "font-semibold text-rosa" : "text-cafe-soft")}>
+          {t("dish.protein", { grams: protein, min: minProteinGrams })}
+          {lowProtein && <span className="block font-normal">{t("dish.lowProtein")}</span>}
+        </p>
       </Card>
 
       {(dirty || !dish) && (

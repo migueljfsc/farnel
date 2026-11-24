@@ -5,12 +5,12 @@ import type { IngredientView, Unit } from "../../shared/types";
 import { useI18n } from "../i18n/context";
 import { api } from "../lib/api";
 import { useApp } from "../lib/app-context";
-import { inputClass } from "./styles";
+import { inputBase, inputClass } from "./styles";
 import { Button, ErrorText, Field } from "./ui";
 
 const UNITS: Unit[] = ["g", "ml", "un"];
 
-/** Name, unit, price and aisle; restrictions are decided afterwards, like any new ingredient. */
+/** Name, unit, price, aisle and protein; restrictions are decided afterwards, like any new ingredient. */
 export function NewIngredientForm({ initialName = "", onCreated, onCancel }: { initialName?: string; onCreated: (ingredient: IngredientView) => void; onCancel?: () => void }) {
   const { t } = useI18n();
   const { refreshMe } = useApp();
@@ -18,16 +18,21 @@ export function NewIngredientForm({ initialName = "", onCreated, onCancel }: { i
   const [unit, setUnit] = useState<Unit>("g");
   const [price, setPrice] = useState("");
   const [aisle, setAisle] = useState<Aisle>("misc");
+  const [protein, setProtein] = useState(false);
+  const [each, setEach] = useState("");
   const [failure, setFailure] = useState<unknown>();
   const [busy, setBusy] = useState(false);
+
+  const proteinGrams = !protein ? null : unit === "un" ? Number(each) : 1;
+  const proteinValid = proteinGrams === null || (Number.isFinite(proteinGrams) && proteinGrams > 0);
 
   const create = async () => {
     setBusy(true);
     try {
       const priceCents = parseMoney(price);
-      const { id } = await api.post<{ id: number }>("/api/ingredients", { name, unit, aisle, priceCents, statuses: {} });
+      const { id } = await api.post<{ id: number }>("/api/ingredients", { name, unit, aisle, priceCents, proteinGrams, statuses: {} });
       refreshMe();
-      onCreated({ id, name: name.trim(), unit, aisle, priceCents, priceSource: "estimated", priceUpdatedAt: null, statuses: {} });
+      onCreated({ id, name: name.trim(), unit, aisle, priceCents, priceSource: "estimated", priceUpdatedAt: null, proteinGrams, statuses: {} });
     } catch (error) {
       setFailure(error);
     } finally {
@@ -63,9 +68,21 @@ export function NewIngredientForm({ initialName = "", onCreated, onCancel }: { i
           </select>
         </Field>
       </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm" title={t("ingredients.proteinHint")}>
+        <label className="inline-flex items-center gap-2">
+          <input type="checkbox" className="size-4 accent-salva" checked={protein} onChange={(e) => setProtein(e.target.checked)} />
+          {t("ingredients.protein")}
+        </label>
+        {protein && unit === "un" && (
+          <span className="inline-flex items-center gap-2">
+            <input aria-label={t("ingredients.proteinEach")} className={`${inputBase} w-16`} inputMode="decimal" value={each} onChange={(e) => setEach(e.target.value)} />
+            <span className="text-cafe-soft">{t("ingredients.proteinEach")}</span>
+          </span>
+        )}
+      </div>
       {failure !== undefined && <ErrorText error={failure} />}
       <div className="flex gap-2">
-        <Button disabled={busy || !name.trim() || (price.trim() !== "" && parseMoney(price) === null)} onClick={create}>
+        <Button disabled={busy || !name.trim() || (price.trim() !== "" && parseMoney(price) === null) || !proteinValid} onClick={create}>
           {t("dish.create")}
         </Button>
         {onCancel && (

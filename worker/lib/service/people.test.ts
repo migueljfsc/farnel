@@ -60,8 +60,8 @@ describe("people", () => {
   });
 
   it("reads and writes settings", async () => {
-    expect(await getSettings(db)).toEqual({ weeklyBudgetCents: 3000, lunchesPerWeek: 5 });
-    await updateSettings(db, { weeklyBudgetCents: 5000, lunchesPerWeek: 7 });
-    expect(await getSettings(db)).toEqual({ weeklyBudgetCents: 5000, lunchesPerWeek: 7 });
+    expect(await getSettings(db)).toEqual({ weeklyBudgetCents: 3000, lunchesPerWeek: 5, minProteinGrams: 0 });
+    await updateSettings(db, { weeklyBudgetCents: 5000, lunchesPerWeek: 7, minProteinGrams: 200 });
+    expect(await getSettings(db)).toEqual({ weeklyBudgetCents: 5000, lunchesPerWeek: 7, minProteinGrams: 200 });
   });
 });

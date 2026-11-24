@@ -1,7 +1,7 @@
 /**
  * The planning rules, as pure functions over facts the services load. These are the guarantees
- * the model cannot bypass: validated dishes only, hard restrictions, repeat intervals, and a
- * consistent plan.
+ * the model cannot bypass: validated dishes only, hard restrictions, enough protein, repeat
+ * intervals, and a consistent plan.
  */
 
 import type { DishStatus, RestrictionStatus, Slot, Unit } from "../../shared/types";
@@ -13,10 +13,11 @@ export interface DishFacts {
   portions: number;
   repeatIntervalDays: number;
   lastCooked: string | null;
-  ingredients: { quantity: number; unit: Unit; priceCents: number | null; statuses: Record<number, RestrictionStatus> }[];
+  /** `proteinGrams`: raw protein weight in 1 g or 1 un of the ingredient; null when it is not a protein. */
+  ingredients: { quantity: number; unit: Unit; priceCents: number | null; statuses: Record<number, RestrictionStatus>; proteinGrams?: number | null }[];
 }
 
-export type RuleCode = "not_validated" | "restricted" | "cooldown";
+export type RuleCode = "not_validated" | "restricted" | "low_protein" | "cooldown";
 
 /** Price of `quantity`, with `priceCents` per 1000 g, 1000 ml or 1 un. */
 export function lineCostCents(quantity: number, unit: Unit, priceCents: number | null): number | null {
@@ -35,12 +36,18 @@ export function costPerPortionCents(dish: DishFacts): { cents: number; missingPr
   return { cents: Math.round(total / dish.portions), missingPrice };
 }
 
+const exactProtein = (dish: DishFacts): number => dish.ingredients.reduce((sum, line) => sum + line.quantity * (line.proteinGrams ?? 0), 0) / dish.portions;
+
+/** Raw weight of the dish's protein ingredients in one portion, rounded down to the gram. */
+export const proteinPerPortionGrams = (dish: DishFacts): number => Math.floor(exactProtein(dish));
+
 /** Why a dish cannot be planned on `onDate`; empty when it can. */
-export function eligibility(dish: DishFacts, hardRestrictionIds: number[], onDate: string): RuleCode[] {
+export function eligibility(dish: DishFacts, hardRestrictionIds: number[], onDate: string, minProteinGrams = 0): RuleCode[] {
   const codes: RuleCode[] = [];
   if (dish.status !== "validated") codes.push("not_validated");
   const unsafe = dish.ingredients.some((line) => hardRestrictionIds.some((id) => line.statuses[id] !== "safe"));
   if (unsafe) codes.push("restricted");
+  if (exactProtein(dish) < minProteinGrams) codes.push("low_protein");
   if (dish.lastCooked !== null && addDays(dish.lastCooked, dish.repeatIntervalDays) > onDate) codes.push("cooldown");
   return codes;
 }
@@ -78,6 +85,8 @@ export interface PlanFacts {
   dishes: Map<number, DishFacts>;
   /** Hard restrictions of the people eating. */
   hardRestrictionIds: number[];
+  /** Raw protein weight each portion needs. */
+  minProteinGrams?: number;
   /** People eating each meal: one portion each. */
   eaters: number;
   today: string;
@@ -117,7 +126,7 @@ export function validatePlan(input: PlanInput, facts: PlanFacts): PlanError[] {
     seenDishes.add(cooking.dishId);
 
     if (structural) errors.push({ code: structural, ...at });
-    else for (const code of eligibility(dish!, facts.hardRestrictionIds, firstCook)) errors.push({ code, ...at });
+    else for (const code of eligibility(dish!, facts.hardRestrictionIds, firstCook, facts.minProteinGrams)) errors.push({ code, ...at });
   });
   return errors;
 }

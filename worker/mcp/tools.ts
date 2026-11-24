@@ -58,13 +58,14 @@ export const TOOLS: Tool[] = [
         weeks: { current: { weekStart: current, hasPlan: currentPlan !== null }, next: { weekStart: next, hasPlan: nextPlan !== null } },
         ...counts,
       };
-      return { summary: `Today is ${today}; weekly budget ${formatMoney(settings.weeklyBudgetCents)}.`, data };
+      const protein = `at least ${settings.minProteinGrams} g of raw protein per portion`;
+      return { summary: `Today is ${today}; weekly budget ${formatMoney(settings.weeklyBudgetCents)}; ${protein}.`, data };
     },
   }),
   tool({
     name: "list_candidates",
     description:
-      "Dishes that can be planned for the week: validated, safe for every hard restriction of the people eating, and past their repeat interval. With cost per portion, ratings, recent comments and the eaters' soft-restriction flags.",
+      "Dishes that can be planned for the week: validated, safe for every hard restriction of the people eating, with the household's minimum raw protein per portion, and past their repeat interval. With cost and protein per portion, ratings, recent comments and the eaters' soft-restriction flags.",
     input: weekArgs.extend({
       tags: z.array(z.string()).optional().describe("Only dishes with any of these tags"),
       peopleIds: planInput.shape.peopleIds,
@@ -110,7 +111,7 @@ export const TOOLS: Tool[] = [
   tool({
     name: "add_dish",
     description:
-      `Proposes a new dish. It is saved as pending and cannot be planned until a person validates it in the web app. Tags must include one protein (${PROTEIN_TAGS.join(", ")}) and one base (${BASE_TAGS.join(", ")}); add others freely. Ingredients that do not exist yet are created: give each an estimated priceCents (per 1000 g, 1000 ml or 1 un) and its supermarket aisle. New ingredients start undecided for every restriction.`,
+      `Proposes a new dish. It is saved as pending and cannot be planned until a person validates it in the web app. Tags must include one protein (${PROTEIN_TAGS.join(", ")}) and one base (${BASE_TAGS.join(", ")}); add others freely. Ingredients that do not exist yet are created: give each an estimated priceCents (per 1000 g, 1000 ml or 1 un), its supermarket aisle and, for a protein, its proteinGrams. New ingredients start undecided for every restriction.`,
     input: dishInput,
     async run(db, input, { now }) {
       if (!hasProteinAndBase(input.tags)) {

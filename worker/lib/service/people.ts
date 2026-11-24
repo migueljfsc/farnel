@@ -119,10 +119,13 @@ export async function resolvePeople(db: D1Database, personIds?: number[]): Promi
 }
 
 export async function getSettings(db: D1Database): Promise<Settings> {
-  const row = await db.prepare("SELECT weekly_budget_cents AS weeklyBudgetCents, lunches_per_week AS lunchesPerWeek FROM settings WHERE id = 1").first<Settings>();
+  const row = await db.prepare("SELECT weekly_budget_cents AS weeklyBudgetCents, lunches_per_week AS lunchesPerWeek, min_protein_grams AS minProteinGrams FROM settings WHERE id = 1").first<Settings>();
   return row!;
 }
 
 export async function updateSettings(db: D1Database, settings: Settings): Promise<void> {
-  await db.prepare("UPDATE settings SET weekly_budget_cents = ?1, lunches_per_week = ?2 WHERE id = 1").bind(settings.weeklyBudgetCents, settings.lunchesPerWeek).run();
+  await db
+    .prepare("UPDATE settings SET weekly_budget_cents = ?1, lunches_per_week = ?2, min_protein_grams = ?3 WHERE id = 1")
+    .bind(settings.weeklyBudgetCents, settings.lunchesPerWeek, settings.minProteinGrams)
+    .run();
 }
