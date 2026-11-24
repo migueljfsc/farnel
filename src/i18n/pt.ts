@@ -91,12 +91,6 @@ export const pt: Dictionary = {
   "week.emptyFuture": "Ainda nada planeado. Toca numa refeição para juntar um prato, ou planeia a semana com o Claude.",
 
   // -------------------------------------------------------------- shopping
-  "shopping.toNotes": "Enviar para Notas",
-  "shopping.notesHelp": "Configurar Enviar para Notas",
-  "shopping.notesStep1": "Abre a app Atalhos e cria um atalho novo chamado “{name}”.",
-  "shopping.notesStep2": "Nos detalhes (ⓘ), ativa Mostrar na folha de partilha e escolhe receber Texto.",
-  "shopping.notesStep3": "Junta a ação Acrescentar à nota, escolhe a vossa nota partilhada da lista de compras e usa Entrada do atalho como texto.",
-  "shopping.notesStep4": "Faz isto uma vez em cada telemóvel. Depois, Enviar para Notas junta à nota o que ainda falta comprar, um item por linha.",
   "shopping.share": "Partilhar",
   "shopping.copy": "Copiar",
   "shopping.copied": "Copiada",

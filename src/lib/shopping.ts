@@ -23,18 +23,3 @@ export function shoppingText(
   const blocks = groups.map((g) => [format.aisle(g.aisle), ...g.items.map((i) => `- ${i.name}, ${format.quantity(i.quantity, i.unit)}`)].join("\n"));
   return [heading, ...blocks].join("\n\n");
 }
-
-/** What is still to buy as "• Name" lines in aisle order, for appending to a shared note. */
-export const notesText = (groups: AisleGroup[], bought: Set<number>): string =>
-  groups
-    .flatMap((g) => g.items)
-    .filter((i) => !bought.has(i.ingredientId))
-    .map((i) => `• ${i.name}`)
-    .join("\n");
-
-/** The Apple Shortcut that appends the list to the household's shared note; the same name on every phone. */
-export const NOTES_SHORTCUT = "Farnel compras";
-
-/** Opens the Shortcuts app and runs the named shortcut with `text` as its input. */
-export const shortcutUrl = (name: string, text: string): string =>
-  `shortcuts://run-shortcut?name=${encodeURIComponent(name)}&input=text&text=${encodeURIComponent(text)}`;

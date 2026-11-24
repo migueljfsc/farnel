@@ -11,7 +11,7 @@ import { useApp } from "../lib/app-context";
 import { SLOTS, segments } from "../lib/board";
 import { AddMeal } from "../components/AddMeal";
 import { CloseButton, Sheet } from "../components/Sheet";
-import { byAisle, notesText, NOTES_SHORTCUT, shortcutUrl, shoppingText } from "../lib/shopping";
+import { byAisle, shoppingText } from "../lib/shopping";
 import { TIN_CLASS, tinTone } from "../lib/tins";
 import { pickRandom } from "../lib/random-dish";
 import { claudeLinks, planPrompt } from "../lib/claude";
@@ -623,7 +623,6 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
   if (list.items.length === 0) return null;
   const groups = byAisle(list.items);
   const bought = list.items.filter((i) => ticked.has(i.ingredientId)).length;
-  const toBuy = notesText(groups, ticked);
 
   const share = async () => {
     const heading = t("shopping.heading", { day: day(plan.weekStart) });
@@ -654,13 +653,6 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
           <Button variant="secondary" onClick={share}>
             {t("shopping.share")}
           </Button>
-          {toBuy ? (
-            <a className={buttonClass("primary")} href={shortcutUrl(NOTES_SHORTCUT, toBuy)}>
-              {t("shopping.toNotes")}
-            </a>
-          ) : (
-            <Button disabled>{t("shopping.toNotes")}</Button>
-          )}
         </div>
       </header>
       <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
@@ -694,15 +686,6 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
           </div>
         ))}
       </div>
-      <details className="text-sm text-tinta-soft">
-        <summary className="cursor-pointer font-semibold text-tinta">{t("shopping.notesHelp")}</summary>
-        <ol className="mt-2 list-decimal space-y-1 pl-5">
-          <li>{t("shopping.notesStep1", { name: NOTES_SHORTCUT })}</li>
-          <li>{t("shopping.notesStep2")}</li>
-          <li>{t("shopping.notesStep3")}</li>
-          <li>{t("shopping.notesStep4")}</li>
-        </ol>
-      </details>
     </section>
   );
 }
