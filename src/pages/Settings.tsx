@@ -75,6 +75,10 @@ function HouseholdForm({ settings }: { settings: SettingsData }) {
   );
 }
 
+/** A part of a person's card, set off from the one above. */
+const SECTION = "space-y-2 border-t border-linha pt-3";
+const HEADING = "text-sm font-semibold text-cafe";
+
 interface RestrictionRow {
   name: string;
   kind: RestrictionKind;
@@ -104,8 +108,8 @@ function PersonForm({ person, ingredientNames }: { person: PersonView; ingredien
       <h2 className="flex flex-wrap items-baseline gap-2">
         <span className="display text-2xl">{person.name}</span> <span className="text-sm text-cafe-soft">{person.email}</span>
       </h2>
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-cafe-soft">{t("dish.restrictions")}</p>
+      <div className={SECTION}>
+        <h3 className={HEADING}>{t("dish.restrictions")}</h3>
         {rows.length === 0 && <p className="text-sm text-cafe-soft">{t("settings.none")}</p>}
         {rows.map((r, index) => (
           <div key={r.name} className="flex flex-wrap items-center gap-2 text-sm">
@@ -135,9 +139,10 @@ function PersonForm({ person, ingredientNames }: { person: PersonView; ingredien
         </div>
       </div>
       <NeverEats names={never} ingredientNames={ingredientNames} onChange={setNever} />
-      <Field label={t("settings.preferences")}>
+      <label className={`block ${SECTION}`}>
+        <span className={`block ${HEADING}`}>{t("settings.preferences")}</span>
         <textarea className={inputClass} rows={2} value={preferences} onChange={(e) => setPreferences(e.target.value)} />
-      </Field>
+      </label>
       <SaveStatus state={state} />
     </Card>
   );
@@ -153,8 +158,8 @@ function NeverEats({ names, ingredientNames, onChange }: { names: string[]; ingr
     setAdding("");
   };
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-cafe-soft">{t("settings.never")}</p>
+    <div className={SECTION}>
+      <h3 className={HEADING}>{t("settings.never")}</h3>
       {names.length === 0 && <p className="text-sm text-cafe-soft">{t("settings.none")}</p>}
       {names.map((name) => {
         const caught = ingredientNames.filter((i) => holdsName(i, name));
