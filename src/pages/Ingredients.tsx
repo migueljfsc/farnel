@@ -1,34 +1,60 @@
 import { useState } from "react";
 import { AISLES, type Aisle } from "../../shared/aisles";
-import { parseMoney, priceUnit } from "../../shared/format";
+import { priceUnit } from "../../shared/format";
 import type { IngredientView, Restriction } from "../../shared/types";
 import { ContainsPicker } from "../components/ContainsPicker";
 import { NewIngredientForm } from "../components/NewIngredientForm";
+import { SaveBar } from "../components/SaveBar";
 import { Check, SelectionBar } from "../components/SelectionBar";
-import { Button, CatalogueTabs, Loaded, Page, List, Row, SaveStatus } from "../components/ui";
+import { Button, CatalogueTabs, Loaded, Page, List, Row } from "../components/ui";
 import { cx, inputBase } from "../components/styles";
 import { api, useApi } from "../lib/api";
-import { useAutosave } from "../lib/autosave";
 import { useBulk } from "../lib/bulk";
 import { useSelection } from "../lib/selection";
 import { useApp } from "../lib/app-context";
 import { useI18n } from "../i18n/context";
 import { isUndecided } from "../lib/catalogue";
 import { errorMessage } from "../lib/errors";
+import { draftView, patchFor, type Draft, type DraftView } from "../lib/ingredient-drafts";
 import { useToast } from "../lib/toast";
 
-/** Shared by the header and every row, so the columns line up whatever the name or save state. */
-const COLUMNS = "grid grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[1.5rem_minmax(0,1fr)_10rem_13rem_10rem]";
+/** Shared by the header and every row, so the columns line up whatever the name. */
+const COLUMNS = "grid grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[1.5rem_minmax(0,1fr)_10rem_9rem_8rem]";
+
+const INVALID = "border-rosa ring-2 ring-rosa/25";
 
 export function Ingredients({ filter }: { filter?: "to-decide" }) {
-  const { navigate, me } = useApp();
-  const { t } = useI18n();
+  const { navigate, me, refreshMe } = useApp();
+  const { t, tn } = useI18n();
+  const toast = useToast();
   const ingredients = useApi<{ ingredients: IngredientView[] }>("/api/ingredients");
   const restrictions = useApi<{ restrictions: Restriction[] }>("/api/restrictions");
   const toDecide = filter === "to-decide";
   const [adding, setAdding] = useState(false);
   const selection = useSelection(filter ?? "all");
   const bulk = useBulk(selection, ingredients.reload);
+  const [drafts, setDrafts] = useState<Record<number, Draft>>({});
+  /** Bumped on discard, so the restriction pickers start over from what is saved. */
+  const [revision, setRevision] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  const edit = (id: number, change: Draft) => setDrafts((all) => ({ ...all, [id]: { ...all[id], ...change } }));
+  const pending = (ingredients.data?.ingredients ?? []).map((i) => ({ id: i.id, ...patchFor(i, drafts[i.id]) }));
+  const changed = pending.filter((p) => !p.valid || Object.keys(p.patch).length > 0);
+  const invalid = changed.some((p) => !p.valid);
+
+  const save = async () => {
+    setBusy(true);
+    const results = await Promise.allSettled(changed.map((p) => api.put(`/api/ingredients/${p.id}`, p.patch)));
+    const failed = new Set(changed.filter((_, index) => results[index].status === "rejected").map((p) => p.id));
+    const failure = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    setDrafts((all) => Object.fromEntries(Object.entries(all).filter(([id]) => failed.has(Number(id)))));
+    setBusy(false);
+    ingredients.reload();
+    refreshMe();
+    if (failure) toast({ message: errorMessage(t, failure.reason), tone: "error" });
+    else toast({ message: tn("ingredients.saved", changed.length) });
+  };
 
   return (
     <Page
@@ -77,51 +103,61 @@ export function Ingredients({ filter }: { filter?: "to-decide" }) {
                   <span>{t("ingredients.price")}</span>
                   <span title={t("ingredients.proteinHint")}>{t("ingredients.protein")}</span>
                 </li>
-                {shown.map((i) => (
-                  <Row key={i.id} className={cx(COLUMNS, selection.selected.has(i.id) && "bg-salva-soft/60")}>
-                    <Check checked={selection.selected.has(i.id)} onChange={() => selection.toggle(i.id)} label={t("selection.select", { name: i.name })} />
-                    <span className="truncate font-medium" title={i.name}>
-                      {i.name}
-                    </span>
-                    <div className="col-start-2 flex flex-wrap items-center gap-2 sm:contents">
-                      <AisleSelect ingredient={i} />
-                      <PriceEditor ingredient={i} />
-                      <ProteinEditor ingredient={i} />
-                    </div>
-                    <div className="col-start-2 sm:col-span-4">
-                      <ContainsPicker ingredientId={i.id} statuses={i.statuses} restrictions={data.restrictions} onChange={ingredients.reload} />
-                    </div>
-                  </Row>
-                ))}
+                {shown.map((i) => {
+                  const view = draftView(i, drafts[i.id]);
+                  const isChanged = changed.some((p) => p.id === i.id);
+                  return (
+                    <Row
+                      key={i.id}
+                      className={cx(COLUMNS, selection.selected.has(i.id) && "bg-salva-soft/60", isChanged && "shadow-[inset_3px_0_0_var(--salva)]")}
+                    >
+                      <Check checked={selection.selected.has(i.id)} onChange={() => selection.toggle(i.id)} label={t("selection.select", { name: i.name })} />
+                      <span className="truncate font-medium" title={i.name}>
+                        {i.name}
+                      </span>
+                      <div className="col-start-2 flex flex-wrap items-center gap-2 sm:contents">
+                        <AisleSelect value={view.aisle} onChange={(aisle) => edit(i.id, { aisle })} />
+                        <PriceInput ingredient={i} view={view} onChange={(price) => edit(i.id, { price })} />
+                        <ProteinInput ingredient={i} view={view} onChange={(protein) => edit(i.id, { protein })} />
+                      </div>
+                      <div className="col-start-2 sm:col-span-4">
+                        <ContainsPicker
+                          key={revision}
+                          ingredientId={i.id}
+                          statuses={view.statuses}
+                          restrictions={data.restrictions}
+                          onEdit={(statuses) => edit(i.id, { statuses })}
+                        />
+                      </div>
+                    </Row>
+                  );
+                })}
               </List>
             </div>
           );
         }}
       </Loaded>
+      {changed.length > 0 && (
+        <SaveBar
+          message={invalid ? t("error.invalid") : tn("ingredients.unsaved", changed.length)}
+          warning={invalid}
+          busy={busy}
+          canSave={!invalid}
+          onDiscard={() => {
+            setDrafts({});
+            setRevision((r) => r + 1);
+          }}
+          onSave={save}
+        />
+      )}
     </Page>
   );
 }
 
-/** The ingredient's aisle; a change saves at once. */
-function AisleSelect({ ingredient }: { ingredient: IngredientView }) {
+function AisleSelect({ value, onChange }: { value: Aisle; onChange: (aisle: Aisle) => void }) {
   const { t } = useI18n();
-  const toast = useToast();
-  const [aisle, setAisle] = useState<Aisle>(ingredient.aisle);
   return (
-    <select
-      aria-label={t("ingredients.aisle")}
-      className={`${inputBase} py-1.5 sm:w-full`}
-      value={aisle}
-      onChange={async (e) => {
-        const next = e.target.value as Aisle;
-        setAisle(next);
-        try {
-          await api.put(`/api/ingredients/${ingredient.id}`, { aisle: next });
-        } catch (error) {
-          toast({ message: errorMessage(t, error), tone: "error" });
-        }
-      }}
-    >
+    <select aria-label={t("ingredients.aisle")} className={`${inputBase} py-1.5 sm:w-full`} value={value} onChange={(e) => onChange(e.target.value as Aisle)}>
       {AISLES.map((a) => (
         <option key={a} value={a}>
           {t(`aisle.${a}`)}
@@ -131,62 +167,51 @@ function AisleSelect({ ingredient }: { ingredient: IngredientView }) {
   );
 }
 
+function PriceInput({ ingredient, view, onChange }: { ingredient: IngredientView; view: DraftView; onChange: (price: string) => void }) {
+  const { t } = useI18n();
+  const valid = patchFor(ingredient, { price: view.price }).valid;
+  return (
+    <span className="inline-flex items-center gap-2 text-sm">
+      <input
+        aria-label={t("ingredients.price")}
+        aria-invalid={!valid}
+        className={cx(inputBase, "w-20 py-1.5", !valid && INVALID)}
+        inputMode="decimal"
+        value={view.price}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <span className="w-8 text-cafe-soft">{priceUnit(ingredient.unit)}</span>
+    </span>
+  );
+}
+
 /**
  * Whether the ingredient counts as protein. Weighed ones are all-or-nothing; counted ones (eggs)
- * take the raw weight of one unit. A change saves at once.
+ * take the raw weight of one unit.
  */
-function ProteinEditor({ ingredient }: { ingredient: IngredientView }) {
+function ProteinInput({ ingredient, view, onChange }: { ingredient: IngredientView; view: DraftView; onChange: (protein: string) => void }) {
   const { t } = useI18n();
-  const toast = useToast();
-  const [checked, setChecked] = useState(ingredient.proteinGrams !== null);
-  const [text, setText] = useState(ingredient.proteinGrams === null ? "" : String(ingredient.proteinGrams));
-  const grams = text.trim() === "" ? null : Number(text);
-  const valid = grams === null || (Number.isFinite(grams) && grams > 0);
-  const state = useAutosave(grams, (g) => api.put(`/api/ingredients/${ingredient.id}`, { proteinGrams: g }), ingredient.unit === "un" && valid);
-
   if (ingredient.unit === "un") {
+    const valid = patchFor(ingredient, { protein: view.protein }).valid;
     return (
       <span className="inline-flex items-center gap-2 text-sm" title={t("ingredients.proteinHint")}>
-        <input aria-label={t("ingredients.protein")} className={`${inputBase} w-16 py-1.5`} inputMode="decimal" placeholder="—" value={text} onChange={(e) => setText(e.target.value)} />
+        <input
+          aria-label={t("ingredients.protein")}
+          aria-invalid={!valid}
+          className={cx(inputBase, "w-16 py-1.5", !valid && INVALID)}
+          inputMode="decimal"
+          placeholder="—"
+          value={view.protein}
+          onChange={(e) => onChange(e.target.value)}
+        />
         <span className="whitespace-nowrap text-cafe-soft">{t("ingredients.proteinEach")}</span>
-        {state !== "saved" && <SaveStatus state={state} />}
       </span>
     );
   }
   return (
     <label className="inline-flex items-center gap-2 text-sm" title={t("ingredients.proteinHint")}>
-      <input
-        type="checkbox"
-        className="size-4 accent-salva"
-        checked={checked}
-        onChange={async (e) => {
-          const next = e.target.checked;
-          setChecked(next);
-          try {
-            await api.put(`/api/ingredients/${ingredient.id}`, { proteinGrams: next ? 1 : null });
-          } catch (error) {
-            setChecked(!next);
-            toast({ message: errorMessage(t, error), tone: "error" });
-          }
-        }}
-      />
+      <input type="checkbox" className="size-4 accent-salva" checked={view.protein !== ""} onChange={(e) => onChange(e.target.checked ? "1" : "")} />
       <span className="sm:sr-only">{t("ingredients.protein")}</span>
     </label>
-  );
-}
-
-function PriceEditor({ ingredient }: { ingredient: IngredientView }) {
-  const { t } = useI18n();
-  const [text, setText] = useState(ingredient.priceCents === null ? "" : (ingredient.priceCents / 100).toFixed(2));
-  const priceCents = text.trim() === "" ? null : parseMoney(text);
-  const state = useAutosave(priceCents, (cents) => api.put(`/api/ingredients/${ingredient.id}`, { priceCents: cents }), text.trim() === "" || priceCents !== null);
-  return (
-    <span className="inline-flex items-center gap-2 text-sm">
-      <input aria-label={t("ingredients.price")} className={`${inputBase} w-20 py-1.5`} inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
-      <span className="w-8 text-cafe-soft">{priceUnit(ingredient.unit)}</span>
-      <span className="w-20 truncate">
-        <SaveStatus state={state} />
-      </span>
-    </span>
   );
 }

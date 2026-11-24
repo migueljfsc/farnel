@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Restriction, RestrictionStatus } from "../../shared/types";
+import type { DecidedStatus, Restriction, RestrictionStatus } from "../../shared/types";
 import { useI18n } from "../i18n/context";
 import { api } from "../lib/api";
 import { useApp } from "../lib/app-context";
@@ -11,18 +11,20 @@ import { cx } from "./styles";
 /**
  * "Contains:" and one chip per restriction in use. While the ingredient is undecided, chips are
  * picked and confirmed together (nothing picked means it contains none of them); once decided,
- * each chip saves as it is tapped.
+ * each chip saves as it is tapped. With `onEdit`, the decisions go there instead of being saved.
  */
 export function ContainsPicker({
   ingredientId,
   statuses,
   restrictions,
   onChange,
+  onEdit,
 }: {
   ingredientId: number;
   statuses: Record<number, RestrictionStatus>;
   restrictions: Restriction[];
-  onChange: () => void;
+  onChange?: () => void;
+  onEdit?: (statuses: Record<number, DecidedStatus>) => void;
 }) {
   const { t } = useI18n();
   const { refreshMe } = useApp();
@@ -32,11 +34,17 @@ export function ContainsPicker({
   const [busy, setBusy] = useState(false);
 
   const save = async (next: Set<number>) => {
+    const decided: Record<number, DecidedStatus> = Object.fromEntries(restrictions.map((r) => [r.id, next.has(r.id) ? "forbidden" : "safe"]));
+    if (onEdit) {
+      setPending(false);
+      onEdit(decided);
+      return;
+    }
     setBusy(true);
     try {
-      await api.put(`/api/ingredients/${ingredientId}`, { statuses: Object.fromEntries(restrictions.map((r) => [r.id, next.has(r.id) ? "forbidden" : "safe"])) });
+      await api.put(`/api/ingredients/${ingredientId}`, { statuses: decided });
       setPending(false);
-      onChange();
+      onChange?.();
       refreshMe();
     } catch (error) {
       toast({ message: errorMessage(t, error), tone: "error" });

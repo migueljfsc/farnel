@@ -3,6 +3,7 @@ import { hasProteinAndBase } from "../../shared/tags";
 import type { DishDetail, IngredientView, Restriction, Settings } from "../../shared/types";
 import { ContainsPicker } from "../components/ContainsPicker";
 import { IngredientPicker } from "../components/IngredientPicker";
+import { SaveBar } from "../components/SaveBar";
 import { TagPicker } from "../components/TagPicker";
 import { Badge, Button, Card, ErrorText, Field, Loaded, Page, Stars } from "../components/ui";
 import { cx, inputBase, inputClass } from "../components/styles";
@@ -220,24 +221,21 @@ function DishForm({
       </Card>
 
       {(dirty || !dish) && (
-        <div className="animate-toast sticky bottom-20 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-linha bg-louca/95 px-4 py-3 shadow-tin backdrop-blur sm:bottom-4">
-          <span className={cx("mr-auto text-sm font-semibold", missing ? "text-rosa" : "text-cafe")}>{missing ?? (dirty ? t("common.unsaved") : "")}</span>
-          {dish && (
-            <Button
-              variant="secondary"
-              disabled={busy}
-              onClick={() => {
-                setForm(saved);
-                setRevision((r) => r + 1);
-              }}
-            >
-              {t("common.discard")}
-            </Button>
-          )}
-          <Button disabled={busy || missing !== null || (dish !== undefined && !dirty)} onClick={save}>
-            {t(dish ? "common.save" : "dish.create")}
-          </Button>
-        </div>
+        <SaveBar
+          message={missing ?? (dirty ? t("common.unsaved") : "")}
+          warning={missing !== null}
+          busy={busy}
+          canSave={missing === null && (dish === undefined || dirty)}
+          saveLabel={t(dish ? "common.save" : "dish.create")}
+          onDiscard={
+            dish &&
+            (() => {
+              setForm(saved);
+              setRevision((r) => r + 1);
+            })
+          }
+          onSave={save}
+        />
       )}
 
       {dish && dish.ingredients.length > 0 && (
