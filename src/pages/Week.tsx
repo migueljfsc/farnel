@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { APP_NAME } from "../../shared/app";
 import { addDays, todayLisbon, weekStartOf } from "../../shared/time";
-import type { CookingView, DishSummary, Meal, PersonView, PlanView, ShoppingList, Slot } from "../../shared/types";
+import type { CookingView, DishSummary, Meal, MealOption, PersonView, PlanView, ShoppingList, Slot } from "../../shared/types";
 import { buttonClass, cx, inputClass } from "../components/styles";
 import { Button, Link, Loaded } from "../components/ui";
 import { WeekCalendar } from "../components/WeekCalendar";
@@ -13,6 +13,7 @@ import { AddMeal } from "../components/AddMeal";
 import { CloseButton, Sheet } from "../components/Sheet";
 import { byAisle, shoppingText } from "../lib/shopping";
 import { TIN_CLASS, tinTone } from "../lib/tins";
+import { pickRandom } from "../lib/random-dish";
 import { claudeLinks, planPrompt } from "../lib/claude";
 import { errorMessage } from "../lib/errors";
 import { useToast } from "../lib/toast";
@@ -444,30 +445,65 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
             </>
           )}
         </div>
-        {replacing && <ReplaceForm onReplace={(by) => change({ status: "replaced", ...by }, "toast.replaced")} />}
+        {replacing && <ReplaceForm weekStart={weekStart} cooking={cooking} onReplace={(by) => change({ status: "replaced", ...by }, "toast.replaced")} />}
     </Sheet>
   );
 }
 
-function ReplaceForm({ onReplace }: { onReplace: (by: { dishId: number } | { text: string }) => void }) {
+function ReplaceForm({ weekStart, cooking, onReplace }: { weekStart: string; cooking: CookingView; onReplace: (by: { dishId: number } | { text: string }) => void }) {
   const { t } = useI18n();
   const { data } = useApi<{ dishes: DishSummary[] }>("/api/dishes?status=validated");
+  const options = useApi<{ dishes: MealOption[] }>(`/api/weeks/${weekStart}/options?date=${cooking.cookDate}`);
   const [text, setText] = useState("");
+  const [suggestion, setSuggestion] = useState<MealOption | null>(null);
+  const [nothing, setNothing] = useState(false);
+  const roll = () => {
+    const picked = pickRandom(options.data?.dishes ?? [], { current: cooking.dishId, previous: suggestion?.id });
+    setSuggestion(picked ?? null);
+    setNothing(!picked);
+  };
   return (
-    <div className="animate-expand flex flex-wrap gap-2">
-      <select className={cx(inputClass, "sm:max-w-64")} defaultValue="" onChange={(e) => e.target.value && onReplace({ dishId: Number(e.target.value) })}>
-        <option value="">{t("cooking.replacePick")}</option>
-        {data?.dishes.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.name}
-          </option>
-        ))}
-      </select>
-      <input className={cx(inputClass, "sm:max-w-64")} placeholder={t("cooking.replaceOther")} value={text} onChange={(e) => setText(e.target.value)} />
-      <Button disabled={!text.trim()} onClick={() => onReplace({ text })}>
-        {t("common.save")}
-      </Button>
+    <div className="animate-expand space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" disabled={!options.data} onClick={roll}>
+          <DiceIcon />
+          {t("cooking.random")}
+        </Button>
+        <select className={cx(inputClass, "sm:max-w-64")} defaultValue="" onChange={(e) => e.target.value && onReplace({ dishId: Number(e.target.value) })}>
+          <option value="">{t("cooking.replacePick")}</option>
+          {data?.dishes.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+        <input className={cx(inputClass, "sm:max-w-64")} placeholder={t("cooking.replaceOther")} value={text} onChange={(e) => setText(e.target.value)} />
+        <Button disabled={!text.trim()} onClick={() => onReplace({ text })}>
+          {t("common.save")}
+        </Button>
+      </div>
+      {suggestion && (
+        <p role="status" className="flex flex-wrap items-center gap-2 border-l-[3px] border-mostarda py-1 pl-3 text-sm">
+          <span className="mr-auto">
+            {t("cooking.randomPick")} <strong>{suggestion.name}</strong>
+          </span>
+          <Button onClick={() => onReplace({ dishId: suggestion.id })}>{t("cooking.randomUse")}</Button>
+          <Button variant="secondary" onClick={roll}>
+            {t("cooking.randomAgain")}
+          </Button>
+        </p>
+      )}
+      {nothing && <p className="text-sm text-tinta-soft">{t("cooking.randomNone")}</p>}
     </div>
+  );
+}
+
+function DiceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01" />
+    </svg>
   );
 }
 
