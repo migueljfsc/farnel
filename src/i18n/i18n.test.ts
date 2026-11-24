@@ -27,7 +27,7 @@ describe("the dictionaries", () => {
 
   it("are actually translated, not copied", () => {
     // Names, units and words both languages share; anything new here is a forgotten string.
-    expect(keys.filter((k) => en[k] === pt[k]).sort()).toEqual(["unit.g", "unit.ml", "unit.un"]);
+    expect(keys.filter((k) => en[k] === pt[k]).sort()).toEqual(["theme.auto", "unit.g", "unit.ml", "unit.un"]);
   });
 });
 
