@@ -186,6 +186,7 @@ function toSummary(d: DishRecord): DishSummary {
     costPerPortionCents: cost.cents,
     missingPrice: cost.missingPrice,
     proteinPerPortionGrams: proteinPerPortionGrams(facts),
+    ingredientNames: d.ingredients.map((i) => i.name),
     lastCooked: d.lastCooked,
   };
 }

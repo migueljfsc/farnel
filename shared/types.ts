@@ -47,6 +47,8 @@ export interface DishSummary {
   missingPrice: boolean;
   /** Raw weight of its protein ingredients in one portion. */
   proteinPerPortionGrams: number;
+  /** Ingredient names, sorted. */
+  ingredientNames: string[];
   lastCooked: string | null;
 }
 

@@ -159,6 +159,23 @@
   ::selection {
     background: var(--mar-soft);
   }
+
+  /* Everything that does something when clicked shows a hand; what is switched off says so. */
+  a[href],
+  button,
+  summary,
+  select,
+  label:has(input),
+  input[type="checkbox"],
+  input[type="radio"],
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  label:has(input:disabled) {
+    cursor: not-allowed;
+  }
 }
 
 @layer components {

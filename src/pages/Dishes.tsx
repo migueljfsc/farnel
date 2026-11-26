@@ -7,6 +7,8 @@ import { useApp } from "../lib/app-context";
 import { useBulk } from "../lib/bulk";
 import { useSelection } from "../lib/selection";
 import { TIN_STRIP, tinTone } from "../lib/tins";
+import { matchesDish, type Protein } from "../lib/dish-filter";
+import { PROTEIN_TAGS } from "../../shared/tags";
 import { Check, SelectionBar } from "../components/SelectionBar";
 import type { Route } from "../lib/router";
 import { useI18n } from "../i18n/context";
@@ -23,10 +25,11 @@ const TABS: { filter: Filter; label: MessageKey; status: DishStatus }[] = [
 export function Dishes({ filter }: { filter: Filter }) {
   const { navigate, me } = useApp();
   const { t, tn, day, money } = useI18n();
-  const [tag, setTag] = useState("");
+  const [query, setQuery] = useState("");
+  const [protein, setProtein] = useState<Protein | null>(null);
   const tab = TABS.find((candidate) => candidate.filter === filter)!;
-  const selection = useSelection(`${tab.status}:${tag.trim().toLowerCase()}`);
-  const { data, error, reload } = useApi<{ dishes: DishSummary[] }>(`/api/dishes?status=${tab.status}${tag.trim() ? `&tag=${encodeURIComponent(tag.trim().toLowerCase())}` : ""}`);
+  const selection = useSelection(`${tab.status}:${query}:${protein ?? ""}`);
+  const { data, error, reload } = useApi<{ dishes: DishSummary[] }>(`/api/dishes?status=${tab.status}`);
 
   const settings = useApi<{ settings: Settings }>("/api/settings");
   const minProtein = settings.data?.settings.minProteinGrams ?? 0;
@@ -49,12 +52,38 @@ export function Dishes({ filter }: { filter: Filter }) {
             {option.status === "pending" && me.pendingDishes > 0 && ` (${me.pendingDishes})`}
           </button>
         ))}
-        <input className={`${inputBase} ml-auto max-w-40 py-1`} placeholder={t("dishes.tag")} value={tag} onChange={(e) => setTag(e.target.value)} />
       </div>
-      <Loaded data={data} error={error}>
-        {({ dishes }) =>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          aria-label={t("dishes.search")}
+          placeholder={t("dishes.search")}
+          className={cx(inputBase, "min-w-48 flex-1 py-1.5")}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div role="group" aria-label={t("tags.protein")} className="flex flex-wrap gap-1.5">
+          {PROTEIN_TAGS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={protein === p}
+              onClick={() => setProtein(protein === p ? null : p)}
+              className={cx(
+                "inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1 text-xs font-semibold transition",
+                protein === p ? "bg-tinta text-papel" : "text-tinta-soft shadow-[inset_0_0_0_1.5px_var(--linha)] hover:text-tinta",
+              )}
+            >
+              <span aria-hidden className={cx("size-2.5 rounded-[2px]", TIN_STRIP[p])} />
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Loaded data={data ? { dishes: data.dishes.filter((d) => matchesDish(d, { query, protein })), all: data.dishes.length } : undefined} error={error}>
+        {({ dishes, all }) =>
           dishes.length === 0 ? (
-            <p className="text-sm text-tinta-soft">{t("dishes.empty")}</p>
+            <p className="text-sm text-tinta-soft">{t(all === 0 ? "dishes.empty" : "dishes.noMatch")}</p>
           ) : (
             <div className="space-y-2">
               <SelectionBar

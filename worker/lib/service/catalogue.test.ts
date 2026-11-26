@@ -246,6 +246,13 @@ describe("dishes", () => {
     expect((await getDish(db, dish))?.proteinPerPortionGrams).toBe(225);
   });
 
+  it("lists each dish's ingredient names", async () => {
+    const rice = await addIngredient(db, "Arroz");
+    const duck = await addIngredient(db, "Pato");
+    await addDish(db, "Arroz de pato", { ingredients: [[rice, 300], [duck, 1000]] });
+    expect((await listDishes(db))[0].ingredientNames).toEqual(["Arroz", "Pato"]);
+  });
+
   it("lists by tag with cost per portion", async () => {
     const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
     await addDish(db, "Arroz", { portions: 4, ingredients: [[rice, 400]], tags: ["peixe"] });
