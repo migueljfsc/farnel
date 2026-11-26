@@ -15,6 +15,7 @@ const ingredient = (id: number, name: string, overrides: Partial<IngredientView>
   priceUpdatedAt: null,
   proteinGrams: null,
   stock: null,
+  stockCount: null,
   inUse: false,
   statuses: { 1: "safe" },
   ...overrides,

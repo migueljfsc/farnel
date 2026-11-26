@@ -12,6 +12,7 @@ const ingredient = (overrides: Partial<IngredientView> = {}): IngredientView => 
   priceUpdatedAt: null,
   proteinGrams: null,
   stock: null,
+  stockCount: null,
   inUse: false,
   statuses: { 1: "safe" },
   ...overrides,
@@ -37,9 +38,9 @@ describe("patchFor", () => {
 
   it("records a new count of what is at home, zero included, or clears it", () => {
     expect(patchFor(ingredient(), { stock: "6" })).toEqual({ patch: { stock: 6 }, valid: true });
-    expect(patchFor(ingredient({ stock: 6 }), { stock: "0" })).toEqual({ patch: { stock: 0 }, valid: true });
-    expect(patchFor(ingredient({ stock: 6 }), { stock: "" })).toEqual({ patch: { stock: null }, valid: true });
-    expect(patchFor(ingredient({ stock: 6 }), { stock: "6" })).toEqual({ patch: {}, valid: true });
+    expect(patchFor(ingredient({ stock: 4, stockCount: 6 }), { stock: "0" })).toEqual({ patch: { stock: 0 }, valid: true });
+    expect(patchFor(ingredient({ stock: 4, stockCount: 6 }), { stock: "" })).toEqual({ patch: { stock: null }, valid: true });
+    expect(patchFor(ingredient({ stock: 4, stockCount: 6 }), { stock: "6" })).toEqual({ patch: {}, valid: true });
     expect(patchFor(ingredient(), { stock: "-1" }).valid).toBe(false);
   });
 
@@ -57,7 +58,7 @@ describe("patchFor", () => {
 
 describe("draftView", () => {
   it("shows the draft over what is saved, as text", () => {
-    expect(draftView(ingredient({ proteinGrams: 60, stock: 4 }), undefined)).toEqual({ aisle: "misc", unit: "un", price: "0.30", protein: "60", stock: "4", statuses: { 1: "safe" } });
+    expect(draftView(ingredient({ proteinGrams: 60, stock: 3, stockCount: 4 }), undefined)).toEqual({ aisle: "misc", unit: "un", price: "0.30", protein: "60", stock: "4", statuses: { 1: "safe" } });
     expect(draftView(ingredient({ priceCents: null }), { aisle: "dairy", protein: "" })).toEqual({ aisle: "dairy", unit: "un", price: "", protein: "", stock: "", statuses: { 1: "safe" } });
   });
 });

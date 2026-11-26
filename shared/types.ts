@@ -29,6 +29,8 @@ export interface IngredientView {
   proteinGrams: number | null;
   /** What is at home and not yet planned, in its unit; null when never counted. */
   stock: number | null;
+  /** The last count, before planned cookings use it up; null when never counted. */
+  stockCount: number | null;
   /** A dish uses it, so its unit cannot change. */
   inUse: boolean;
   /** By restriction id. */

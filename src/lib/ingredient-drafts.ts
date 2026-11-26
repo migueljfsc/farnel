@@ -10,7 +10,7 @@ export interface Draft {
   unit?: Unit;
   price?: string;
   protein?: string;
-  /** A new count of what is at home; "" clears it. */
+  /** A new count of what is at home, before planned cookings; "" clears it. */
   stock?: string;
   statuses?: Record<number, DecidedStatus>;
 }
@@ -42,7 +42,7 @@ export function draftView(ingredient: IngredientView, draft: Draft | undefined):
     unit: draft?.unit ?? ingredient.unit,
     price: draft?.price ?? priceText(ingredient.priceCents),
     protein: draft?.protein ?? (ingredient.proteinGrams === null ? "" : String(ingredient.proteinGrams)),
-    stock: draft?.stock ?? (ingredient.stock === null ? "" : String(ingredient.stock)),
+    stock: draft?.stock ?? (ingredient.stockCount === null ? "" : String(ingredient.stockCount)),
     statuses: { ...ingredient.statuses, ...draft?.statuses },
   };
 }
@@ -74,7 +74,7 @@ export function patchFor(ingredient: IngredientView, draft: Draft | undefined): 
     const text = draft.stock.trim().replace(",", ".");
     const count = text === "" ? null : Number(text);
     if (count !== null && !(Number.isFinite(count) && count >= 0)) valid = false;
-    else if (count !== ingredient.stock) patch.stock = count;
+    else if (count !== ingredient.stockCount) patch.stock = count;
   }
   if (draft.statuses !== undefined && Object.entries(draft.statuses).some(([id, status]) => ingredient.statuses[Number(id)] !== status)) {
     patch.statuses = draft.statuses;

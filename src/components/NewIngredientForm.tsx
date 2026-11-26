@@ -32,7 +32,7 @@ export function NewIngredientForm({ initialName = "", onCreated, onCancel }: { i
       const priceCents = parseMoney(price);
       const { id } = await api.post<{ id: number }>("/api/ingredients", { name, unit, aisle, priceCents, proteinGrams, statuses: {} });
       refreshMe();
-      onCreated({ id, name: name.trim(), unit, aisle, priceCents, priceSource: "estimated", priceUpdatedAt: null, proteinGrams, stock: null, inUse: false, statuses: {} });
+      onCreated({ id, name: name.trim(), unit, aisle, priceCents, priceSource: "estimated", priceUpdatedAt: null, proteinGrams, stock: null, stockCount: null, inUse: false, statuses: {} });
     } catch (error) {
       setFailure(error);
     } finally {

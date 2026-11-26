@@ -385,10 +385,10 @@ export async function unarchiveDish(db: D1Database, id: number): Promise<boolean
 
 export async function listIngredients(db: D1Database): Promise<IngredientView[]> {
   const [ingredients, statuses, stock] = await Promise.all([
-    rows<Omit<IngredientView, "statuses" | "stock" | "inUse"> & { counted: number; used: number }>(
+    rows<Omit<IngredientView, "statuses" | "stock" | "inUse"> & { used: number }>(
       db.prepare(
         `SELECT id, name, unit, aisle, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt, protein_grams AS proteinGrams,
-                stock_quantity IS NOT NULL AS counted,
+                stock_quantity AS stockCount,
                 EXISTS (SELECT 1 FROM dish_ingredients di WHERE di.ingredient_id = ingredients.id) AS used
          FROM ingredients ORDER BY name COLLATE NOCASE`,
       ),
@@ -396,7 +396,7 @@ export async function listIngredients(db: D1Database): Promise<IngredientView[]>
     loadStatuses(db),
     availableStock(db),
   ]);
-  return ingredients.map(({ counted, used, ...i }) => ({ ...i, stock: counted ? (stock.get(i.id) ?? 0) : null, inUse: used === 1, statuses: statuses.get(i.id) ?? {} }));
+  return ingredients.map(({ used, ...i }) => ({ ...i, stock: i.stockCount === null ? null : (stock.get(i.id) ?? 0), inUse: used === 1, statuses: statuses.get(i.id) ?? {} }));
 }
 
 export async function updateIngredient(

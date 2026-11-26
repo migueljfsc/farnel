@@ -234,7 +234,7 @@ function IngredientRow({
   onEdit: () => void;
   onChange: (change: Draft) => void;
 }) {
-  const { t, quantity } = useI18n();
+  const { t } = useI18n();
   const priceValid = patchFor(ingredient, { price: view.price }).valid;
   const proteinValid = patchFor(ingredient, { protein: view.protein }).valid;
   const stockValid = patchFor(ingredient, { stock: view.stock }).valid;
@@ -356,10 +356,8 @@ function IngredientRow({
             />
             <span className="text-tinta-soft">{t(`unit.${view.unit}`)}</span>
           </span>
-        ) : view.stock.trim() !== "" && Number(view.stock.replace(",", ".")) > 0 ? (
-          quantity(Number(view.stock.replace(",", ".")), view.unit)
         ) : (
-          view.stock.trim() !== "" && <span className="text-tinta-soft">{t("ingredients.stockNone")}</span>
+          <StockCell ingredient={ingredient} view={view} />
         )}
       </td>
       {restrictions.map((r) => (
@@ -373,6 +371,24 @@ function IngredientRow({
         </td>
       ))}
     </tr>
+  );
+}
+
+/**
+ * What is left at home once planned cookings take their share, and the count it came from when
+ * they took some. An unsaved new count shows as typed.
+ */
+function StockCell({ ingredient, view }: { ingredient: IngredientView; view: DraftView }) {
+  const { t, quantity } = useI18n();
+  const typed = view.stock.trim() === "" ? null : Number(view.stock.replace(",", "."));
+  if (typed !== ingredient.stockCount) return typed === null ? null : <>{typed > 0 ? quantity(typed, view.unit) : t("ingredients.stockNone")}</>;
+  if (ingredient.stock === null || ingredient.stockCount === null) return null;
+  const left = ingredient.stock > 0 ? quantity(ingredient.stock, view.unit) : t("ingredients.stockNone");
+  if (ingredient.stock === ingredient.stockCount) return <>{left}</>;
+  return (
+    <span title={t("ingredients.stockPlanned", { quantity: quantity(ingredient.stockCount - ingredient.stock, view.unit) })}>
+      {left} <span className="text-xs text-tinta-soft">{t("ingredients.stockOf", { count: quantity(ingredient.stockCount, view.unit) })}</span>
+    </span>
   );
 }
 

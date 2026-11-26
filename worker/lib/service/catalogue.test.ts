@@ -113,9 +113,9 @@ describe("creating ingredients", () => {
     expect((await listIngredients(db))[0].stock).toBeNull();
     expect(await updateIngredient(db, chicken, { stock: 1000 }, "2026-11-22T10:00:00Z")).toBe("ok");
     await addPlan(db, "2026-11-23", [{ dishId: dish, cookDate: "2026-11-24", portions: 2 }]);
-    expect((await listIngredients(db))[0].stock).toBe(600);
+    expect((await listIngredients(db))[0]).toMatchObject({ stock: 600, stockCount: 1000 });
     expect(await updateIngredient(db, chicken, { stock: null }, "2026-11-22T10:00:00Z")).toBe("ok");
-    expect((await listIngredients(db))[0].stock).toBeNull();
+    expect((await listIngredients(db))[0]).toMatchObject({ stock: null, stockCount: null });
   });
 
   it("marks an ingredient as protein with its raw weight per unit, and unmarks it", async () => {
