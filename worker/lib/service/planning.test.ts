@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addDish, addHousehold, addIngredient, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId, setMinProtein } from "../../test/fixtures";
 import type { PlanInput } from "../rules";
+import { setStock } from "./pantry";
 import { updatePerson } from "./people";
 import { addCooking, getPlan, removeCooking, history, listCandidates, mealOptions, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
 
@@ -181,6 +182,19 @@ describe("who is eating", () => {
 });
 
 describe("listCandidates", () => {
+  it("says how much of each dish is already at home", async () => {
+    await addHousehold(db);
+    const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
+    const chicken = await addIngredient(db, "Frango", { priceCents: 500 });
+    const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400], [chicken, 600]] });
+    const b = await addDish(db, "B", { portions: 4, ingredients: [[rice, 400]] });
+    await setStock(db, [{ name: "Frango", quantity: 300, unit: "g" }], TODAY, NOW);
+    const candidates = await listCandidates(db, "2026-11-23", TODAY);
+    expect(candidates.find((c) => c.id === a)!.pantry).toEqual({ share: 0.39, items: [{ name: "Frango", have: 300, need: 600, unit: "g" }] });
+    expect(candidates.find((c) => c.id === b)!.pantry).toEqual({ share: 0, items: [] });
+  });
+
+
   it("leaves out dishes inside their repeat interval until the week they are free", async () => {
     const a = await addDish(db, "A", { interval: 14 });
     await addPlan(db, "2026-11-09", [{ dishId: a, cookDate: "2026-11-10" }]);
@@ -270,8 +284,25 @@ describe("shoppingList", () => {
       { dishId: b, cookDate: "2026-11-24", portions: 2, status: "skipped" },
     ]);
     expect(await shoppingList(db, "2026-11-23")).toEqual({
-      items: [{ ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 200, costCents: 40 }],
+      items: [{ ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 200, fromStock: 0, costCents: 40 }],
       totalCents: 40,
+      missingPrices: 0,
+    });
+  });
+
+  it("asks only for what the stock left at the week's start does not cover", async () => {
+    const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
+    const chicken = await addIngredient(db, "Frango", { priceCents: 500 });
+    const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400], [chicken, 600]] });
+    await setStock(db, [{ name: "Arroz", quantity: 500, unit: "g" }, { name: "Frango", quantity: 1000, unit: "g" }], "2026-11-20", NOW);
+    await addPlan(db, "2026-11-16", [{ dishId: a, cookDate: "2026-11-21", portions: 4 }]);
+    await addPlan(db, "2026-11-23", [{ dishId: a, cookDate: "2026-11-23", portions: 4 }]);
+    expect(await shoppingList(db, "2026-11-23")).toEqual({
+      items: [
+        { ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 300, fromStock: 100, costCents: 60 },
+        { ingredientId: chicken, name: "Frango", unit: "g", aisle: "misc", quantity: 200, fromStock: 400, costCents: 100 },
+      ],
+      totalCents: 160,
       missingPrices: 0,
     });
   });

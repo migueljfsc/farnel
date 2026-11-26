@@ -91,6 +91,9 @@ export const en = {
   "week.emptyFuture": "Nothing planned yet. Tap a meal to add a dish, or plan the week with Claude.",
 
   // -------------------------------------------------------------- shopping
+  "shopping.atHome": "At home",
+  "shopping.atHomeHint": "Covered by what you have, so not on the list.",
+  "shopping.fromStock": "+{quantity} at home",
   "shopping.share": "Share",
   "shopping.copy": "Copy",
   "shopping.copied": "Copied",
@@ -130,6 +133,9 @@ export const en = {
   "ingredients.proteinEach": "g each",
   "ingredients.proteinHint": "Raw weight that counts as protein",
   "ingredients.isProtein": "protein",
+  "ingredients.stock": "At home",
+  "ingredients.stockHint": "What is at home and not yet planned; type a new count to replace it",
+  "ingredients.stockNone": "none",
   "ingredients.search": "Search",
   "ingredients.filter.label": "Show",
   "ingredients.filter.protein": "Proteins",

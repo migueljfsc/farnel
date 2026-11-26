@@ -115,7 +115,7 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
           const shown = data.ingredients.filter((i) => changedIds.has(i.id) || matches(i, draftView(i, drafts[i.id]), { query, filter }, data.restrictions));
           if (data.ingredients.length === 0) return <p className="text-sm text-tinta-soft">{t("ingredients.empty")}</p>;
           if (shown.length === 0) return <p className="text-sm text-tinta-soft">{t(filter === "undecided" && !query ? "ingredients.nothingToDecide" : "ingredients.noMatch")}</p>;
-          const columns = 4 + data.restrictions.length;
+          const columns = 5 + data.restrictions.length;
           return (
             <div className="space-y-2">
               <SelectionBar
@@ -133,6 +133,9 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
                       <th className="w-36 py-2 pr-3">{t("ingredients.price")}</th>
                       <th className="w-32 py-2 pr-3" title={t("ingredients.proteinHint")}>
                         {t("ingredients.protein")}
+                      </th>
+                      <th className="w-32 py-2 pr-3" title={t("ingredients.stockHint")}>
+                        {t("ingredients.stock")}
                       </th>
                       {data.restrictions.map((r) => (
                         <th key={r.id} className="w-20 px-1 py-2 text-center">
@@ -211,9 +214,10 @@ function IngredientRow({
   onEdit: () => void;
   onChange: (change: Draft) => void;
 }) {
-  const { t } = useI18n();
+  const { t, quantity } = useI18n();
   const priceValid = patchFor(ingredient, { price: view.price }).valid;
   const proteinValid = patchFor(ingredient, { protein: view.protein }).valid;
+  const stockValid = patchFor(ingredient, { stock: view.stock }).valid;
   const setStatus = (restrictionId: number, status: "safe" | "forbidden") => {
     const decided = Object.fromEntries(Object.entries(view.statuses).filter(([, s]) => s !== "unknown")) as Record<number, "safe" | "forbidden">;
     onChange({ statuses: { ...decided, [restrictionId]: status } });
@@ -300,6 +304,26 @@ function IngredientRow({
               {ingredient.unit === "un" ? `${view.protein} ${t("ingredients.proteinEach")}` : t("ingredients.isProtein")}
             </span>
           )
+        )}
+      </td>
+      <td className="py-2 pr-3 tabular-nums">
+        {editing ? (
+          <span className="inline-flex items-center gap-1.5">
+            <input
+              aria-label={t("ingredients.stock")}
+              aria-invalid={!stockValid}
+              className={cx(inputBase, "w-20 py-1", !stockValid && INVALID)}
+              inputMode="decimal"
+              placeholder="—"
+              value={view.stock}
+              onChange={(e) => onChange({ stock: e.target.value })}
+            />
+            <span className="text-tinta-soft">{t(`unit.${ingredient.unit}`)}</span>
+          </span>
+        ) : view.stock.trim() !== "" && Number(view.stock.replace(",", ".")) > 0 ? (
+          quantity(Number(view.stock.replace(",", ".")), ingredient.unit)
+        ) : (
+          view.stock.trim() !== "" && <span className="text-tinta-soft">{t("ingredients.stockNone")}</span>
         )}
       </td>
       {restrictions.map((r) => (

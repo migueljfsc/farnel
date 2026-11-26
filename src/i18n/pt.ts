@@ -91,6 +91,9 @@ export const pt: Dictionary = {
   "week.emptyFuture": "Ainda nada planeado. Toca numa refeição para juntar um prato, ou planeia a semana com o Claude.",
 
   // -------------------------------------------------------------- shopping
+  "shopping.atHome": "Em casa",
+  "shopping.atHomeHint": "Já há em casa, por isso não entra na lista.",
+  "shopping.fromStock": "+{quantity} em casa",
   "shopping.share": "Partilhar",
   "shopping.copy": "Copiar",
   "shopping.copied": "Copiada",
@@ -130,6 +133,9 @@ export const pt: Dictionary = {
   "ingredients.proteinEach": "g cada",
   "ingredients.proteinHint": "Peso cru que conta como proteína",
   "ingredients.isProtein": "proteína",
+  "ingredients.stock": "Em casa",
+  "ingredients.stockHint": "O que há em casa e ainda não está planeado; escreve uma nova contagem para a substituir",
+  "ingredients.stockNone": "nada",
   "ingredients.search": "Procurar",
   "ingredients.filter.label": "Mostrar",
   "ingredients.filter.protein": "Proteínas",

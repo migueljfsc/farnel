@@ -9,7 +9,7 @@ const clock = { today: "2026-11-22", now: "2026-11-22T10:00:00Z" };
 beforeEach(() => resetDb(db));
 
 describe("mcp tools", () => {
-  it("exposes the seven planning tools", () => {
+  it("exposes the eight planning tools", () => {
     expect(TOOLS.map((t) => t.name)).toEqual([
       "get_context",
       "list_candidates",
@@ -18,7 +18,23 @@ describe("mcp tools", () => {
       "save_plan",
       "add_dish",
       "get_shopping_list",
+      "set_stock",
     ]);
+  });
+
+  it("records what is at home and lists what is available in the context", async () => {
+    const result = await runTool("set_stock", db, { items: [{ name: "Frango", quantity: 1000, unit: "g" }] }, clock);
+    expect(result.isError).toBeFalsy();
+    expect(result.summary).toContain("Frango");
+    const context = await runTool("get_context", db, {}, clock);
+    expect(context.data).toMatchObject({ stock: [{ name: "Frango", quantity: 1000, unit: "g" }] });
+  });
+
+  it("reports a unit that differs from the ingredient's as an error", async () => {
+    await runTool("set_stock", db, { items: [{ name: "Ovos", quantity: 6, unit: "un" }] }, clock);
+    const result = await runTool("set_stock", db, { items: [{ name: "Ovos", quantity: 300, unit: "g" }] }, clock);
+    expect(result.isError).toBe(true);
+    expect(result.summary).toContain("Ovos");
   });
 
   it("describes the household with hard restrictions by name", async () => {

@@ -11,6 +11,7 @@ const ingredient = (overrides: Partial<IngredientView> = {}): IngredientView => 
   priceSource: "estimated",
   priceUpdatedAt: null,
   proteinGrams: null,
+  stock: null,
   statuses: { 1: "safe" },
   ...overrides,
 });
@@ -18,7 +19,7 @@ const ingredient = (overrides: Partial<IngredientView> = {}): IngredientView => 
 describe("patchFor", () => {
   it("is empty without a draft or when the draft matches what is saved", () => {
     expect(patchFor(ingredient(), undefined)).toEqual({ patch: {}, valid: true });
-    expect(patchFor(ingredient(), { aisle: "misc", price: "0.30", protein: "", statuses: { 1: "safe" } })).toEqual({ patch: {}, valid: true });
+    expect(patchFor(ingredient(), { aisle: "misc", price: "0.30", protein: "", stock: "", statuses: { 1: "safe" } })).toEqual({ patch: {}, valid: true });
   });
 
   it("holds only the fields that changed", () => {
@@ -33,6 +34,14 @@ describe("patchFor", () => {
     expect(patchFor(ingredient(), { statuses: { 1: "forbidden" } })).toEqual({ patch: { statuses: { 1: "forbidden" } }, valid: true });
   });
 
+  it("records a new count of what is at home, zero included, or clears it", () => {
+    expect(patchFor(ingredient(), { stock: "6" })).toEqual({ patch: { stock: 6 }, valid: true });
+    expect(patchFor(ingredient({ stock: 6 }), { stock: "0" })).toEqual({ patch: { stock: 0 }, valid: true });
+    expect(patchFor(ingredient({ stock: 6 }), { stock: "" })).toEqual({ patch: { stock: null }, valid: true });
+    expect(patchFor(ingredient({ stock: 6 }), { stock: "6" })).toEqual({ patch: {}, valid: true });
+    expect(patchFor(ingredient(), { stock: "-1" }).valid).toBe(false);
+  });
+
   it("flags values the server would refuse", () => {
     expect(patchFor(ingredient(), { price: "abc" }).valid).toBe(false);
     expect(patchFor(ingredient(), { protein: "0" }).valid).toBe(false);
@@ -42,7 +51,7 @@ describe("patchFor", () => {
 
 describe("draftView", () => {
   it("shows the draft over what is saved, as text", () => {
-    expect(draftView(ingredient({ proteinGrams: 60 }), undefined)).toEqual({ aisle: "misc", price: "0.30", protein: "60", statuses: { 1: "safe" } });
-    expect(draftView(ingredient({ priceCents: null }), { aisle: "dairy", protein: "" })).toEqual({ aisle: "dairy", price: "", protein: "", statuses: { 1: "safe" } });
+    expect(draftView(ingredient({ proteinGrams: 60, stock: 4 }), undefined)).toEqual({ aisle: "misc", price: "0.30", protein: "60", stock: "4", statuses: { 1: "safe" } });
+    expect(draftView(ingredient({ priceCents: null }), { aisle: "dairy", protein: "" })).toEqual({ aisle: "dairy", price: "", protein: "", stock: "", statuses: { 1: "safe" } });
   });
 });

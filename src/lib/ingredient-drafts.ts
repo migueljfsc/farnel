@@ -9,6 +9,8 @@ export interface Draft {
   aisle?: Aisle;
   price?: string;
   protein?: string;
+  /** A new count of what is at home; "" clears it. */
+  stock?: string;
   statuses?: Record<number, DecidedStatus>;
 }
 
@@ -16,6 +18,7 @@ export interface IngredientPatch {
   aisle?: Aisle;
   priceCents?: number | null;
   proteinGrams?: number | null;
+  stock?: number | null;
   statuses?: Record<number, DecidedStatus>;
 }
 
@@ -23,6 +26,7 @@ export interface DraftView {
   aisle: Aisle;
   price: string;
   protein: string;
+  stock: string;
   statuses: Record<number, RestrictionStatus>;
 }
 
@@ -34,6 +38,7 @@ export function draftView(ingredient: IngredientView, draft: Draft | undefined):
     aisle: draft?.aisle ?? ingredient.aisle,
     price: draft?.price ?? priceText(ingredient.priceCents),
     protein: draft?.protein ?? (ingredient.proteinGrams === null ? "" : String(ingredient.proteinGrams)),
+    stock: draft?.stock ?? (ingredient.stock === null ? "" : String(ingredient.stock)),
     statuses: { ...ingredient.statuses, ...draft?.statuses },
   };
 }
@@ -59,6 +64,12 @@ export function patchFor(ingredient: IngredientView, draft: Draft | undefined): 
     const grams = parseProtein(draft.protein);
     if (grams === undefined) valid = false;
     else if (grams !== ingredient.proteinGrams) patch.proteinGrams = grams;
+  }
+  if (draft.stock !== undefined) {
+    const text = draft.stock.trim().replace(",", ".");
+    const count = text === "" ? null : Number(text);
+    if (count !== null && !(Number.isFinite(count) && count >= 0)) valid = false;
+    else if (count !== ingredient.stock) patch.stock = count;
   }
   if (draft.statuses !== undefined && Object.entries(draft.statuses).some(([id, status]) => ingredient.statuses[Number(id)] !== status)) {
     patch.statuses = draft.statuses;

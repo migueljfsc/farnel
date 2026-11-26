@@ -18,7 +18,8 @@ import type { Aisle } from "../../../shared/aisles";
 import { idList, isUniqueViolation, rows } from "../db";
 import { nameKey } from "../../../shared/names";
 import { costPerPortionCents, proteinPerPortionGrams, type DishFacts } from "../rules";
-import { weekStartOf } from "../../../shared/time";
+import { todayLisbon, weekStartOf } from "../../../shared/time";
+import { availableStock } from "./pantry";
 
 export interface IngredientLine {
   name: string;
@@ -382,22 +383,24 @@ export async function unarchiveDish(db: D1Database, id: number): Promise<boolean
 // ---------------------------------------------------------------- ingredients and restrictions
 
 export async function listIngredients(db: D1Database): Promise<IngredientView[]> {
-  const [ingredients, statuses] = await Promise.all([
-    rows<Omit<IngredientView, "statuses">>(
+  const [ingredients, statuses, stock] = await Promise.all([
+    rows<Omit<IngredientView, "statuses" | "stock"> & { counted: number }>(
       db.prepare(
-        `SELECT id, name, unit, aisle, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt, protein_grams AS proteinGrams
+        `SELECT id, name, unit, aisle, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt, protein_grams AS proteinGrams,
+                stock_quantity IS NOT NULL AS counted
          FROM ingredients ORDER BY name COLLATE NOCASE`,
       ),
     ),
     loadStatuses(db),
+    availableStock(db),
   ]);
-  return ingredients.map((i) => ({ ...i, statuses: statuses.get(i.id) ?? {} }));
+  return ingredients.map(({ counted, ...i }) => ({ ...i, stock: counted ? (stock.get(i.id) ?? 0) : null, statuses: statuses.get(i.id) ?? {} }));
 }
 
 export async function updateIngredient(
   db: D1Database,
   id: number,
-  patch: { name?: string; unit?: Unit; priceCents?: number | null; aisle?: Aisle; proteinGrams?: number | null; statuses?: Record<number, DecidedStatus> },
+  patch: { name?: string; unit?: Unit; priceCents?: number | null; aisle?: Aisle; proteinGrams?: number | null; stock?: number | null; statuses?: Record<number, DecidedStatus> },
   now: string,
 ): Promise<"ok" | "not_found" | "name_taken" | "in_use"> {
   const current = await db.prepare("SELECT unit FROM ingredients WHERE id = ?1").bind(id).first<{ unit: Unit }>();
@@ -414,6 +417,10 @@ export async function updateIngredient(
   if (patch.unit !== undefined) statements.push(db.prepare("UPDATE ingredients SET unit = ?2 WHERE id = ?1").bind(id, patch.unit));
   if (patch.aisle !== undefined) statements.push(db.prepare("UPDATE ingredients SET aisle = ?2 WHERE id = ?1").bind(id, patch.aisle));
   if (patch.proteinGrams !== undefined) statements.push(db.prepare("UPDATE ingredients SET protein_grams = ?2 WHERE id = ?1").bind(id, patch.proteinGrams));
+  if (patch.stock !== undefined) {
+    const counted = patch.stock === null ? null : todayLisbon(new Date(now));
+    statements.push(db.prepare("UPDATE ingredients SET stock_quantity = ?2, stock_date = ?3 WHERE id = ?1").bind(id, patch.stock, counted));
+  }
   if (patch.priceCents !== undefined) {
     statements.push(
       db.prepare("UPDATE ingredients SET price_cents = ?2, price_source = 'estimated', price_updated_at = ?3 WHERE id = ?1").bind(id, patch.priceCents, now),

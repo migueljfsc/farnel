@@ -27,6 +27,8 @@ export interface IngredientView {
   priceUpdatedAt: string | null;
   /** Raw protein weight in 1 g, 1 ml or 1 un; null when it is not a protein. */
   proteinGrams: number | null;
+  /** What is at home and not yet planned, in its unit; null when never counted. */
+  stock: number | null;
   /** By restriction id. */
   statuses: Record<number, RestrictionStatus>;
 }
@@ -110,7 +112,10 @@ export interface ShoppingItem {
   name: string;
   unit: Unit;
   aisle: Aisle;
+  /** Still to buy, after what is at home. */
   quantity: number;
+  /** Covered by what is at home. */
+  fromStock: number;
   costCents: number | null;
 }
 
@@ -130,6 +135,8 @@ export interface Candidate {
   costPerPortionCents: number;
   missingPrice: boolean;
   proteinPerPortionGrams: number;
+  /** What is already at home: the share of the recipe's cost and the ingredients it covers. */
+  pantry: { share: number; items: { name: string; have: number; need: number; unit: Unit }[] };
   ratings: { personId: number; person: string; average: number; count: number }[];
   recentComments: { date: string; person: string; rating: number; comment: string }[];
   /** Soft restrictions for which the dish has a forbidden ingredient. */

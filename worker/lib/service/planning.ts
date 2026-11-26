@@ -3,10 +3,11 @@
 import type { Aisle } from "../../../shared/aisles";
 import type { Candidate, CookingStatus, CookingView, FeedbackView, Meal, MealOption, PlanView, ShoppingList, Unit } from "../../../shared/types";
 import { idList, rows } from "../db";
-import { costPerPortionCents, eligibility, lineCostCents, mealKey, validatePlan, type PlanError, type PlanInput } from "../rules";
+import { costPerPortionCents, eligibility, lineCostCents, mealKey, pantryCover, validatePlan, type PlanError, type PlanInput } from "../rules";
 import { addDays } from "../../../shared/time";
 import { MAX_COMMENT, rating as ratingSchema } from "../schemas";
 import { loadDishes, loadDishFacts } from "./catalogue";
+import { availableStock } from "./pantry";
 import { getSettings, hardRestrictionIds, neverEaten, resolvePeople } from "./people";
 
 const RECENT_COMMENTS = 3;
@@ -23,7 +24,7 @@ export async function listCandidates(db: D1Database, weekStart: string, today: s
   const people = peopleIds ? idList(peopleIds) : null;
   const excludePlanId = await planIdForWeek(db, weekStart);
   const onDate = weekStart > today ? weekStart : today;
-  const [dishes, hard, ratings, comments, soft, settings, never] = await Promise.all([
+  const [dishes, hard, ratings, comments, soft, settings, never, stock] = await Promise.all([
     loadDishes(db, { status: "validated", excludePlanId }),
     hardRestrictionIds(db, peopleIds),
     rows<{ dishId: number; personId: number; person: string; average: number; count: number }>(
@@ -51,6 +52,7 @@ export async function listCandidates(db: D1Database, weekStart: string, today: s
     ),
     getSettings(db),
     neverEaten(db, peopleIds),
+    availableStock(db, { until: weekStart, excludePlanId }),
   ]);
 
   return dishes
@@ -65,6 +67,7 @@ export async function listCandidates(db: D1Database, weekStart: string, today: s
       costPerPortionCents: summary.costPerPortionCents,
       missingPrice: summary.missingPrice,
       proteinPerPortionGrams: summary.proteinPerPortionGrams,
+      pantry: pantryCover(facts, stock),
       ratings: ratings.filter((r) => r.dishId === summary.id).map(({ personId, person, average, count }) => ({ personId, person, average, count })),
       recentComments: comments
         .filter((c) => c.dishId === summary.id)
@@ -408,7 +411,9 @@ export async function plannedWeeks(db: D1Database, from: string, to: string): Pr
 
 // ---------------------------------------------------------------- shopping list
 
+/** The week's ingredients; what was left at home when the week starts covers them first. */
 export async function shoppingList(db: D1Database, weekStart: string): Promise<ShoppingList> {
+  const stock = await availableStock(db, { until: weekStart });
   const lines = await rows<{ ingredientId: number; name: string; unit: Unit; aisle: Aisle; priceCents: number | null; quantity: number }>(
     db
       .prepare(
@@ -420,9 +425,12 @@ export async function shoppingList(db: D1Database, weekStart: string): Promise<S
       )
       .bind(weekStart),
   );
+  const round = (n: number) => Math.round(n * 100) / 100;
   const items = lines.map((l) => {
-    const quantity = Math.round(l.quantity * 100) / 100;
-    return { ingredientId: l.ingredientId, name: l.name, unit: l.unit, aisle: l.aisle, quantity, costCents: lineCostCents(quantity, l.unit, l.priceCents) };
+    const needed = round(l.quantity);
+    const fromStock = Math.min(stock.get(l.ingredientId) ?? 0, needed);
+    const quantity = round(needed - fromStock);
+    return { ingredientId: l.ingredientId, name: l.name, unit: l.unit, aisle: l.aisle, quantity, fromStock, costCents: lineCostCents(quantity, l.unit, l.priceCents) };
   });
   return {
     items,

@@ -7,8 +7,9 @@
 import { z } from "zod";
 import { formatMoney } from "../../shared/format";
 import { BASE_TAGS, hasProteinAndBase, PROTEIN_TAGS } from "../../shared/tags";
-import { date, dishInput, id, planInput } from "../lib/schemas";
+import { date, dishInput, id, planInput, stockInput } from "../lib/schemas";
 import { catalogueCounts, createDish, getDish } from "../lib/service/catalogue";
+import { setStock, stockList } from "../lib/service/pantry";
 import { getSettings, listPeople } from "../lib/service/people";
 import { getPlan, history, listCandidates, savePlan, shoppingList } from "../lib/service/planning";
 import { addDays, HISTORY_DAYS, weekStartOf, type Clock } from "../../shared/time";
@@ -33,17 +34,18 @@ const weekArgs = z.object({ weekStart: date.describe("Monday of the week, YYYY-M
 export const TOOLS: Tool[] = [
   tool({
     name: "get_context",
-    description: "Household settings, people with their hard and soft restrictions, the ingredients they never eat, and preferences, today's date, and whether this and next week have plans. Call first.",
+    description: "Household settings, people with their hard and soft restrictions, the ingredients they never eat, and preferences, what is at home (stock, in each ingredient's unit), today's date, and whether this and next week have plans. Call first.",
     input: z.object({}),
     async run(db, _args, { today }) {
       const current = weekStartOf(today);
       const next = addDays(current, 7);
-      const [settings, people, counts, currentPlan, nextPlan] = await Promise.all([
+      const [settings, people, counts, currentPlan, nextPlan, stock] = await Promise.all([
         getSettings(db),
         listPeople(db),
         catalogueCounts(db),
         getPlan(db, current, today),
         getPlan(db, next, today),
+        stockList(db),
       ]);
       const data = {
         today,
@@ -57,6 +59,7 @@ export const TOOLS: Tool[] = [
           preferences: p.preferences,
         })),
         weeks: { current: { weekStart: current, hasPlan: currentPlan !== null }, next: { weekStart: next, hasPlan: nextPlan !== null } },
+        stock,
         ...counts,
       };
       const protein = `at least ${settings.minProteinGrams} g of raw protein per portion`;
@@ -66,7 +69,7 @@ export const TOOLS: Tool[] = [
   tool({
     name: "list_candidates",
     description:
-      "Dishes that can be planned for the week: validated, safe for every hard restriction of the people eating, without any ingredient they never eat, with the household's minimum raw protein per portion, and past their repeat interval. With cost and protein per portion, ratings, recent comments and the eaters' soft-restriction flags.",
+      "Dishes that can be planned for the week: validated, safe for every hard restriction of the people eating, without any ingredient they never eat, with the household's minimum raw protein per portion, and past their repeat interval. With cost and protein per portion, how much of the recipe is already at home (pantry.share by cost, pantry.items), ratings, recent comments and the eaters' soft-restriction flags.",
     input: weekArgs.extend({
       tags: z.array(z.string()).optional().describe("Only dishes with any of these tags"),
       peopleIds: planInput.shape.peopleIds,
@@ -131,6 +134,21 @@ export const TOOLS: Tool[] = [
     async run(db, { weekStart }) {
       const list = await shoppingList(db, weekStart);
       return { summary: `${list.items.length} items, ${formatMoney(list.totalCents)}.`, data: list };
+    },
+  }),
+  tool({
+    name: "set_stock",
+    description:
+      "Records what is at home now, in each ingredient's unit (g, ml or un), replacing the previous count of those ingredients; 0 means none left. Names that match no ingredient become new ones, undecided for every restriction. From the count on, planned cookings use it up by themselves, so only call this when the person tells you what they have.",
+    input: stockInput,
+    async run(db, { items }, { today, now }) {
+      const result = await setStock(db, items, today, now);
+      const parts = [
+        result.set.length > 0 && `Recorded ${result.set.join(", ")}.`,
+        result.created.length > 0 && `New ingredients: ${result.created.join(", ")}.`,
+        result.mismatched.length > 0 && `Not recorded, another unit than the ingredient's: ${result.mismatched.join(", ")}.`,
+      ].filter(Boolean);
+      return { summary: parts.join(" "), data: result, isError: result.mismatched.length > 0 };
     },
   }),
 ];

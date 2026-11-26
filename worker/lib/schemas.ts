@@ -56,6 +56,7 @@ export const ingredientPatch = z.object({
   priceCents: cents.nullable().optional(),
   aisle: aisle.optional(),
   proteinGrams: proteinGrams.optional(),
+  stock: z.number().nonnegative().max(1_000_000).nullable().optional(),
   statuses: decided.optional(),
 });
 
@@ -66,6 +67,20 @@ export const ingredientCreate = z.object({
   aisle,
   proteinGrams: proteinGrams.optional(),
   statuses: decided.default({}),
+});
+
+/** One dish for one or more meals of a week, chosen by hand. */
+export const stockInput = z.object({
+  items: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(100),
+        quantity: z.number().nonnegative().max(1_000_000).describe("How much is at home now, in the unit; 0 when none is left"),
+        unit: unit.describe("g, ml or un; an existing ingredient keeps its unit"),
+      }),
+    )
+    .min(1)
+    .max(100),
 });
 
 /** One dish for one or more meals of a week, chosen by hand. */

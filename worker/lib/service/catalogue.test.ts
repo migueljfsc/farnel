@@ -97,6 +97,17 @@ describe("creating ingredients", () => {
     expect((await listIngredients(db))[0].aisle).toBe("frozen");
   });
 
+  it("records a count of what is at home and lists what is still available", async () => {
+    const chicken = await addIngredient(db, "Frango");
+    const dish = await addDish(db, "Frango assado", { portions: 4, ingredients: [[chicken, 800]] });
+    expect((await listIngredients(db))[0].stock).toBeNull();
+    expect(await updateIngredient(db, chicken, { stock: 1000 }, "2026-11-22T10:00:00Z")).toBe("ok");
+    await addPlan(db, "2026-11-23", [{ dishId: dish, cookDate: "2026-11-24", portions: 2 }]);
+    expect((await listIngredients(db))[0].stock).toBe(600);
+    expect(await updateIngredient(db, chicken, { stock: null }, "2026-11-22T10:00:00Z")).toBe("ok");
+    expect((await listIngredients(db))[0].stock).toBeNull();
+  });
+
   it("marks an ingredient as protein with its raw weight per unit, and unmarks it", async () => {
     await createDish(db, input("Omelete", [{ name: "Ovo", quantity: 4, unit: "un", proteinGrams: 60 }]), "claude", NOW);
     const [egg] = await listIngredients(db);

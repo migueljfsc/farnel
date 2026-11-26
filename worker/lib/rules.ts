@@ -15,7 +15,7 @@ export interface DishFacts {
   repeatIntervalDays: number;
   lastCooked: string | null;
   /** `proteinGrams`: raw protein weight in 1 g or 1 un of the ingredient; null when it is not a protein. */
-  ingredients: { name?: string; quantity: number; unit: Unit; priceCents: number | null; statuses: Record<number, RestrictionStatus>; proteinGrams?: number | null }[];
+  ingredients: { ingredientId?: number; name?: string; quantity: number; unit: Unit; priceCents: number | null; statuses: Record<number, RestrictionStatus>; proteinGrams?: number | null }[];
 }
 
 export type RuleCode = "not_validated" | "restricted" | "never_eaten" | "low_protein" | "cooldown";
@@ -41,6 +41,26 @@ const exactProtein = (dish: DishFacts): number => dish.ingredients.reduce((sum, 
 
 /** Raw weight of the dish's protein ingredients in one portion, rounded down to the gram. */
 export const proteinPerPortionGrams = (dish: DishFacts): number => Math.floor(exactProtein(dish));
+
+export interface PantryCover {
+  /** Share of the dish's priced ingredients, by cost, already at home (0–1). */
+  share: number;
+  items: { name: string; have: number; need: number; unit: Unit }[];
+}
+
+/** How much of one cooking of the recipe what is at home (`stock`, by ingredient id) covers. */
+export function pantryCover(dish: DishFacts, stock: Map<number, number>): PantryCover {
+  let total = 0;
+  let covered = 0;
+  const items: PantryCover["items"] = [];
+  for (const line of dish.ingredients) {
+    const have = Math.min(line.ingredientId === undefined ? 0 : (stock.get(line.ingredientId) ?? 0), line.quantity);
+    total += lineCostCents(line.quantity, line.unit, line.priceCents) ?? 0;
+    covered += lineCostCents(have, line.unit, line.priceCents) ?? 0;
+    if (have > 0) items.push({ name: line.name ?? "", have, need: line.quantity, unit: line.unit });
+  }
+  return { share: total > 0 ? Math.round((covered / total) * 100) / 100 : 0, items };
+}
 
 /** Why a dish cannot be planned on `onDate`; empty when it can. `neverEaten` holds name keys. */
 export function eligibility(dish: DishFacts, hardRestrictionIds: number[], onDate: string, minProteinGrams = 0, neverEaten: string[] = []): RuleCode[] {

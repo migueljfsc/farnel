@@ -621,8 +621,10 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
   const toast = useToast();
   const [ticked, toggle] = useTicks(plan.weekStart);
   if (list.items.length === 0) return null;
-  const groups = byAisle(list.items);
-  const bought = list.items.filter((i) => ticked.has(i.ingredientId)).length;
+  const toBuy = list.items.filter((i) => i.quantity > 0);
+  const atHome = list.items.filter((i) => i.quantity === 0 && i.fromStock > 0);
+  const groups = byAisle(toBuy);
+  const bought = toBuy.filter((i) => ticked.has(i.ingredientId)).length;
 
   const share = async () => {
     const heading = t("shopping.heading", { day: day(plan.weekStart) });
@@ -649,7 +651,7 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold tabular-nums text-mar">{t("shopping.bought", { count: bought, total: list.items.length })}</span>
+          <span className="text-sm font-semibold tabular-nums text-mar">{t("shopping.bought", { count: bought, total: toBuy.length })}</span>
           <Button variant="secondary" onClick={share}>
             {t("shopping.share")}
           </Button>
@@ -676,7 +678,10 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
                         {done && "✓"}
                       </span>
                       <span className={cx("flex-1 transition", done && "text-tinta-soft line-through")}>{i.name}</span>
-                      <span className="tabular-nums text-tinta-soft">{quantity(i.quantity, i.unit)}</span>
+                      <span className="text-right tabular-nums text-tinta-soft">
+                        {quantity(i.quantity, i.unit)}
+                        {i.fromStock > 0 && <span className="block text-[11px] text-mar">{t("shopping.fromStock", { quantity: quantity(i.fromStock, i.unit) })}</span>}
+                      </span>
                       <span className="w-14 text-right tabular-nums text-tinta-soft">{i.costCents === null ? "–" : money(i.costCents)}</span>
                     </label>
                   </li>
@@ -686,6 +691,19 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
           </div>
         ))}
       </div>
+      {atHome.length > 0 && (
+        <div className="space-y-1">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-mar">{t("shopping.atHome")}</h3>
+          <p className="text-xs text-tinta-soft">{t("shopping.atHomeHint")}</p>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {atHome.map((i) => (
+              <li key={i.ingredientId}>
+                {i.name} <span className="tabular-nums text-tinta-soft">{quantity(i.fromStock, i.unit)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
