@@ -16,6 +16,7 @@ import type { MessageKey } from "../i18n/core";
 import { errorMessage } from "../lib/errors";
 import { draftView, patchFor, type Draft, type DraftView } from "../lib/ingredient-drafts";
 import { groupByAisle, matches, nextStatus, type TableFilter } from "../lib/ingredient-table";
+import { useCollapsed } from "../lib/collapsed";
 import { useToast } from "../lib/toast";
 
 const INVALID = "border-tomate! ring-2 ring-tomate/25";
@@ -45,6 +46,7 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
   const bulk = useBulk(selection, ingredients.reload);
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [busy, setBusy] = useState(false);
+  const [collapsed, toggleCollapsed] = useCollapsed("ingredients:collapsed");
 
   const edit = (id: number, change: Draft) => setDrafts((all) => ({ ...all, [id]: { ...all[id], ...change } }));
   const pending = (ingredients.data?.ingredients ?? []).map((i) => ({ id: i.id, ...patchFor(i, drafts[i.id]) }));
@@ -120,7 +122,7 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
             <div className="space-y-2">
               <SelectionBar
                 selection={selection}
-                visible={shown.map((i) => i.id)}
+                visible={shown.filter((i) => !collapsed.has(i.aisle)).map((i) => i.id)}
                 confirmKey="delete.confirmIngredients"
                 onDelete={() => bulk.remove("/api/ingredients/delete", "delete.keptIngredients")}
               />
@@ -144,29 +146,45 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
                       ))}
                     </tr>
                   </thead>
-                  {groupByAisle(shown).map((group) => (
-                    <tbody key={group.aisle}>
-                      <tr>
-                        <th colSpan={columns} scope="colgroup" className="display border-b border-tinta pb-1 pl-1 pt-4 text-left text-base text-mar">
-                          {t(`aisle.${group.aisle}`)} <span className="font-sans text-xs font-medium normal-case tracking-normal text-tinta-soft">{group.items.length}</span>
-                        </th>
-                      </tr>
-                      {group.items.map((i) => (
-                        <IngredientRow
-                          key={i.id}
-                          ingredient={i}
-                          view={draftView(i, drafts[i.id])}
-                          restrictions={data.restrictions}
-                          editing={editing === i.id}
-                          changed={changedIds.has(i.id)}
-                          selected={selection.selected.has(i.id)}
-                          onToggle={() => selection.toggle(i.id)}
-                          onEdit={() => setEditing(i.id)}
-                          onChange={(change) => edit(i.id, change)}
-                        />
-                      ))}
-                    </tbody>
-                  ))}
+                  {groupByAisle(shown).map((group) => {
+                    const open = !collapsed.has(group.aisle);
+                    const unsaved = group.items.some((i) => changedIds.has(i.id));
+                    return (
+                      <tbody key={group.aisle}>
+                        <tr>
+                          <th colSpan={columns} scope="colgroup" className="border-b border-tinta p-0 text-left">
+                            <button
+                              type="button"
+                              aria-expanded={open}
+                              onClick={() => toggleCollapsed(group.aisle)}
+                              className="display flex w-full items-center gap-2 pb-1 pl-1 pt-4 text-left text-base text-mar hover:text-tinta"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden className={cx("size-4 transition", !open && "-rotate-90")} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="m6 9 6 6 6-6" />
+                              </svg>
+                              {t(`aisle.${group.aisle}`)}
+                              <span className="font-sans text-xs font-medium normal-case tracking-normal text-tinta-soft">{group.items.length}</span>
+                              {!open && unsaved && <span className="size-2 rounded-[2px] bg-mar" title={t("common.unsaved")} />}
+                            </button>
+                          </th>
+                        </tr>
+                        {open && group.items.map((i) => (
+                          <IngredientRow
+                            key={i.id}
+                            ingredient={i}
+                            view={draftView(i, drafts[i.id])}
+                            restrictions={data.restrictions}
+                            editing={editing === i.id}
+                            changed={changedIds.has(i.id)}
+                            selected={selection.selected.has(i.id)}
+                            onToggle={() => selection.toggle(i.id)}
+                            onEdit={() => setEditing(i.id)}
+                            onChange={(change) => edit(i.id, change)}
+                          />
+                        ))}
+                      </tbody>
+                    );
+                  })}
                 </table>
               </div>
             </div>
