@@ -1,6 +1,6 @@
 /**
- * What is at home. A count is taken on a day; from that day on, every planned cooking uses its
- * share of the recipe, so what is available goes down by itself until the next count.
+ * What is at home. A count is taken at a moment; every meal marked cooked after it uses its share
+ * of the recipe, so what is at home goes down as people cook, until the next count.
  */
 
 import type { Unit } from "../../../shared/types";
@@ -17,10 +17,10 @@ export interface StockLine {
 const round = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * Records counts dated `today`. Unknown names become new ingredients; a unit that differs from an
+ * Records counts taken `now`. Unknown names become new ingredients; a unit that differs from an
  * existing ingredient's is refused for that line only. Names come back as stored.
  */
-export async function setStock(db: D1Database, lines: StockLine[], today: string, now: string): Promise<{ set: string[]; created: string[]; mismatched: string[] }> {
+export async function setStock(db: D1Database, lines: StockLine[], now: string): Promise<{ set: string[]; created: string[]; mismatched: string[] }> {
   const result = { set: [] as string[], created: [] as string[], mismatched: [] as string[] };
   for (const line of lines) {
     const key = nameKey(line.name);
@@ -35,16 +35,17 @@ export async function setStock(db: D1Database, lines: StockLine[], today: string
       found = { id: created.id, name: line.name.trim(), unit: line.unit };
       result.created.push(found.name);
     }
-    await db.prepare("UPDATE ingredients SET stock_quantity = ?2, stock_date = ?3 WHERE id = ?1").bind(found.id, line.quantity, today).run();
+    await db.prepare("UPDATE ingredients SET stock_quantity = ?2, stock_counted_at = ?3 WHERE id = ?1").bind(found.id, line.quantity, now).run();
     result.set.push(found.name);
   }
   return result;
 }
 
 /**
- * What is left of each counted ingredient: its count minus what planned cookings from the count's
- * day on use, scaled to their portions. `until` (exclusive) stops at a date; `excludePlanId`
- * leaves out a plan being replaced. Skipped and replaced cookings use nothing.
+ * What is at home of each counted ingredient: its count minus what meals marked cooked since used,
+ * scaled to their portions. With `until` (a date, exclusive) it is what a plan for that date can
+ * count on: meals planned from the count's day until then and not cooked yet hold back their share
+ * too, except those of `excludePlanId` (a plan being replaced). Skipped and replaced meals use nothing.
  */
 export async function availableStock(db: D1Database, { until, excludePlanId }: { until?: string; excludePlanId?: number } = {}): Promise<Map<number, number>> {
   const result = await rows<{ id: number; stock: number; used: number }>(
@@ -53,8 +54,10 @@ export async function availableStock(db: D1Database, { until, excludePlanId }: {
         `SELECT i.id, i.stock_quantity AS stock,
            COALESCE((SELECT SUM(di.quantity * c.portions * 1.0 / d.portions)
              FROM dish_ingredients di JOIN cookings c ON c.dish_id = di.dish_id JOIN dishes d ON d.id = c.dish_id
-             WHERE di.ingredient_id = i.id AND c.status = 'planned' AND c.cook_date >= i.stock_date
-               AND (?1 IS NULL OR c.cook_date < ?1) AND c.plan_id IS NOT ?2), 0) AS used
+             WHERE di.ingredient_id = i.id AND c.status = 'planned' AND (
+               (c.cooked_at IS NOT NULL AND c.cooked_at > i.stock_counted_at)
+               OR (?1 IS NOT NULL AND c.cooked_at IS NULL AND c.cook_date >= substr(i.stock_counted_at, 1, 10) AND c.cook_date < ?1 AND c.plan_id IS NOT ?2)
+             )), 0) AS used
          FROM ingredients i WHERE i.stock_quantity IS NOT NULL`,
       )
       .bind(until ?? null, excludePlanId ?? null),

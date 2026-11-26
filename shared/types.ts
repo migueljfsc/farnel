@@ -27,9 +27,9 @@ export interface IngredientView {
   priceUpdatedAt: string | null;
   /** Raw protein weight in 1 g, 1 ml or 1 un; null when it is not a protein. */
   proteinGrams: number | null;
-  /** What is at home and not yet planned, in its unit; null when never counted. */
+  /** What is at home: the count minus meals marked cooked since, in its unit; null when never counted. */
   stock: number | null;
-  /** The last count, before planned cookings use it up; null when never counted. */
+  /** The last count, before cooked meals used it up; null when never counted. */
   stockCount: number | null;
   /** A dish uses it, so its unit cannot change. */
   inUse: boolean;
@@ -97,6 +97,8 @@ export interface CookingView {
   portions: number;
   costCents: number;
   status: CookingStatus;
+  /** Marked cooked by a person, which takes its ingredients off what is at home. */
+  cooked: boolean;
   replacedBy: { dishId: number; dish: string } | { text: string } | null;
   meals: Meal[];
   feedback: FeedbackView[];

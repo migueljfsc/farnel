@@ -292,7 +292,7 @@ function MealBlock({
       )}
       <span className="display text-base leading-[0.95]">
         {continued ? `↳ ${cooking.dish}` : cooking.dish}
-        {cooking.status === "done" && <span className="ml-1 font-sans">✓</span>}
+        {cooking.cooked && <span className="ml-1 font-sans">✓</span>}
       </span>
       {!continued && (
         <span className="flex items-center justify-between gap-2 text-[11px] italic opacity-90">
@@ -364,7 +364,27 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
   const [replacing, setReplacing] = useState(false);
   const heading = useRef<HTMLSpanElement>(null);
   useEffect(() => heading.current?.focus(), []);
-  const removable = cooking.status === "planned" && cooking.cookDate >= todayLisbon(new Date());
+  const today = todayLisbon(new Date());
+  const removable = cooking.status === "planned" && cooking.cookDate >= today && !cooking.cooked;
+  const cookable = (cooking.status === "planned" || cooking.status === "done") && cooking.cookDate <= today;
+  const markCooked = async (value: boolean) => {
+    try {
+      await api.put(`/api/cookings/${cooking.id}/cooked`, { cooked: value });
+      onChange();
+      toast({
+        message: t(value ? "toast.cooked" : "toast.uncooked", { dish: cooking.dish }),
+        action: {
+          label: t("common.undo"),
+          run: async () => {
+            await api.put(`/api/cookings/${cooking.id}/cooked`, { cooked: !value });
+            onChange();
+          },
+        },
+      });
+    } catch (error) {
+      toast({ message: errorMessage(t, error), tone: "error" });
+    }
+  };
   const remove = async () => {
     try {
       await api.delete(`/api/cookings/${cooking.id}`);
@@ -431,6 +451,17 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
             </Button>
           ) : (
             <>
+              {cookable &&
+                (cooking.cooked ? (
+                  <>
+                    <span className="inline-flex items-center gap-1 rounded-[3px] bg-mar-soft px-2.5 py-1 text-sm font-semibold text-mar">✓ {t("cooking.cooked")}</span>
+                    <Button variant="secondary" onClick={() => markCooked(false)}>
+                      {t("cooking.uncook")}
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={() => markCooked(true)}>{t("cooking.cooked")}</Button>
+                ))}
               <Button variant="secondary" onClick={() => change({ status: "skipped" }, "toast.skipped")}>
                 {t("cooking.skip")}
               </Button>

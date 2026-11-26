@@ -74,6 +74,8 @@ describe("api", () => {
     expect((await call("PUT", `/api/cookings/${cooking!.id}/feedback`, { rating: 5, comment: "great" })).status).toBe(204);
     const row = await env.DB.prepare("SELECT person_id, rating FROM feedback").first();
     expect(row).toEqual({ person_id: me, rating: 5 });
+    expect((await call("PUT", `/api/cookings/${cooking!.id}/cooked`, { cooked: true })).status).toBe(204);
+    expect(await env.DB.prepare("SELECT cooked_at IS NOT NULL AS cooked FROM cookings").first("cooked")).toBe(1);
   });
 
   it("adds a person and refuses an invalid email", async () => {

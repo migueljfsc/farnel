@@ -18,7 +18,7 @@ import type { Aisle } from "../../../shared/aisles";
 import { idList, isUniqueViolation, rows } from "../db";
 import { nameKey } from "../../../shared/names";
 import { costPerPortionCents, proteinPerPortionGrams, type DishFacts } from "../rules";
-import { todayLisbon, weekStartOf } from "../../../shared/time";
+import { weekStartOf } from "../../../shared/time";
 import { availableStock } from "./pantry";
 
 export interface IngredientLine {
@@ -420,8 +420,7 @@ export async function updateIngredient(
   if (patch.aisle !== undefined) statements.push(db.prepare("UPDATE ingredients SET aisle = ?2 WHERE id = ?1").bind(id, patch.aisle));
   if (patch.proteinGrams !== undefined) statements.push(db.prepare("UPDATE ingredients SET protein_grams = ?2 WHERE id = ?1").bind(id, patch.proteinGrams));
   if (patch.stock !== undefined) {
-    const counted = patch.stock === null ? null : todayLisbon(new Date(now));
-    statements.push(db.prepare("UPDATE ingredients SET stock_quantity = ?2, stock_date = ?3 WHERE id = ?1").bind(id, patch.stock, counted));
+    statements.push(db.prepare("UPDATE ingredients SET stock_quantity = ?2, stock_counted_at = ?3 WHERE id = ?1").bind(id, patch.stock, patch.stock === null ? null : now));
   }
   if (patch.priceCents !== undefined) {
     statements.push(

@@ -107,12 +107,15 @@ describe("creating ingredients", () => {
     ]);
   });
 
-  it("records a count of what is at home and lists what is still available", async () => {
+  it("records a count of what is at home and lists what is left once cooked meals took their share", async () => {
     const chicken = await addIngredient(db, "Frango");
     const dish = await addDish(db, "Frango assado", { portions: 4, ingredients: [[chicken, 800]] });
     expect((await listIngredients(db))[0].stock).toBeNull();
     expect(await updateIngredient(db, chicken, { stock: 1000 }, "2026-11-22T10:00:00Z")).toBe("ok");
-    await addPlan(db, "2026-11-23", [{ dishId: dish, cookDate: "2026-11-24", portions: 2 }]);
+    await addPlan(db, "2026-11-23", [
+      { dishId: dish, cookDate: "2026-11-24", portions: 2, cookedAt: "2026-11-24T20:00:00Z" },
+      { dishId: dish, cookDate: "2026-11-25", portions: 4 },
+    ]);
     expect((await listIngredients(db))[0]).toMatchObject({ stock: 600, stockCount: 1000 });
     expect(await updateIngredient(db, chicken, { stock: null }, "2026-11-22T10:00:00Z")).toBe("ok");
     expect((await listIngredients(db))[0]).toMatchObject({ stock: null, stockCount: null });

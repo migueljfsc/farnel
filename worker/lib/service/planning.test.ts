@@ -4,7 +4,7 @@ import { addDish, addHousehold, addIngredient, addPerson, addPersonRestriction, 
 import type { PlanInput } from "../rules";
 import { setStock } from "./pantry";
 import { updatePerson } from "./people";
-import { addCooking, getPlan, removeCooking, history, listCandidates, mealOptions, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
+import { addCooking, setCooked, getPlan, removeCooking, history, listCandidates, mealOptions, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
 
 const db = env.DB;
 const NOW = "2026-11-22T10:00:00Z";
@@ -188,7 +188,7 @@ describe("listCandidates", () => {
     const chicken = await addIngredient(db, "Frango", { priceCents: 500 });
     const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400], [chicken, 600]] });
     const b = await addDish(db, "B", { portions: 4, ingredients: [[rice, 400]] });
-    await setStock(db, [{ name: "Frango", quantity: 300, unit: "g" }], TODAY, NOW);
+    await setStock(db, [{ name: "Frango", quantity: 300, unit: "g" }], NOW);
     const candidates = await listCandidates(db, "2026-11-23", TODAY);
     expect(candidates.find((c) => c.id === a)!.pantry).toEqual({ share: 0.39, items: [{ name: "Frango", have: 300, need: 600, unit: "g" }] });
     expect(candidates.find((c) => c.id === b)!.pantry).toEqual({ share: 0, items: [] });
@@ -223,6 +223,27 @@ describe("listCandidates", () => {
       recentComments: [{ date: "2026-11-02", person: "Ana", rating: 4, comment: "more salt" }],
       softFlags: [{ person: "Ana", restriction: "gluten" }],
     });
+  });
+});
+
+describe("marking a meal cooked", () => {
+  it("is allowed from its cook day for planned meals, shows on the cooking, and can be undone", async () => {
+    await addHousehold(db);
+    const dish = await addDish(db, "A");
+    const { cookingIds } = await addPlan(db, "2026-11-16", [
+      { dishId: dish, cookDate: "2026-11-21" },
+      { dishId: dish, cookDate: "2026-11-23" },
+      { dishId: dish, cookDate: "2026-11-20", status: "skipped" },
+    ]);
+    const [past, future, skipped] = cookingIds;
+    expect(await setCooked(db, past, true, TODAY, NOW)).toBe("ok");
+    expect(await setCooked(db, future, true, TODAY, NOW)).toBe("not_yet");
+    expect(await setCooked(db, skipped, true, TODAY, NOW)).toBe("not_planned");
+    expect(await setCooked(db, 999, true, TODAY, NOW)).toBe("not_found");
+    const cooked = (await history(db, "2026-11-16", "2026-11-30", TODAY)).find((c) => c.id === past)!;
+    expect(cooked.cooked).toBe(true);
+    expect(await setCooked(db, past, false, TODAY, NOW)).toBe("ok");
+    expect((await history(db, "2026-11-16", "2026-11-30", TODAY)).find((c) => c.id === past)!.cooked).toBe(false);
   });
 });
 
@@ -290,11 +311,22 @@ describe("shoppingList", () => {
     });
   });
 
+  it("leaves out meals already marked cooked", async () => {
+    const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
+    const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400]] });
+    await setStock(db, [{ name: "Arroz", quantity: 1000, unit: "g" }], "2026-11-20T08:00:00Z");
+    await addPlan(db, "2026-11-16", [
+      { dishId: a, cookDate: "2026-11-21", portions: 4, cookedAt: "2026-11-21T20:00:00Z" },
+      { dishId: a, cookDate: "2026-11-22", portions: 4 },
+    ]);
+    expect((await shoppingList(db, "2026-11-16")).items).toEqual([expect.objectContaining({ name: "Arroz", quantity: 0, fromStock: 400 })]);
+  });
+
   it("asks only for what the stock left at the week's start does not cover", async () => {
     const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
     const chicken = await addIngredient(db, "Frango", { priceCents: 500 });
     const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400], [chicken, 600]] });
-    await setStock(db, [{ name: "Arroz", quantity: 500, unit: "g" }, { name: "Frango", quantity: 1000, unit: "g" }], "2026-11-20", NOW);
+    await setStock(db, [{ name: "Arroz", quantity: 500, unit: "g" }, { name: "Frango", quantity: 1000, unit: "g" }], "2026-11-20T08:00:00Z");
     await addPlan(db, "2026-11-16", [{ dishId: a, cookDate: "2026-11-21", portions: 4 }]);
     await addPlan(db, "2026-11-23", [{ dishId: a, cookDate: "2026-11-23", portions: 4 }]);
     expect(await shoppingList(db, "2026-11-23")).toEqual({

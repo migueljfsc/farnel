@@ -102,7 +102,7 @@ export async function addDish(
 export async function addPlan(
   db: D1Database,
   weekStart: string,
-  cookings: { dishId: number; cookDate: string; portions?: number; meals?: string[]; status?: "planned" | "skipped" | "replaced"; replacedByDishId?: number }[],
+  cookings: { dishId: number; cookDate: string; portions?: number; meals?: string[]; status?: "planned" | "skipped" | "replaced"; replacedByDishId?: number; cookedAt?: string }[],
 ): Promise<{ planId: number; cookingIds: number[] }> {
   const plan = await db
     .prepare("INSERT INTO plans (week_start, budget_cents, total_cents, created_at) VALUES (?1, 6000, 0, '') RETURNING id")
@@ -112,9 +112,9 @@ export async function addPlan(
   for (const c of cookings) {
     const row = await db
       .prepare(
-        "INSERT INTO cookings (plan_id, dish_id, cook_date, portions, cost_cents, status, replaced_by_dish_id) VALUES (?1, ?2, ?3, ?4, 0, ?5, ?6) RETURNING id",
+        "INSERT INTO cookings (plan_id, dish_id, cook_date, portions, cost_cents, status, replaced_by_dish_id, cooked_at) VALUES (?1, ?2, ?3, ?4, 0, ?5, ?6, ?7) RETURNING id",
       )
-      .bind(plan!.id, c.dishId, c.cookDate, c.portions ?? 2, c.status ?? "planned", c.replacedByDishId ?? null)
+      .bind(plan!.id, c.dishId, c.cookDate, c.portions ?? 2, c.status ?? "planned", c.replacedByDishId ?? null, c.cookedAt ?? null)
       .first<{ id: number }>();
     cookingIds.push(row!.id);
     for (const date of c.meals ?? [c.cookDate]) {

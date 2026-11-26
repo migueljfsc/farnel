@@ -32,7 +32,7 @@ export function withBody<S extends z.ZodType>(schema: S, handle: (ctx: ApiCtx, b
   };
 }
 
-const STATUS: Record<string, number> = { not_found: 404, invalid: 400, name_taken: 409, in_use: 409, email_taken: 409 };
+const STATUS: Record<string, number> = { not_found: 404, invalid: 400, name_taken: 409, in_use: 409, email_taken: 409, not_yet: 409, not_planned: 409 };
 
 /** A service's string outcome: `ok` is 204, anything else an error code. */
 export const outcome = (result: string): Response => (result === "ok" ? noContent() : fail(result, STATUS[result] ?? 400));

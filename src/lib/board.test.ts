@@ -11,6 +11,7 @@ const cooking = (id: number, meals: [string, "lunch" | "dinner"][], cookDate = m
   portions: 4,
   costCents: 0,
   status: "planned",
+  cooked: false,
   replacedBy: null,
   meals: meals.map(([date, slot]) => ({ date, slot })),
   feedback: [],

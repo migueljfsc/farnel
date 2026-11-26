@@ -1,6 +1,6 @@
 import { fail, json } from "../lib/http";
-import { cookingAdd, cookingChange, date, feedback } from "../lib/schemas";
-import { addCooking, getPlan, history, mealOptions, removeCooking, plannedWeeks, setCookingStatus, setFeedback, shoppingList } from "../lib/service/planning";
+import { cooked, cookingAdd, cookingChange, date, feedback } from "../lib/schemas";
+import { addCooking, getPlan, history, mealOptions, removeCooking, plannedWeeks, setCooked, setCookingStatus, setFeedback, shoppingList } from "../lib/service/planning";
 import { addDays, HISTORY_DAYS, isMonday } from "../../shared/time";
 import { idParam, outcome, route, withBody, type Route } from "./routing";
 
@@ -41,6 +41,11 @@ export const planningRoutes: Route[] = [
     "PUT",
     /^\/api\/cookings\/(\d+)\/status$/,
     withBody(cookingChange, async (ctx, change) => outcome(await setCookingStatus(ctx.db, idParam(ctx), change))),
+  ),
+  route(
+    "PUT",
+    /^\/api\/cookings\/(\d+)\/cooked$/,
+    withBody(cooked, async (ctx, body) => outcome(await setCooked(ctx.db, idParam(ctx), body.cooked, ctx.today, ctx.now))),
   ),
   route(
     "PUT",

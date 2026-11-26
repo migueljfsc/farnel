@@ -265,6 +265,7 @@ interface CookingRow {
   portions: number;
   costCents: number;
   status: Exclude<CookingStatus, "done">;
+  cookedAt: string | null;
   replacedByDishId: number | null;
   replacedByDish: string | null;
   replacedByText: string | null;
@@ -281,7 +282,7 @@ async function loadCookings(
   const cookings = await rows<CookingRow>(
     db
       .prepare(
-        `SELECT c.id, c.dish_id AS dishId, d.name AS dish, c.cook_date AS cookDate, c.portions, c.cost_cents AS costCents, c.status,
+        `SELECT c.id, c.dish_id AS dishId, d.name AS dish, c.cook_date AS cookDate, c.portions, c.cost_cents AS costCents, c.status, c.cooked_at AS cookedAt,
                 c.replaced_by_dish_id AS replacedByDishId, rd.name AS replacedByDish, c.replaced_by_text AS replacedByText
          FROM cookings c JOIN plans p ON p.id = c.plan_id JOIN dishes d ON d.id = c.dish_id LEFT JOIN dishes rd ON rd.id = c.replaced_by_dish_id
          WHERE (?1 IS NULL OR p.week_start = ?1) AND (?2 IS NULL OR c.cook_date >= ?2) AND (?3 IS NULL OR c.cook_date <= ?3)
@@ -320,6 +321,7 @@ async function loadCookings(
     portions: c.portions,
     costCents: c.costCents,
     status: c.status === "planned" && c.cookDate < today ? "done" : c.status,
+    cooked: c.status === "planned" && c.cookedAt !== null,
     replacedBy:
       c.status !== "replaced"
         ? null
@@ -357,6 +359,19 @@ export async function history(db: D1Database, from: string, to: string, today: s
 }
 
 // ---------------------------------------------------------------- outcomes and feedback
+
+/**
+ * Marks a meal cooked (`now`) or not. Only a planned meal, from its cook day on; marking it is
+ * what takes its ingredients off what is at home.
+ */
+export async function setCooked(db: D1Database, id: number, cooked: boolean, today: string, now: string): Promise<"ok" | "not_found" | "not_planned" | "not_yet"> {
+  const cooking = await db.prepare("SELECT status, cook_date AS cookDate FROM cookings WHERE id = ?1").bind(id).first<{ status: string; cookDate: string }>();
+  if (!cooking) return "not_found";
+  if (cooking.status !== "planned") return "not_planned";
+  if (cooking.cookDate > today) return "not_yet";
+  await db.prepare("UPDATE cookings SET cooked_at = ?2 WHERE id = ?1").bind(id, cooked ? now : null).run();
+  return "ok";
+}
 
 export type CookingChange = { status: "planned" | "skipped" } | { status: "replaced"; dishId?: number; text?: string };
 
@@ -411,7 +426,7 @@ export async function plannedWeeks(db: D1Database, from: string, to: string): Pr
 
 // ---------------------------------------------------------------- shopping list
 
-/** The week's ingredients; what was left at home when the week starts covers them first. */
+/** What the week's meals not cooked yet need; what is at home, less what earlier meals will use, covers them first. */
 export async function shoppingList(db: D1Database, weekStart: string): Promise<ShoppingList> {
   const stock = await availableStock(db, { until: weekStart });
   const lines = await rows<{ ingredientId: number; name: string; unit: Unit; aisle: Aisle; priceCents: number | null; quantity: number }>(
@@ -420,7 +435,7 @@ export async function shoppingList(db: D1Database, weekStart: string): Promise<S
         `SELECT i.id AS ingredientId, i.name, i.unit, i.aisle, i.price_cents AS priceCents, SUM(di.quantity * c.portions / d.portions) AS quantity
          FROM cookings c JOIN plans p ON p.id = c.plan_id JOIN dishes d ON d.id = c.dish_id
          JOIN dish_ingredients di ON di.dish_id = c.dish_id JOIN ingredients i ON i.id = di.ingredient_id
-         WHERE p.week_start = ?1 AND c.status = 'planned'
+         WHERE p.week_start = ?1 AND c.status = 'planned' AND c.cooked_at IS NULL
          GROUP BY i.id ORDER BY i.name COLLATE NOCASE`,
       )
       .bind(weekStart),

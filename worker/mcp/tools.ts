@@ -139,10 +139,10 @@ export const TOOLS: Tool[] = [
   tool({
     name: "set_stock",
     description:
-      "Records what is at home now, in each ingredient's unit (g, ml or un), replacing the previous count of those ingredients; 0 means none left. Names that match no ingredient become new ones, undecided for every restriction. From the count on, planned cookings use it up by themselves, so only call this when the person tells you what they have.",
+      "Records what is at home now, in each ingredient's unit (g, ml or un), replacing the previous count of those ingredients; 0 means none left. Names that match no ingredient become new ones, undecided for every restriction. Meals the person marks cooked after the count use it up by themselves, so only call this when the person tells you what they have.",
     input: stockInput,
-    async run(db, { items }, { today, now }) {
-      const result = await setStock(db, items, today, now);
+    async run(db, { items }, { now }) {
+      const result = await setStock(db, items, now);
       const parts = [
         result.set.length > 0 && `Recorded ${result.set.join(", ")}.`,
         result.created.length > 0 && `New ingredients: ${result.created.join(", ")}.`,

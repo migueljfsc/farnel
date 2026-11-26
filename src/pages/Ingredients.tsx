@@ -375,7 +375,7 @@ function IngredientRow({
 }
 
 /**
- * What is left at home once planned cookings take their share, and the count it came from when
+ * What is at home once meals marked cooked took their share, and the count it came from when
  * they took some. An unsaved new count shows as typed.
  */
 function StockCell({ ingredient, view }: { ingredient: IngredientView; view: DraftView }) {
@@ -386,7 +386,7 @@ function StockCell({ ingredient, view }: { ingredient: IngredientView; view: Dra
   const left = ingredient.stock > 0 ? quantity(ingredient.stock, view.unit) : t("ingredients.stockNone");
   if (ingredient.stock === ingredient.stockCount) return <>{left}</>;
   return (
-    <span title={t("ingredients.stockPlanned", { quantity: quantity(ingredient.stockCount - ingredient.stock, view.unit) })}>
+    <span title={t("ingredients.stockUsed", { quantity: quantity(ingredient.stockCount - ingredient.stock, view.unit) })}>
       {left} <span className="text-xs text-tinta-soft">{t("ingredients.stockOf", { count: quantity(ingredient.stockCount, view.unit) })}</span>
     </span>
   );
