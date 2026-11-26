@@ -12,6 +12,7 @@ const ingredient = (overrides: Partial<IngredientView> = {}): IngredientView => 
   priceUpdatedAt: null,
   proteinGrams: null,
   stock: null,
+  inUse: false,
   statuses: { 1: "safe" },
   ...overrides,
 });
@@ -42,6 +43,11 @@ describe("patchFor", () => {
     expect(patchFor(ingredient(), { stock: "-1" }).valid).toBe(false);
   });
 
+  it("changes the unit", () => {
+    expect(patchFor(ingredient(), { unit: "g" })).toEqual({ patch: { unit: "g" }, valid: true });
+    expect(patchFor(ingredient(), { unit: "un" })).toEqual({ patch: {}, valid: true });
+  });
+
   it("flags values the server would refuse", () => {
     expect(patchFor(ingredient(), { price: "abc" }).valid).toBe(false);
     expect(patchFor(ingredient(), { protein: "0" }).valid).toBe(false);
@@ -51,7 +57,7 @@ describe("patchFor", () => {
 
 describe("draftView", () => {
   it("shows the draft over what is saved, as text", () => {
-    expect(draftView(ingredient({ proteinGrams: 60, stock: 4 }), undefined)).toEqual({ aisle: "misc", price: "0.30", protein: "60", stock: "4", statuses: { 1: "safe" } });
-    expect(draftView(ingredient({ priceCents: null }), { aisle: "dairy", protein: "" })).toEqual({ aisle: "dairy", price: "", protein: "", stock: "", statuses: { 1: "safe" } });
+    expect(draftView(ingredient({ proteinGrams: 60, stock: 4 }), undefined)).toEqual({ aisle: "misc", unit: "un", price: "0.30", protein: "60", stock: "4", statuses: { 1: "safe" } });
+    expect(draftView(ingredient({ priceCents: null }), { aisle: "dairy", protein: "" })).toEqual({ aisle: "dairy", unit: "un", price: "", protein: "", stock: "", statuses: { 1: "safe" } });
   });
 });

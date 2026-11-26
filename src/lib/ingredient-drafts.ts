@@ -2,11 +2,12 @@
 
 import type { Aisle } from "../../shared/aisles";
 import { parseMoney } from "../../shared/format";
-import type { DecidedStatus, IngredientView, RestrictionStatus } from "../../shared/types";
+import type { DecidedStatus, IngredientView, RestrictionStatus, Unit } from "../../shared/types";
 
 /** What a person changed on one ingredient, as typed. `protein` is grams per unit; "" when not a protein. */
 export interface Draft {
   aisle?: Aisle;
+  unit?: Unit;
   price?: string;
   protein?: string;
   /** A new count of what is at home; "" clears it. */
@@ -16,6 +17,7 @@ export interface Draft {
 
 export interface IngredientPatch {
   aisle?: Aisle;
+  unit?: Unit;
   priceCents?: number | null;
   proteinGrams?: number | null;
   stock?: number | null;
@@ -24,6 +26,7 @@ export interface IngredientPatch {
 
 export interface DraftView {
   aisle: Aisle;
+  unit: Unit;
   price: string;
   protein: string;
   stock: string;
@@ -36,6 +39,7 @@ const priceText = (cents: number | null): string => (cents === null ? "" : (cent
 export function draftView(ingredient: IngredientView, draft: Draft | undefined): DraftView {
   return {
     aisle: draft?.aisle ?? ingredient.aisle,
+    unit: draft?.unit ?? ingredient.unit,
     price: draft?.price ?? priceText(ingredient.priceCents),
     protein: draft?.protein ?? (ingredient.proteinGrams === null ? "" : String(ingredient.proteinGrams)),
     stock: draft?.stock ?? (ingredient.stock === null ? "" : String(ingredient.stock)),
@@ -55,6 +59,7 @@ export function patchFor(ingredient: IngredientView, draft: Draft | undefined): 
   let valid = true;
   if (!draft) return { patch, valid };
   if (draft.aisle !== undefined && draft.aisle !== ingredient.aisle) patch.aisle = draft.aisle;
+  if (draft.unit !== undefined && draft.unit !== ingredient.unit) patch.unit = draft.unit;
   if (draft.price !== undefined) {
     const cents = draft.price.trim() === "" ? null : parseMoney(draft.price);
     if (draft.price.trim() !== "" && cents === null) valid = false;

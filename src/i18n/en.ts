@@ -127,6 +127,7 @@ export const en = {
   // ----------------------------------------------------- ingredient picker
   "ingredients.new": "New ingredient",
   "ingredients.unit": "Unit",
+  "ingredients.unitLocked": "Dishes use it in this unit, so it cannot change.",
   "ingredients.price": "Price",
   "ingredients.aisle": "Aisle",
   "ingredients.protein": "Protein",

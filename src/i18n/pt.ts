@@ -126,6 +126,7 @@ export const pt: Dictionary = {
 
   // ----------------------------------------------------- ingredient picker
   "ingredients.new": "Novo ingrediente",
+  "ingredients.unitLocked": "Há pratos que o usam nesta unidade, por isso não pode mudar.",
   "ingredients.unit": "Unidade",
   "ingredients.price": "Preço",
   "ingredients.aisle": "Secção",

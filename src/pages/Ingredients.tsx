@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { AISLES, type Aisle } from "../../shared/aisles";
 import { priceUnit } from "../../shared/format";
-import type { IngredientView, Restriction, RestrictionStatus } from "../../shared/types";
+import type { IngredientView, Restriction, RestrictionStatus, Unit } from "../../shared/types";
 import { NewIngredientForm } from "../components/NewIngredientForm";
 import { SaveBar } from "../components/SaveBar";
 import { Check, SelectionBar } from "../components/SelectionBar";
@@ -18,6 +18,8 @@ import { draftView, patchFor, type Draft, type DraftView } from "../lib/ingredie
 import { groupByAisle, matches, nextStatus, type TableFilter } from "../lib/ingredient-table";
 import { useCollapsed } from "../lib/collapsed";
 import { useToast } from "../lib/toast";
+
+const UNITS: Unit[] = ["g", "ml", "un"];
 
 const INVALID = "border-tomate! ring-2 ring-tomate/25";
 
@@ -260,18 +262,34 @@ function IngredientRow({
       <td className="py-2 pr-3">
         <span className="font-semibold">{ingredient.name}</span>
         {editing && (
-          <select
-            aria-label={t("ingredients.aisle")}
-            className={cx(inputBase, "mt-1.5 block w-full max-w-48 py-1")}
-            value={view.aisle}
-            onChange={(e) => onChange({ aisle: e.target.value as Aisle })}
-          >
-            {AISLES.map((a) => (
-              <option key={a} value={a}>
-                {t(`aisle.${a}`)}
-              </option>
-            ))}
-          </select>
+          <span className="mt-1.5 flex flex-wrap gap-1.5">
+            <select
+              aria-label={t("ingredients.aisle")}
+              className={cx(inputBase, "w-full max-w-48 py-1")}
+              value={view.aisle}
+              onChange={(e) => onChange({ aisle: e.target.value as Aisle })}
+            >
+              {AISLES.map((a) => (
+                <option key={a} value={a}>
+                  {t(`aisle.${a}`)}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label={t("ingredients.unit")}
+              title={ingredient.inUse ? t("ingredients.unitLocked") : undefined}
+              disabled={ingredient.inUse}
+              className={cx(inputBase, "w-24 py-1")}
+              value={view.unit}
+              onChange={(e) => onChange({ unit: e.target.value as Unit })}
+            >
+              {UNITS.map((u) => (
+                <option key={u} value={u}>
+                  {t(`unit.${u}`)}
+                </option>
+              ))}
+            </select>
+          </span>
         )}
       </td>
       <td className="py-2 pr-3 tabular-nums">
@@ -285,11 +303,11 @@ function IngredientRow({
               value={view.price}
               onChange={(e) => onChange({ price: e.target.value })}
             />
-            <span className="text-tinta-soft">{priceUnit(ingredient.unit)}</span>
+            <span className="text-tinta-soft">{priceUnit(view.unit)}</span>
           </span>
         ) : view.price.trim() ? (
           <>
-            {view.price} <span className="text-tinta-soft">{priceUnit(ingredient.unit)}</span>
+            {view.price} <span className="text-tinta-soft">{priceUnit(view.unit)}</span>
           </>
         ) : (
           <span className="text-tinta-soft">—</span>
@@ -297,7 +315,7 @@ function IngredientRow({
       </td>
       <td className="py-2 pr-3">
         {editing ? (
-          ingredient.unit === "un" ? (
+          view.unit === "un" ? (
             <span className="inline-flex items-center gap-1.5">
               <input
                 aria-label={t("ingredients.protein")}
@@ -319,7 +337,7 @@ function IngredientRow({
         ) : (
           view.protein.trim() !== "" && (
             <span className="rounded-[2px] bg-mar-soft px-1.5 py-0.5 text-[11px] font-bold text-mar">
-              {ingredient.unit === "un" ? `${view.protein} ${t("ingredients.proteinEach")}` : t("ingredients.isProtein")}
+              {view.unit === "un" ? `${view.protein} ${t("ingredients.proteinEach")}` : t("ingredients.isProtein")}
             </span>
           )
         )}
@@ -336,10 +354,10 @@ function IngredientRow({
               value={view.stock}
               onChange={(e) => onChange({ stock: e.target.value })}
             />
-            <span className="text-tinta-soft">{t(`unit.${ingredient.unit}`)}</span>
+            <span className="text-tinta-soft">{t(`unit.${view.unit}`)}</span>
           </span>
         ) : view.stock.trim() !== "" && Number(view.stock.replace(",", ".")) > 0 ? (
-          quantity(Number(view.stock.replace(",", ".")), ingredient.unit)
+          quantity(Number(view.stock.replace(",", ".")), view.unit)
         ) : (
           view.stock.trim() !== "" && <span className="text-tinta-soft">{t("ingredients.stockNone")}</span>
         )}

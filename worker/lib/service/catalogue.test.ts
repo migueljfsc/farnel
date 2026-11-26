@@ -97,6 +97,16 @@ describe("creating ingredients", () => {
     expect((await listIngredients(db))[0].aisle).toBe("frozen");
   });
 
+  it("says whether a dish uses each ingredient", async () => {
+    const used = await addIngredient(db, "Arroz");
+    await addIngredient(db, "Sal");
+    await addDish(db, "A", { ingredients: [[used, 100]] });
+    expect((await listIngredients(db)).map((i) => [i.name, i.inUse])).toEqual([
+      ["Arroz", true],
+      ["Sal", false],
+    ]);
+  });
+
   it("records a count of what is at home and lists what is still available", async () => {
     const chicken = await addIngredient(db, "Frango");
     const dish = await addDish(db, "Frango assado", { portions: 4, ingredients: [[chicken, 800]] });
