@@ -166,12 +166,23 @@ export interface ShoppingItem {
   /** Covered by what is at home. */
   fromStock: number;
   costCents: number | null;
+  /** What is still to buy costs at each store; null when the store has no price for it. */
+  storeCosts: Record<Store, number | null>;
+}
+
+export interface StoreTotal {
+  store: Store;
+  /** Only items the store has a price for. */
+  totalCents: number;
+  /** Items still to buy that the store has no price for. */
+  missing: number;
 }
 
 export interface ShoppingList {
   items: ShoppingItem[];
   totalCents: number;
   missingPrices: number;
+  stores: StoreTotal[];
 }
 
 export interface Candidate {

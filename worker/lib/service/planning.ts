@@ -7,8 +7,10 @@ import { costPerPortionCents, eligibility, lineCostCents, mealKey, pantryCover, 
 import { addDays } from "../../../shared/time";
 import { MAX_COMMENT, rating as ratingSchema } from "../schemas";
 import { loadDishes, loadDishFacts } from "./catalogue";
+import { STORES, type Store } from "../../../shared/stores";
 import { availableStock } from "./pantry";
 import { getSettings, hardRestrictionIds, neverEaten, resolvePeople } from "./people";
+import { storeLinks } from "./stores";
 
 const RECENT_COMMENTS = 3;
 
@@ -440,16 +442,29 @@ export async function shoppingList(db: D1Database, weekStart: string): Promise<S
       )
       .bind(weekStart),
   );
+  const links = await storeLinks(db);
   const round = (n: number) => Math.round(n * 100) / 100;
   const items = lines.map((l) => {
     const needed = round(l.quantity);
     const fromStock = Math.min(stock.get(l.ingredientId) ?? 0, needed);
     const quantity = round(needed - fromStock);
-    return { ingredientId: l.ingredientId, name: l.name, unit: l.unit, aisle: l.aisle, quantity, fromStock, costCents: lineCostCents(quantity, l.unit, l.priceCents) };
+    const priced = links.get(l.ingredientId) ?? [];
+    const storeCosts = Object.fromEntries(
+      STORES.map((store) => {
+        const link = priced.find((p) => p.store === store);
+        return [store, quantity === 0 ? 0 : lineCostCents(quantity, l.unit, link?.unitPriceCents ?? null)];
+      }),
+    ) as Record<Store, number | null>;
+    return { ingredientId: l.ingredientId, name: l.name, unit: l.unit, aisle: l.aisle, quantity, fromStock, costCents: lineCostCents(quantity, l.unit, l.priceCents), storeCosts };
   });
   return {
     items,
     totalCents: items.reduce((sum, i) => sum + (i.costCents ?? 0), 0),
     missingPrices: items.filter((i) => i.costCents === null).length,
+    stores: STORES.map((store) => ({
+      store,
+      totalCents: items.reduce((sum, i) => sum + (i.storeCosts[store] ?? 0), 0),
+      missing: items.filter((i) => i.storeCosts[store] === null).length,
+    })),
   };
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ShoppingItem } from "../../shared/types";
 import { byAisle, shoppingText } from "./shopping";
 
-const item = (name: string, aisle: ShoppingItem["aisle"], quantity = 100): ShoppingItem => ({ ingredientId: name.length, name, unit: "g", aisle, quantity, fromStock: 0, costCents: 50 });
+const item = (name: string, aisle: ShoppingItem["aisle"], quantity = 100): ShoppingItem => ({ ingredientId: name.length, name, unit: "g", aisle, quantity, fromStock: 0, costCents: 50, storeCosts: { continente: null, pingo_doce: null } });
 
 describe("shopping list", () => {
   it("groups items by aisle in the order a shop is walked, skipping empty aisles", () => {

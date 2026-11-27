@@ -22,6 +22,13 @@ describe("mcp tools", () => {
     ]);
   });
 
+  it("gives the shopping list with a total per store", async () => {
+    const result = await runTool("get_shopping_list", db, { weekStart: "2026-11-23" }, clock);
+    expect(result.data).toMatchObject({ stores: [{ store: "continente" }, { store: "pingo_doce" }] });
+    expect(result.summary).toContain("Continente");
+    expect(result.summary).toContain("Pingo Doce");
+  });
+
   it("records what is at home and lists what is available in the context", async () => {
     const result = await runTool("set_stock", db, { items: [{ name: "Frango", quantity: 1000, unit: "g" }] }, clock);
     expect(result.isError).toBeFalsy();

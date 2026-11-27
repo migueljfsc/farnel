@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { addDish, addHousehold, addIngredient, addPerson, addPersonRestriction, addPlan, resetDb, restrictionId, setMinProtein } from "../../test/fixtures";
 import type { PlanInput } from "../rules";
 import { setStock } from "./pantry";
+import { linkStatements } from "./stores";
 import { updatePerson } from "./people";
 import { addCooking, setCooked, getPlan, removeCooking, history, listCandidates, mealOptions, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
 
@@ -295,7 +296,41 @@ describe("plannedWeeks", () => {
   });
 });
 
+const NO_STORES = { continente: null, pingo_doce: null };
+
 describe("shoppingList", () => {
+  it("prices what is still to buy at each store, counting items a store has no price for", async () => {
+    const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
+    const salsa = await addIngredient(db, "Salsa", { priceCents: 2000 });
+    const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400], [salsa, 50]] });
+    const link = { sourceId: "s", name: "x", url: "https://www.continente.pt/p.html", ean: null, packText: null, checkedAt: "2026-11-20T00:00:00Z" };
+    await db.batch([
+      ...linkStatements(db, rice, { continente: { ...link, amount: 1000, priceCents: 150 }, pingo_doce: { ...link, amount: 1000, priceCents: 170 } }, NOW),
+      ...linkStatements(db, salsa, { continente: { ...link, amount: 50, priceCents: 99 } }, NOW),
+    ]);
+    await setStock(db, [{ name: "Arroz", quantity: 200, unit: "g" }], "2026-11-20T08:00:00Z");
+    await addPlan(db, "2026-11-23", [{ dishId: a, cookDate: "2026-11-23", portions: 4 }]);
+    const list = await shoppingList(db, "2026-11-23");
+    expect(list.items.map((i) => [i.name, i.storeCosts])).toEqual([
+      ["Arroz", { continente: 30, pingo_doce: 34 }],
+      ["Salsa", { continente: 99, pingo_doce: null }],
+    ]);
+    expect(list.stores).toEqual([
+      { store: "continente", totalCents: 129, missing: 0 },
+      { store: "pingo_doce", totalCents: 34, missing: 1 },
+    ]);
+  });
+
+  it("does not count an item fully covered at home as missing at a store", async () => {
+    const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
+    const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400]] });
+    await setStock(db, [{ name: "Arroz", quantity: 1000, unit: "g" }], "2026-11-20T08:00:00Z");
+    await addPlan(db, "2026-11-23", [{ dishId: a, cookDate: "2026-11-23", portions: 4 }]);
+    const list = await shoppingList(db, "2026-11-23");
+    expect(list.items[0].storeCosts).toEqual({ continente: 0, pingo_doce: 0 });
+    expect(list.stores.map((s) => s.missing)).toEqual([0, 0]);
+  });
+
   it("scales dish quantities to the cooking's portions and skips skipped cookings", async () => {
     const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
     const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400]] });
@@ -305,9 +340,13 @@ describe("shoppingList", () => {
       { dishId: b, cookDate: "2026-11-24", portions: 2, status: "skipped" },
     ]);
     expect(await shoppingList(db, "2026-11-23")).toEqual({
-      items: [{ ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 200, fromStock: 0, costCents: 40 }],
+      items: [{ ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 200, fromStock: 0, costCents: 40, storeCosts: NO_STORES }],
       totalCents: 40,
       missingPrices: 0,
+      stores: [
+        { store: "continente", totalCents: 0, missing: 1 },
+        { store: "pingo_doce", totalCents: 0, missing: 1 },
+      ],
     });
   });
 
@@ -331,11 +370,12 @@ describe("shoppingList", () => {
     await addPlan(db, "2026-11-23", [{ dishId: a, cookDate: "2026-11-23", portions: 4 }]);
     expect(await shoppingList(db, "2026-11-23")).toEqual({
       items: [
-        { ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 300, fromStock: 100, costCents: 60 },
-        { ingredientId: chicken, name: "Frango", unit: "g", aisle: "misc", quantity: 200, fromStock: 400, costCents: 100 },
+        { ingredientId: rice, name: "Arroz", unit: "g", aisle: "misc", quantity: 300, fromStock: 100, costCents: 60, storeCosts: NO_STORES },
+        { ingredientId: chicken, name: "Frango", unit: "g", aisle: "misc", quantity: 200, fromStock: 400, costCents: 100, storeCosts: NO_STORES },
       ],
       totalCents: 160,
       missingPrices: 0,
+      stores: expect.any(Array),
     });
   });
 });

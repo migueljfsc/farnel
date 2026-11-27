@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 import { formatMoney } from "../../shared/format";
+import { SOURCE_NAME } from "../../shared/stores";
 import { BASE_TAGS, hasProteinAndBase, PROTEIN_TAGS } from "../../shared/tags";
 import { date, dishInput, id, planInput, stockInput } from "../lib/schemas";
 import { catalogueCounts, createDish, getDish } from "../lib/service/catalogue";
@@ -129,11 +130,13 @@ export const TOOLS: Tool[] = [
   }),
   tool({
     name: "get_shopping_list",
-    description: "Ingredients and estimated cost for the week's planned cookings.",
+    description:
+      "Ingredients and estimated cost for the week's planned cookings, with what is still to buy priced at each supermarket (stores: total and how many items it has no price for).",
     input: weekArgs,
     async run(db, { weekStart }) {
       const list = await shoppingList(db, weekStart);
-      return { summary: `${list.items.length} items, ${formatMoney(list.totalCents)}.`, data: list };
+      const stores = list.stores.map((s) => `${SOURCE_NAME[s.store]} ${formatMoney(s.totalCents)}${s.missing ? ` (${s.missing} without price)` : ""}`).join(", ");
+      return { summary: `${list.items.length} items, ${formatMoney(list.totalCents)}. ${stores}.`, data: list };
     },
   }),
   tool({
