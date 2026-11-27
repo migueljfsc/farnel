@@ -1,6 +1,7 @@
 import type { DishStatus } from "../../shared/types";
 import { fail, json, noContent } from "../lib/http";
-import { dishInput, ids, ingredientCreate, ingredientPatch } from "../lib/schemas";
+import { searchStore } from "../lib/poupando";
+import { dishInput, ids, ingredientCreate, ingredientPatch, store } from "../lib/schemas";
 import {
   archiveDish,
   createIngredient,
@@ -63,6 +64,13 @@ export const catalogueRoutes: Route[] = [
   route("POST", /^\/api\/dishes\/(\d+)\/unarchive$/, async (ctx) => outcome((await unarchiveDish(ctx.db, idParam(ctx))) ? "ok" : "not_found")),
 
   route("GET", /^\/api\/ingredients$/, async ({ db }) => json({ ingredients: await listIngredients(db) })),
+  route("GET", /^\/api\/store-search$/, async ({ url }) => {
+    const query = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
+    const which = store.safeParse(url.searchParams.get("store"));
+    if (!query || !which.success) return fail("invalid", 400);
+    const products = await searchStore(fetch, query, which.data);
+    return products === "unavailable" ? fail("source_unavailable", 502) : json({ products });
+  }),
   route(
     "PUT",
     /^\/api\/ingredients\/(\d+)$/,

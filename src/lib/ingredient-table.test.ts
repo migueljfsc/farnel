@@ -18,6 +18,7 @@ const ingredient = (id: number, name: string, overrides: Partial<IngredientView>
   stockCount: null,
   inUse: false,
   statuses: { 1: "safe" },
+  stores: [],
   ...overrides,
 });
 

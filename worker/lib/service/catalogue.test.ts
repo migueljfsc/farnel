@@ -79,6 +79,37 @@ describe("ingredients", () => {
   });
 });
 
+describe("store links on ingredients", () => {
+  const link = { sourceId: "s", name: "Salsa Fresca", url: "https://www.continente.pt/p.html", ean: null, packText: "emb. 50 gr", amount: 50, priceCents: 99, checkedAt: "2026-11-23T01:00:00Z" };
+
+  it("links and unlinks stores, and lists the links with a price per unit", async () => {
+    const salsa = await addIngredient(db, "Salsa");
+    expect(await updateIngredient(db, salsa, { stores: { continente: link, pingo_doce: { ...link, sourceId: "pd", priceCents: 109 } } }, NOW)).toBe("ok");
+    const [listed] = await listIngredients(db);
+    expect(listed.stores.map((s) => [s.store, s.unitPriceCents])).toEqual([
+      ["continente", 1980],
+      ["pingo_doce", 2180],
+    ]);
+    expect(await updateIngredient(db, salsa, { stores: { pingo_doce: null } }, NOW)).toBe("ok");
+    expect((await listIngredients(db))[0].stores.map((s) => s.store)).toEqual(["continente"]);
+  });
+
+  it("drops the links when the unit changes", async () => {
+    const salsa = await addIngredient(db, "Salsa");
+    await updateIngredient(db, salsa, { stores: { continente: link } }, NOW);
+    expect(await updateIngredient(db, salsa, { unit: "un" }, NOW)).toBe("ok");
+    expect((await listIngredients(db))[0].stores).toEqual([]);
+  });
+
+  it("takes the price from a linked store, with its source and date", async () => {
+    const salsa = await addIngredient(db, "Salsa");
+    await updateIngredient(db, salsa, { stores: { continente: link } }, NOW);
+    expect(await updateIngredient(db, salsa, { priceFromStore: "continente" }, NOW)).toBe("ok");
+    expect((await listIngredients(db))[0]).toMatchObject({ priceCents: 1980, priceSource: "continente", priceUpdatedAt: "2026-11-23T01:00:00Z" });
+    expect(await updateIngredient(db, salsa, { priceFromStore: "pingo_doce" }, NOW)).toBe("not_found");
+  });
+});
+
 describe("creating ingredients", () => {
   it("creates an ingredient with its aisle and decisions, undecided for the rest", async () => {
     const lactose = await restrictionByName(db, "lactose");

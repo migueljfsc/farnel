@@ -15,6 +15,7 @@ const ingredient = (overrides: Partial<IngredientView> = {}): IngredientView => 
   stockCount: null,
   inUse: false,
   statuses: { 1: "safe" },
+  stores: [],
   ...overrides,
 });
 

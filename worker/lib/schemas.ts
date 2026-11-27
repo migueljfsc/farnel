@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { AISLES } from "../../shared/aisles";
+import { STORES } from "../../shared/stores";
 import { isCalendarDate } from "../../shared/time";
 
 export const date = z
@@ -50,6 +51,19 @@ export const planInput = z.object({
     .max(14),
 });
 
+export const store = z.enum(STORES);
+
+const storeLink = z.object({
+  sourceId: z.string().min(1).max(200),
+  name: z.string().min(1).max(300),
+  url: z.url().max(1000),
+  ean: z.string().max(20).nullable(),
+  packText: z.string().max(200).nullable(),
+  amount: z.number().positive().max(1_000_000),
+  priceCents: cents.max(1_000_000),
+  checkedAt: z.string().min(10).max(40),
+});
+
 export const ingredientPatch = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   unit: unit.optional(),
@@ -58,6 +72,8 @@ export const ingredientPatch = z.object({
   proteinGrams: proteinGrams.optional(),
   stock: z.number().nonnegative().max(1_000_000).nullable().optional(),
   statuses: decided.optional(),
+  stores: z.partialRecord(store, storeLink.nullable()).optional(),
+  priceFromStore: store.optional(),
 });
 
 export const ingredientCreate = z.object({

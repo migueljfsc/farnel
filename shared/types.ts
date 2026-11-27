@@ -74,6 +74,8 @@ export interface IngredientView {
   inUse: boolean;
   /** By restriction id. */
   statuses: Record<number, RestrictionStatus>;
+  /** Products linked at each store, in store order. */
+  stores: StoreLinkView[];
 }
 
 export interface DishSummary {

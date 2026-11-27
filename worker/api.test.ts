@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { createExecutionContext } from "cloudflare:test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "./index";
 import { addPerson, resetDb, restrictionId } from "./test/fixtures";
 
@@ -130,5 +130,27 @@ describe("api", () => {
   it("answers unknown ids with 404", async () => {
     expect((await call("GET", "/api/dishes/999")).status).toBe(404);
     expect((await call("PUT", "/api/cookings/999/status", { status: "skipped" })).status).toBe(404);
+  });
+});
+
+describe("store search", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("refuses an unknown store or an empty search", async () => {
+    expect((await call("GET", "/api/store-search?q=salsa&store=lidl")).status).toBe(400);
+    expect((await call("GET", "/api/store-search?q=%20&store=continente")).status).toBe(400);
+  });
+
+  it("lists products, or says the source is unavailable", async () => {
+    const item = { id: "s", nome: "Salsa Fresca", preco: 0.99, supermercado: "Continente", link: "https://www.continente.pt/p.html", ean: null, unidade_preco: "embalagem", descricao_embalagem: "emb. 50 gr", ultima_atualizacao: "2026-11-26T00:00:00Z" };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json([[item]]));
+    const found = await call("GET", "/api/store-search?q=salsa&store=continente");
+    expect(found.status).toBe(200);
+    expect(((await found.json()) as { products: { sourceId: string }[] }).products.map((p) => p.sourceId)).toEqual(["s"]);
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("no", { status: 403 }));
+    const down = await call("GET", "/api/store-search?q=salsa&store=continente");
+    expect(down.status).toBe(502);
+    expect(await down.json()).toEqual({ error: "source_unavailable" });
   });
 });

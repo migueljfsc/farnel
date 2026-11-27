@@ -11,6 +11,7 @@ import type {
   IngredientView,
   Restriction,
   RestrictionStatus,
+  StoreLinkInput,
   UndecidedItem,
   Unit,
 } from "../../../shared/types";
@@ -20,6 +21,8 @@ import { nameKey } from "../../../shared/names";
 import { costPerPortionCents, proteinPerPortionGrams, type DishFacts } from "../rules";
 import { weekStartOf } from "../../../shared/time";
 import { availableStock } from "./pantry";
+import { linkStatements, storeLinks, unitPriceCents } from "./stores";
+import type { Store } from "../../../shared/stores";
 
 export interface IngredientLine {
   name: string;
@@ -384,8 +387,8 @@ export async function unarchiveDish(db: D1Database, id: number): Promise<boolean
 // ---------------------------------------------------------------- ingredients and restrictions
 
 export async function listIngredients(db: D1Database): Promise<IngredientView[]> {
-  const [ingredients, statuses, stock] = await Promise.all([
-    rows<Omit<IngredientView, "statuses" | "stock" | "inUse"> & { used: number }>(
+  const [ingredients, statuses, stock, links] = await Promise.all([
+    rows<Omit<IngredientView, "statuses" | "stock" | "inUse" | "stores"> & { used: number }>(
       db.prepare(
         `SELECT id, name, unit, aisle, price_cents AS priceCents, price_source AS priceSource, price_updated_at AS priceUpdatedAt, protein_grams AS proteinGrams,
                 stock_quantity AS stockCount,
@@ -395,14 +398,31 @@ export async function listIngredients(db: D1Database): Promise<IngredientView[]>
     ),
     loadStatuses(db),
     availableStock(db),
+    storeLinks(db),
   ]);
-  return ingredients.map(({ used, ...i }) => ({ ...i, stock: i.stockCount === null ? null : (stock.get(i.id) ?? 0), inUse: used === 1, statuses: statuses.get(i.id) ?? {} }));
+  return ingredients.map(({ used, ...i }) => ({
+    ...i,
+    stock: i.stockCount === null ? null : (stock.get(i.id) ?? 0),
+    inUse: used === 1,
+    statuses: statuses.get(i.id) ?? {},
+    stores: links.get(i.id) ?? [],
+  }));
 }
 
 export async function updateIngredient(
   db: D1Database,
   id: number,
-  patch: { name?: string; unit?: Unit; priceCents?: number | null; aisle?: Aisle; proteinGrams?: number | null; stock?: number | null; statuses?: Record<number, DecidedStatus> },
+  patch: {
+    name?: string;
+    unit?: Unit;
+    priceCents?: number | null;
+    aisle?: Aisle;
+    proteinGrams?: number | null;
+    stock?: number | null;
+    statuses?: Record<number, DecidedStatus>;
+    stores?: Partial<Record<Store, StoreLinkInput | null>>;
+    priceFromStore?: Store;
+  },
   now: string,
 ): Promise<"ok" | "not_found" | "name_taken" | "in_use"> {
   const current = await db.prepare("SELECT unit FROM ingredients WHERE id = ?1").bind(id).first<{ unit: Unit }>();
@@ -416,7 +436,24 @@ export async function updateIngredient(
   if (patch.name !== undefined) {
     statements.push(db.prepare("UPDATE ingredients SET name = ?2, name_key = ?3 WHERE id = ?1").bind(id, patch.name.trim(), nameKey(patch.name)));
   }
-  if (patch.unit !== undefined) statements.push(db.prepare("UPDATE ingredients SET unit = ?2 WHERE id = ?1").bind(id, patch.unit));
+  if (patch.unit !== undefined && patch.unit !== current.unit) {
+    statements.push(db.prepare("UPDATE ingredients SET unit = ?2 WHERE id = ?1").bind(id, patch.unit));
+    // Link amounts are in the old unit.
+    statements.push(db.prepare("DELETE FROM store_products WHERE ingredient_id = ?1").bind(id));
+  }
+  if (patch.stores !== undefined) statements.push(...linkStatements(db, id, patch.stores, now));
+  if (patch.priceFromStore !== undefined) {
+    const link = await db
+      .prepare("SELECT price_cents AS priceCents, amount, checked_at AS checkedAt FROM store_products WHERE ingredient_id = ?1 AND store = ?2")
+      .bind(id, patch.priceFromStore)
+      .first<{ priceCents: number; amount: number; checkedAt: string }>();
+    if (!link) return "not_found";
+    statements.push(
+      db
+        .prepare("UPDATE ingredients SET price_cents = ?2, price_source = ?3, price_updated_at = ?4 WHERE id = ?1")
+        .bind(id, unitPriceCents(link.priceCents, link.amount, patch.unit ?? current.unit), patch.priceFromStore, link.checkedAt),
+    );
+  }
   if (patch.aisle !== undefined) statements.push(db.prepare("UPDATE ingredients SET aisle = ?2 WHERE id = ?1").bind(id, patch.aisle));
   if (patch.proteinGrams !== undefined) statements.push(db.prepare("UPDATE ingredients SET protein_grams = ?2 WHERE id = ?1").bind(id, patch.proteinGrams));
   if (patch.stock !== undefined) {
