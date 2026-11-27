@@ -367,6 +367,7 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
   useEffect(() => heading.current?.focus(), []);
   const today = todayLisbon(new Date());
   const removable = cooking.status === "planned" && cooking.cookDate >= today && !cooking.cooked;
+  const swappable = removable;
   const cookable = (cooking.status === "planned" || cooking.status === "done") && cooking.cookDate <= today;
   const markCooked = async (value: boolean) => {
     try {
@@ -426,6 +427,26 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
       toast({ message: errorMessage(t, error), tone: "error" });
     }
   };
+  const swap = async (dishId: number, name: string) => {
+    const before = cooking.dishId;
+    try {
+      await api.put(`/api/cookings/${cooking.id}/dish`, { dishId });
+      setReplacing(false);
+      onChange();
+      toast({
+        message: t("toast.swapped", { dish: name }),
+        action: {
+          label: t("common.undo"),
+          run: async () => {
+            await api.put(`/api/cookings/${cooking.id}/dish`, { dishId: before });
+            onChange();
+          },
+        },
+      });
+    } catch (error) {
+      toast({ message: errorMessage(t, error), tone: "error" });
+    }
+  };
   const undoable = cooking.status === "skipped" || cooking.status === "replaced";
 
   return (
@@ -466,9 +487,11 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
               <Button variant="secondary" onClick={() => change({ status: "skipped" }, "toast.skipped")}>
                 {t("cooking.skip")}
               </Button>
-              <Button variant="secondary" aria-expanded={replacing} onClick={() => setReplacing(!replacing)}>
-                {t("cooking.replace")}
-              </Button>
+              {swappable && (
+                <Button variant="secondary" aria-expanded={replacing} onClick={() => setReplacing(!replacing)}>
+                  {t("cooking.replace")}
+                </Button>
+              )}
               {removable && (
                 <Button variant="danger" onClick={remove}>
                   {t("cooking.remove")}
@@ -477,16 +500,16 @@ function TinDetail({ weekStart, cooking, onChange, onClose }: { weekStart: strin
             </>
           )}
         </div>
-        {replacing && <ReplaceForm weekStart={weekStart} cooking={cooking} onReplace={(by) => change({ status: "replaced", ...by }, "toast.replaced")} />}
+        {replacing && swappable && <SwapForm weekStart={weekStart} cooking={cooking} onSwap={swap} />}
     </Sheet>
   );
 }
 
-function ReplaceForm({ weekStart, cooking, onReplace }: { weekStart: string; cooking: CookingView; onReplace: (by: { dishId: number } | { text: string }) => void }) {
+/** Another dish for a planned cooking: a random one that fits the meal, or any from the catalogue. */
+function SwapForm({ weekStart, cooking, onSwap }: { weekStart: string; cooking: CookingView; onSwap: (dishId: number, name: string) => void }) {
   const { t } = useI18n();
   const { data } = useApi<{ dishes: DishSummary[] }>("/api/dishes?status=validated");
   const options = useApi<{ dishes: MealOption[] }>(`/api/weeks/${weekStart}/options?date=${cooking.cookDate}`);
-  const [text, setText] = useState("");
   const [suggestion, setSuggestion] = useState<MealOption | null>(null);
   const [nothing, setNothing] = useState(false);
   const roll = () => {
@@ -494,6 +517,7 @@ function ReplaceForm({ weekStart, cooking, onReplace }: { weekStart: string; coo
     setSuggestion(picked ?? null);
     setNothing(!picked);
   };
+  const others = data?.dishes.filter((d) => d.id !== cooking.dishId) ?? [];
   return (
     <div className="animate-expand space-y-2">
       <div className="flex flex-wrap gap-2">
@@ -501,25 +525,28 @@ function ReplaceForm({ weekStart, cooking, onReplace }: { weekStart: string; coo
           <DiceIcon />
           {t("cooking.random")}
         </Button>
-        <select className={cx(inputClass, "sm:max-w-64")} defaultValue="" onChange={(e) => e.target.value && onReplace({ dishId: Number(e.target.value) })}>
+        <select
+          className={cx(inputClass, "sm:max-w-72")}
+          defaultValue=""
+          onChange={(e) => {
+            const dish = others.find((d) => d.id === Number(e.target.value));
+            if (dish) onSwap(dish.id, dish.name);
+          }}
+        >
           <option value="">{t("cooking.replacePick")}</option>
-          {data?.dishes.map((d) => (
+          {others.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
             </option>
           ))}
         </select>
-        <input className={cx(inputClass, "sm:max-w-64")} placeholder={t("cooking.replaceOther")} value={text} onChange={(e) => setText(e.target.value)} />
-        <Button disabled={!text.trim()} onClick={() => onReplace({ text })}>
-          {t("common.save")}
-        </Button>
       </div>
       {suggestion && (
         <p role="status" className="flex flex-wrap items-center gap-2 border-l-[3px] border-mostarda py-1 pl-3 text-sm">
           <span className="mr-auto">
             {t("cooking.randomPick")} <strong>{suggestion.name}</strong>
           </span>
-          <Button onClick={() => onReplace({ dishId: suggestion.id })}>{t("cooking.randomUse")}</Button>
+          <Button onClick={() => onSwap(suggestion.id, suggestion.name)}>{t("cooking.randomUse")}</Button>
           <Button variant="secondary" onClick={roll}>
             {t("cooking.randomAgain")}
           </Button>

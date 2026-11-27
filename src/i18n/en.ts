@@ -55,6 +55,7 @@ export const en = {
   // ---------------------------------------------------------------- toasts
   "toast.skipped": "{dish} marked as not made",
   "toast.replaced": "{dish} marked as replaced",
+  "toast.swapped": "Swapped for {dish}",
   "toast.restored": "{dish} back in the plan",
   "toast.cooked": "{dish} cooked: its ingredients came off what is at home",
   "toast.uncooked": "{dish} no longer marked cooked",
@@ -197,6 +198,8 @@ export const en = {
   // ---------------------------------------------------------------- errors
   "error.generic": "Something went wrong.",
   "error.not_found": "Not found.",
+  "error.invalid_plan": "That dish does not fit this meal (restrictions or protein).",
+  "error.in_past": "That day has passed.",
   "error.source_unavailable": "The price source is not answering. Try again later.",
   "error.invalid": "Some values are not valid.",
   "error.unauthorized": "Your session ended. Reload to sign in again.",
@@ -251,9 +254,8 @@ export const en = {
   "cooking.eat": "Eat {meals}",
   "cooking.replacedBy": "replaced by {dish}",
   "cooking.skip": "Skipped",
-  "cooking.replace": "Replaced…",
+  "cooking.replace": "Swap",
   "cooking.replacePick": "A dish from the catalogue…",
-  "cooking.replaceOther": "…or something else",
   "cooking.cooked": "Cooked",
   "cooking.uncook": "Not cooked after all",
   "cooking.random": "Random",

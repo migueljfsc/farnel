@@ -95,6 +95,20 @@ describe("api", () => {
     expect(await (await call("GET", "/api/plans?from=2026-11-01&to=2026-11-30")).json()).toEqual({ weeks: [] });
   });
 
+  it("swaps a planned cooking's dish", async () => {
+    const dish = (name: string) => ({ name, portions: 2, repeatIntervalDays: 7, tags: [], ingredients: [{ name: "Nabo", quantity: 1, unit: "un" }] });
+    const { id: a } = (await (await call("POST", "/api/dishes", dish("Sopa"))).json()) as { id: number };
+    const { id: b } = (await (await call("POST", "/api/dishes", dish("Caldo"))).json()) as { id: number };
+    for (const d of [a, b]) expect((await call("POST", `/api/dishes/${d}/validate`)).status).toBe(204);
+    const { id: cookingId } = (await (await call("POST", "/api/weeks/2027-01-04/cookings", { dishId: a, meals: [{ date: "2027-01-05", slot: "dinner" }] })).json()) as { id: number };
+    expect((await call("PUT", `/api/cookings/${cookingId}/dish`, { dishId: b })).status).toBe(204);
+    const week = (await (await call("GET", "/api/weeks/2027-01-04")).json()) as { plan: { cookings: { dishId: number }[] } };
+    expect(week.plan.cookings.map((c) => c.dishId)).toEqual([b]);
+    expect((await call("PUT", `/api/cookings/${cookingId}/dish`, { dishId: 9999 })).status).toBe(409);
+    expect((await call("PUT", "/api/cookings/9999/dish", { dishId: b })).status).toBe(404);
+    expect((await call("PUT", `/api/cookings/${cookingId}/dish`, {})).status).toBe(400);
+  });
+
   it("offers dishes for one meal and adds one", async () => {
     const { id } = (await (await call("POST", "/api/dishes", { name: "Sopa", portions: 2, repeatIntervalDays: 7, tags: [], ingredients: [{ name: "Nabo", quantity: 1, unit: "un" }] })).json()) as { id: number };
     expect((await call("POST", `/api/dishes/${id}/validate`)).status).toBe(204);

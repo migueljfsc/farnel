@@ -113,6 +113,8 @@ export const cookingChange = z.union([
 /** Whether a meal was cooked; marking it takes its ingredients off what is at home. */
 export const cooked = z.object({ cooked: z.boolean() });
 
+export const cookingDish = z.object({ dishId: id });
+
 export const MAX_COMMENT = 1000;
 export const rating = z.number().int().min(1).max(5);
 export const feedback = z.object({ rating, comment: z.string().max(MAX_COMMENT).default("") });

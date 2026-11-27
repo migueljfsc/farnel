@@ -243,6 +243,40 @@ export async function addCooking(db: D1Database, input: CookingInput, today: str
   return { ok: true, id: results[start.length].meta.last_row_id };
 }
 
+/**
+ * Puts another dish in a planned cooking not cooked yet, from its cook day on: same meals and
+ * portions, the cost and the plan's total follow. Same checks as adding a meal by hand.
+ */
+export async function swapCooking(
+  db: D1Database,
+  id: number,
+  dishId: number,
+  today: string,
+): Promise<{ ok: true } | { ok: false; errors: PlanError[] } | "not_found" | "in_past" | "not_planned"> {
+  const cooking = await db
+    .prepare(
+      `SELECT c.cook_date AS cookDate, c.portions, c.status, c.cooked_at AS cookedAt, c.cost_cents AS costCents, p.week_start AS weekStart
+       FROM cookings c JOIN plans p ON p.id = c.plan_id WHERE c.id = ?1`,
+    )
+    .bind(id)
+    .first<{ cookDate: string; portions: number; status: CookingStatus; cookedAt: string | null; costCents: number; weekStart: string }>();
+  if (!cooking) return "not_found";
+  if (cooking.cookDate < today) return "in_past";
+  if (cooking.status !== "planned" || cooking.cookedAt !== null) return "not_planned";
+  const eaters = await weekEaters(db, cooking.weekStart);
+  const [dishes, hard, settings, never] = await Promise.all([loadDishFacts(db, { ids: [dishId] }), hardRestrictionIds(db, eaters), getSettings(db), neverEaten(db, eaters)]);
+  const dish = dishes.get(dishId);
+  if (!dish) return { ok: false, errors: [{ code: "unknown_dish", dishId }] };
+  const codes = eligibility(dish, hard, cooking.cookDate, settings.minProteinGrams, never).filter((code) => code !== "cooldown");
+  if (codes.length) return { ok: false, errors: codes.map((code) => ({ code, dishId })) };
+  const cost = costPerPortionCents(dish).cents * cooking.portions;
+  await db.batch([
+    db.prepare("UPDATE cookings SET dish_id = ?2, cost_cents = ?3 WHERE id = ?1").bind(id, dishId, cost),
+    db.prepare("UPDATE plans SET total_cents = total_cents + ?2 WHERE week_start = ?1").bind(cooking.weekStart, cost - cooking.costCents),
+  ]);
+  return { ok: true };
+}
+
 /** Takes a cooking off its plan, with its meals and its cost; only before its cook day. */
 export async function removeCooking(db: D1Database, id: number, today: string): Promise<"ok" | "not_found" | "in_past"> {
   const cooking = await db.prepare("SELECT cook_date AS cookDate FROM cookings WHERE id = ?1").bind(id).first<{ cookDate: string }>();

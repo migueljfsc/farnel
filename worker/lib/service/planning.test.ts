@@ -5,7 +5,7 @@ import type { PlanInput } from "../rules";
 import { setStock } from "./pantry";
 import { linkStatements } from "./stores";
 import { updatePerson } from "./people";
-import { addCooking, setCooked, getPlan, removeCooking, history, listCandidates, mealOptions, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
+import { addCooking, setCooked, getPlan, removeCooking, swapCooking, history, listCandidates, mealOptions, plannedWeeks, savePlan, setCookingStatus, setFeedback, shoppingList } from "./planning";
 
 const db = env.DB;
 const NOW = "2026-11-22T10:00:00Z";
@@ -441,6 +441,40 @@ describe("adding one meal", () => {
     expect(await add(a, dinner("2026-11-26"))).toMatchObject({ ok: false, errors: [{ code: "meal_taken" }] });
     expect(await add(toast, dinner("2026-11-27"))).toMatchObject({ ok: false, errors: [{ code: "restricted" }] });
     expect(await addCooking(db, { weekStart: "2026-11-16", dishId: a, meals: [dinner("2026-11-20")] }, TODAY, NOW)).toMatchObject({ ok: false, errors: [{ code: "in_past" }] });
+  });
+
+  it("swaps a cooking's dish, keeping its meals and portions and updating the cost", async () => {
+    const rice = await addIngredient(db, "Arroz", { priceCents: 200 });
+    const fish = await addIngredient(db, "Dourada", { priceCents: 1000 });
+    const a = await addDish(db, "A", { portions: 4, ingredients: [[rice, 400]] });
+    const b = await addDish(db, "B", { portions: 2, ingredients: [[fish, 400]] });
+    await addCooking(db, { weekStart: "2026-11-23", dishId: a, meals: [dinner("2026-11-24"), lunch("2026-11-25")] }, TODAY, NOW);
+    const [before] = (await getPlan(db, "2026-11-23", TODAY))!.cookings;
+    expect(await swapCooking(db, before.id, b, TODAY)).toEqual({ ok: true });
+    const plan = (await getPlan(db, "2026-11-23", TODAY))!;
+    expect(plan.cookings).toEqual([
+      expect.objectContaining({ id: before.id, dishId: b, dish: "B", status: "planned", portions: 4, costCents: 800, meals: [dinner("2026-11-24"), lunch("2026-11-25")] }),
+    ]);
+    expect(plan.totalCents).toBe(800);
+  });
+
+  it("refuses a swap to a dish someone cannot eat, and swaps of the past, cooked or missing cookings", async () => {
+    const gluten = await restrictionId(db);
+    const bread = await addIngredient(db, "Pão", { statuses: { gluten: "forbidden" } });
+    await addPersonRestriction(db, people[1], gluten, "hard");
+    const a = await addDish(db, "A");
+    const b = await addDish(db, "B", { interval: 30 });
+    const toast = await addDish(db, "Tosta", { ingredients: [[bread, 100]] });
+    await addPlan(db, "2026-11-16", [{ dishId: a, cookDate: "2026-11-17" }]);
+    const [past] = (await getPlan(db, "2026-11-16", TODAY))!.cookings;
+    await addCooking(db, { weekStart: "2026-11-23", dishId: a, meals: [dinner("2026-11-24")] }, TODAY, NOW);
+    const [next] = (await getPlan(db, "2026-11-23", TODAY))!.cookings;
+    expect(await swapCooking(db, next.id, toast, TODAY)).toMatchObject({ ok: false, errors: [{ code: "restricted" }] });
+    expect(await swapCooking(db, next.id, b, TODAY)).toEqual({ ok: true });
+    expect(await swapCooking(db, past.id, b, TODAY)).toBe("in_past");
+    expect(await swapCooking(db, 9999, b, TODAY)).toBe("not_found");
+    await db.prepare("UPDATE cookings SET status = 'skipped' WHERE id = ?1").bind(next.id).run();
+    expect(await swapCooking(db, next.id, a, TODAY)).toBe("not_planned");
   });
 
   it("removes a cooking not cooked yet and gives its meals and cost back", async () => {

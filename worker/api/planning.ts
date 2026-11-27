@@ -1,6 +1,6 @@
-import { fail, json } from "../lib/http";
-import { cooked, cookingAdd, cookingChange, date, feedback } from "../lib/schemas";
-import { addCooking, getPlan, history, mealOptions, removeCooking, plannedWeeks, setCooked, setCookingStatus, setFeedback, shoppingList } from "../lib/service/planning";
+import { fail, json, noContent } from "../lib/http";
+import { cooked, cookingAdd, cookingChange, cookingDish, date, feedback } from "../lib/schemas";
+import { addCooking, getPlan, history, mealOptions, removeCooking, plannedWeeks, setCooked, setCookingStatus, setFeedback, shoppingList, swapCooking } from "../lib/service/planning";
 import { addDays, HISTORY_DAYS, isMonday } from "../../shared/time";
 import { idParam, outcome, route, withBody, type Route } from "./routing";
 
@@ -41,6 +41,15 @@ export const planningRoutes: Route[] = [
     "PUT",
     /^\/api\/cookings\/(\d+)\/status$/,
     withBody(cookingChange, async (ctx, change) => outcome(await setCookingStatus(ctx.db, idParam(ctx), change))),
+  ),
+  route(
+    "PUT",
+    /^\/api\/cookings\/(\d+)\/dish$/,
+    withBody(cookingDish, async (ctx, { dishId }) => {
+      const result = await swapCooking(ctx.db, idParam(ctx), dishId, ctx.today);
+      if (typeof result === "string") return outcome(result);
+      return result.ok ? noContent() : fail("invalid_plan", 409, { errors: result.errors });
+    }),
   ),
   route(
     "PUT",

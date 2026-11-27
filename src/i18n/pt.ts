@@ -55,6 +55,7 @@ export const pt: Dictionary = {
   // ---------------------------------------------------------------- toasts
   "toast.skipped": "{dish} marcado como não feito",
   "toast.replaced": "{dish} marcado como trocado",
+  "toast.swapped": "Trocado por {dish}",
   "toast.restored": "{dish} de volta ao plano",
   "toast.cooked": "{dish} cozinhado: os ingredientes saíram do que há em casa",
   "toast.uncooked": "{dish} já não está marcado como cozinhado",
@@ -197,6 +198,8 @@ export const pt: Dictionary = {
   // ---------------------------------------------------------------- errors
   "error.generic": "Algo correu mal.",
   "error.not_found": "Não encontrado.",
+  "error.invalid_plan": "Esse prato não serve para esta refeição (restrições ou proteína).",
+  "error.in_past": "Esse dia já passou.",
   "error.source_unavailable": "A fonte de preços não está a responder. Tenta mais tarde.",
   "error.invalid": "Há valores inválidos.",
   "error.unauthorized": "A sessão terminou. Recarregue para voltar a entrar.",
@@ -251,9 +254,8 @@ export const pt: Dictionary = {
   "cooking.eat": "Comer {meals}",
   "cooking.replacedBy": "trocado por {dish}",
   "cooking.skip": "Não fizemos",
-  "cooking.replace": "Trocámos…",
+  "cooking.replace": "Trocar",
   "cooking.replacePick": "Um prato do catálogo…",
-  "cooking.replaceOther": "…ou outra coisa",
   "cooking.cooked": "Cozinhado",
   "cooking.uncook": "Afinal não",
   "cooking.random": "Aleatório",
