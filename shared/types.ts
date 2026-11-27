@@ -1,8 +1,47 @@
 /** Shapes shared by the Worker (API and MCP) and the web UI. Types only. */
 
 import type { Aisle } from "./aisles";
+import type { Pack } from "./packs";
+import type { Store } from "./stores";
+
+export type { Store };
 
 export type Unit = "g" | "ml" | "un";
+
+/** A product as the price source shows it. `priceCents` is the price of one priced item (a pack, a kg, a litre or a unit). */
+export interface StoreProduct {
+  store: Store;
+  sourceId: string;
+  name: string;
+  url: string;
+  ean: string | null;
+  packText: string | null;
+  priceUnit: string | null;
+  priceCents: number;
+  checkedAt: string;
+  pack: Pack | null;
+}
+
+/** A store product linked to an ingredient; `amount` is how much of the ingredient, in its unit, one priced item gives. */
+export interface StoreLinkInput {
+  sourceId: string;
+  name: string;
+  url: string;
+  ean: string | null;
+  packText: string | null;
+  amount: number;
+  priceCents: number;
+  checkedAt: string;
+}
+
+export interface StoreLinkView extends StoreLinkInput {
+  store: Store;
+  /** Price of 1000 g, 1000 ml or 1 un at this store. */
+  unitPriceCents: number;
+  /** The price source stopped showing it; the last price is kept. */
+  missing: boolean;
+  refreshedAt: string;
+}
 export type RestrictionStatus = "safe" | "forbidden" | "unknown";
 export type DecidedStatus = Exclude<RestrictionStatus, "unknown">;
 export type RestrictionKind = "hard" | "soft";

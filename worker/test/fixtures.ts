@@ -12,6 +12,7 @@ export async function resetDb(db: D1Database): Promise<void> {
     "dish_tags",
     "dish_ingredients",
     "dishes",
+    "store_products",
     "ingredient_restrictions",
     "ingredients",
     "person_restrictions",
