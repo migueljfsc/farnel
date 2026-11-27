@@ -425,9 +425,12 @@ export async function updateIngredient(
     priceFromStore?: Store;
   },
   now: string,
-): Promise<"ok" | "not_found" | "name_taken" | "in_use"> {
+): Promise<"ok" | "not_found" | "name_taken" | "in_use" | "invalid"> {
   const current = await db.prepare("SELECT unit FROM ingredients WHERE id = ?1").bind(id).first<{ unit: Unit }>();
   if (!current) return "not_found";
+  const unitChanges = patch.unit !== undefined && patch.unit !== current.unit;
+  // Link amounts are in the unit they were picked in.
+  if (unitChanges && (patch.stores !== undefined || patch.priceFromStore !== undefined)) return "invalid";
   // Dish quantities are in the ingredient's unit; changing it would silently change every dish.
   if (patch.unit !== undefined && patch.unit !== current.unit) {
     const used = await db.prepare("SELECT 1 FROM dish_ingredients WHERE ingredient_id = ?1").bind(id).first();
@@ -437,9 +440,8 @@ export async function updateIngredient(
   if (patch.name !== undefined) {
     statements.push(db.prepare("UPDATE ingredients SET name = ?2, name_key = ?3 WHERE id = ?1").bind(id, patch.name.trim(), nameKey(patch.name)));
   }
-  if (patch.unit !== undefined && patch.unit !== current.unit) {
+  if (unitChanges) {
     statements.push(db.prepare("UPDATE ingredients SET unit = ?2 WHERE id = ?1").bind(id, patch.unit));
-    // Link amounts are in the old unit.
     statements.push(db.prepare("DELETE FROM store_products WHERE ingredient_id = ?1").bind(id));
   }
   if (patch.stores !== undefined) statements.push(...linkStatements(db, id, patch.stores, now));
@@ -452,7 +454,7 @@ export async function updateIngredient(
     statements.push(
       db
         .prepare("UPDATE ingredients SET price_cents = ?2, price_source = ?3, price_updated_at = ?4 WHERE id = ?1")
-        .bind(id, unitPriceCents(link.priceCents, link.amount, patch.unit ?? current.unit), patch.priceFromStore, link.checkedAt),
+        .bind(id, unitPriceCents(link.priceCents, link.amount, current.unit), patch.priceFromStore, link.checkedAt),
     );
   }
   if (patch.aisle !== undefined) statements.push(db.prepare("UPDATE ingredients SET aisle = ?2 WHERE id = ?1").bind(id, patch.aisle));

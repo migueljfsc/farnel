@@ -16,6 +16,7 @@ describe("packOf", () => {
     expect(packOf("embalagem", "emb. 20 x 8 gr", "x")).toEqual({ quantity: 160, unit: "g" });
     expect(packOf("embalagem", "3 x 1 L", "x")).toEqual({ quantity: 3000, unit: "ml" });
     expect(packOf("embalagem", "6 un", "x")).toEqual({ quantity: 6, unit: "un" });
+    expect(packOf("embalagem", "1 Lt", "x")).toEqual({ quantity: 1000, unit: "ml" });
   });
 
   it("falls back to the name, and gives up without a size", () => {

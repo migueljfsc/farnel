@@ -7,7 +7,7 @@ import { unitPriceCents } from "../../../shared/packs";
 import type { Store } from "../../../shared/stores";
 import type { StoreLinkInput, StoreLinkView, Unit } from "../../../shared/types";
 import { rows } from "../db";
-import { searchStore, type Fetcher } from "../poupando";
+import { findProduct, type Fetcher } from "../poupando";
 
 const REFRESH_EVERY_MS = 6 * 24 * 60 * 60 * 1000;
 
@@ -47,8 +47,8 @@ export function linkStatements(db: D1Database, ingredientId: number, changes: Pa
 
 /**
  * Looks up to `limit` links not refreshed in 6 days, oldest first, one request each: a product
- * still listed gets its current price, one no longer listed is marked missing, and a failed
- * request leaves the link for the next run.
+ * still listed gets its current price, one no longer listed is marked missing. A failed request
+ * ends the run, leaving that link and the rest for the next one.
  */
 export async function refreshStorePrices(db: D1Database, fetcher: Fetcher, now: string, limit = 40): Promise<{ refreshed: number; missing: number; failed: number }> {
   const before = new Date(Date.parse(now) - REFRESH_EVERY_MS).toISOString();
@@ -62,12 +62,11 @@ export async function refreshStorePrices(db: D1Database, fetcher: Fetcher, now: 
   );
   const result = { refreshed: 0, missing: 0, failed: 0 };
   for (const link of due) {
-    const products = await searchStore(fetcher, link.ean ?? link.name, link.store, 24);
-    if (products === "unavailable") {
+    const found = await findProduct(fetcher, link.ean ?? link.name, link.store, link.sourceId);
+    if (found === "unavailable") {
       result.failed++;
-      continue;
+      break;
     }
-    const found = products.find((p) => p.sourceId === link.sourceId);
     const where = "WHERE ingredient_id = ?1 AND store = ?2";
     if (found) {
       result.refreshed++;

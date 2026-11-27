@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { AISLES } from "../../shared/aisles";
-import { STORES } from "../../shared/stores";
+import { STORE_URL, STORES } from "../../shared/stores";
 import { isCalendarDate } from "../../shared/time";
 
 export const date = z
@@ -56,7 +56,7 @@ export const store = z.enum(STORES);
 const storeLink = z.object({
   sourceId: z.string().min(1).max(200),
   name: z.string().min(1).max(300),
-  url: z.url().max(1000),
+  url: z.url(STORE_URL).max(1000),
   ean: z.string().max(20).nullable(),
   packText: z.string().max(200).nullable(),
   amount: z.number().positive().max(1_000_000),

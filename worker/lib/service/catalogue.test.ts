@@ -101,6 +101,14 @@ describe("store links on ingredients", () => {
     expect((await listIngredients(db))[0].stores).toEqual([]);
   });
 
+  it("refuses a unit change together with links or a store price, whose amounts are in the old unit", async () => {
+    const salsa = await addIngredient(db, "Salsa");
+    await updateIngredient(db, salsa, { stores: { continente: link } }, NOW);
+    expect(await updateIngredient(db, salsa, { unit: "un", priceFromStore: "continente" }, NOW)).toBe("invalid");
+    expect(await updateIngredient(db, salsa, { unit: "un", stores: { pingo_doce: link } }, NOW)).toBe("invalid");
+    expect((await listIngredients(db))[0]).toMatchObject({ unit: "g", stores: [expect.objectContaining({ store: "continente" })] });
+  });
+
   it("takes the price from a linked store, with its source and date", async () => {
     const salsa = await addIngredient(db, "Salsa");
     await updateIngredient(db, salsa, { stores: { continente: link } }, NOW);

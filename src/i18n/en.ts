@@ -155,6 +155,7 @@ export const en = {
   "ingredients.storeUseHint": "Make this the ingredient's price",
   "ingredients.storeUnlink": "Unlink {store}",
   "ingredients.storeCheaper": "cheaper",
+  "ingredients.storesUnitChange": "Saving a new unit unlinks the stores; link them again after.",
   "ingredients.search": "Search",
   "ingredients.filter.label": "Show",
   "ingredients.filter.protein": "Proteins",

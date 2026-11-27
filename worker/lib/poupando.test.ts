@@ -22,6 +22,8 @@ const GROUPS = [
   ],
   [item({ id: "kg-continente", nome: "Cebola Continente", preco: 1.69, unidade_preco: "kg", descricao_embalagem: null, ean: null })],
   [{ id: "broken", supermercado: "Continente" }],
+  [item({ link: "https://evil.example/salsa" , id: "elsewhere" })],
+  [item({})],
 ];
 
 function fake(body: unknown, status = 200): { fetcher: Fetcher; urls: URL[] } {

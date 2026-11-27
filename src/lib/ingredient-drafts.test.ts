@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IngredientView } from "../../shared/types";
-import { draftView, patchFor } from "./ingredient-drafts";
+import { draftView, mergeDraft, patchFor, withUnit } from "./ingredient-drafts";
 
 const ingredient = (overrides: Partial<IngredientView> = {}): IngredientView => ({
   id: 1,
@@ -82,5 +82,16 @@ describe("store links in drafts", () => {
 
   it("takes the price from a store instead of the typed one", () => {
     expect(patchFor(ingredient({ stores: [saved] }), { priceFromStore: "continente", price: "0.30" })).toEqual({ patch: { priceFromStore: "continente" }, valid: true });
+  });
+});
+
+describe("unit changes in drafts", () => {
+  const link = { sourceId: "s", name: "Ovos M", url: "https://www.continente.pt/p.html", ean: null, packText: "6 un", amount: 6, priceCents: 180, checkedAt: "2026-11-23T01:00:00Z" };
+  it("drops pending links and a store price, since their amounts are in the old unit", () => {
+    expect(withUnit({ stores: { pingo_doce: link }, priceFromStore: "continente", price: "0.30" }, "g")).toEqual({ unit: "g", price: "0.30" });
+  });
+
+  it("merges link changes per store", () => {
+    expect(mergeDraft({ stores: { continente: link } }, { stores: { pingo_doce: null } })).toEqual({ stores: { continente: link, pingo_doce: null } });
   });
 });

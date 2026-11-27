@@ -155,6 +155,7 @@ export const pt: Dictionary = {
   "ingredients.storeUseHint": "Usar este preço como preço do ingrediente",
   "ingredients.storeUnlink": "Desligar {store}",
   "ingredients.storeCheaper": "mais barato",
+  "ingredients.storesUnitChange": "Ao guardar a nova unidade, as lojas ficam desligadas; liga-as de novo depois.",
   "ingredients.search": "Procurar",
   "ingredients.filter.label": "Mostrar",
   "ingredients.filter.protein": "Proteínas",

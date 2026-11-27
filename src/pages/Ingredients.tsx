@@ -17,7 +17,7 @@ import { useApp } from "../lib/app-context";
 import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/core";
 import { errorMessage } from "../lib/errors";
-import { draftView, patchFor, type Draft, type DraftView } from "../lib/ingredient-drafts";
+import { draftView, mergeDraft, patchFor, withUnit, type Draft, type DraftView } from "../lib/ingredient-drafts";
 import { groupByAisle, matches, nextStatus, type TableFilter } from "../lib/ingredient-table";
 import { useCollapsed } from "../lib/collapsed";
 import { useToast } from "../lib/toast";
@@ -53,7 +53,8 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
   const [busy, setBusy] = useState(false);
   const [collapsed, toggleCollapsed] = useCollapsed("ingredients:collapsed");
 
-  const edit = (id: number, change: Draft) => setDrafts((all) => ({ ...all, [id]: { ...all[id], ...change } }));
+  const edit = (id: number, change: Draft) => setDrafts((all) => ({ ...all, [id]: mergeDraft(all[id], change) }));
+  const changeUnit = (id: number, unit: Unit) => setDrafts((all) => ({ ...all, [id]: withUnit(all[id], unit) }));
   const pending = (ingredients.data?.ingredients ?? []).map((i) => ({ id: i.id, ...patchFor(i, drafts[i.id]) }));
   const changed = pending.filter((p) => !p.valid || Object.keys(p.patch).length > 0);
   const changedIds = new Set(changed.map((p) => p.id));
@@ -189,6 +190,7 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
                             onToggle={() => selection.toggle(i.id)}
                             onEdit={() => setEditing(i.id)}
                             onChange={(change) => edit(i.id, change)}
+                            onUnit={(unit) => changeUnit(i.id, unit)}
                           />
                         ))}
                       </tbody>
@@ -231,6 +233,7 @@ function IngredientRow({
   onToggle,
   onEdit,
   onChange,
+  onUnit,
 }: {
   ingredient: IngredientView;
   view: DraftView;
@@ -242,6 +245,7 @@ function IngredientRow({
   onToggle: () => void;
   onEdit: () => void;
   onChange: (change: Draft) => void;
+  onUnit: (unit: Unit) => void;
 }) {
   const { t } = useI18n();
   const [searching, setSearching] = useState<Store | null>(null);
@@ -292,7 +296,10 @@ function IngredientRow({
                 disabled={ingredient.inUse}
                 className={cx(inputBase, "w-24 py-1")}
                 value={view.unit}
-                onChange={(e) => onChange({ unit: e.target.value as Unit })}
+                onChange={(e) => {
+                  setSearching(null);
+                  onUnit(e.target.value as Unit);
+                }}
               >
                 {UNITS.map((u) => (
                   <option key={u} value={u}>
@@ -331,7 +338,7 @@ function IngredientRow({
             editing={editing}
             onSearch={setSearching}
             onUse={(store, cents) => onChange({ priceFromStore: store, price: (cents / 100).toFixed(2) })}
-            onUnlink={(store) => onChange({ stores: { ...view.stores, [store]: null } })}
+            onUnlink={(store) => onChange({ stores: { [store]: null } })}
           />
         </td>
         <td className="py-2 pr-3">
@@ -392,7 +399,7 @@ function IngredientRow({
           </td>
         ))}
       </tr>
-      {editing && searching && (
+      {editing && searching && view.unit === ingredient.unit && (
         <tr className="bg-mar-soft/50">
           <td />
           <td colSpan={columns - 1} className="pb-3 pr-3">
@@ -403,7 +410,7 @@ function IngredientRow({
               unit={view.unit}
               onClose={() => setSearching(null)}
               onPick={(link) => {
-                onChange({ stores: { ...view.stores, [searching]: link } });
+                onChange({ stores: { [searching]: link } });
                 setSearching(null);
               }}
             />
@@ -434,6 +441,7 @@ function StoresCell({
   onUnlink: (store: Store) => void;
 }) {
   const { t, day } = useI18n();
+  if (editing && view.unit !== ingredient.unit) return ingredient.stores.length > 0 ? <span className="text-xs text-tinta-soft">{t("ingredients.storesUnitChange")}</span> : null;
   const priced = STORES.flatMap((store) => {
     const link = view.stores[store];
     return link ? [{ store, link, cents: unitPriceCents(link.priceCents, link.amount, view.unit), stale: "missing" in link && link.missing }] : [];

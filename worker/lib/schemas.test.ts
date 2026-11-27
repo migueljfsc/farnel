@@ -24,3 +24,14 @@ describe("ingredientPatch stores", () => {
     expect(ingredientPatch.safeParse({ priceFromStore: "lidl" }).success).toBe(false);
   });
 });
+
+describe("store link url", () => {
+  const link = { sourceId: "s", name: "Salsa", ean: null, packText: null, amount: 50, priceCents: 99, checkedAt: "2026-11-23T01:00:00Z" };
+  it("takes only https links on the stores' own sites", () => {
+    expect(ingredientPatch.safeParse({ stores: { continente: { ...link, url: "https://www.continente.pt/p.html" } } }).success).toBe(true);
+    expect(ingredientPatch.safeParse({ stores: { pingo_doce: { ...link, url: "https://www.pingodoce.pt/p.html" } } }).success).toBe(true);
+    for (const url of ["http://www.continente.pt/p.html", "https://evil.example/p", "javascript:alert(1)", "https://continente.pt.evil.example/p"]) {
+      expect(ingredientPatch.safeParse({ stores: { continente: { ...link, url } } }).success).toBe(false);
+    }
+  });
+});

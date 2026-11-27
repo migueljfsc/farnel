@@ -107,3 +107,18 @@ export function patchFor(ingredient: IngredientView, draft: Draft | undefined): 
   }
   return { patch, valid };
 }
+
+/** A unit change: pending links and a store price go, since their amounts are in the old unit. */
+export function withUnit(draft: Draft | undefined, unit: Unit): Draft {
+  const next: Draft = { ...draft, unit };
+  delete next.stores;
+  delete next.priceFromStore;
+  return next;
+}
+
+/** `change` over `draft`; link changes merge per store. */
+export function mergeDraft(draft: Draft | undefined, change: Draft): Draft {
+  const merged = { ...draft, ...change };
+  if (draft?.stores && change.stores) merged.stores = { ...draft.stores, ...change.stores };
+  return merged;
+}

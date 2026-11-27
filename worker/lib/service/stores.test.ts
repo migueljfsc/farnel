@@ -108,6 +108,25 @@ describe("refreshStorePrices", () => {
     expect(await row(down)).toEqual({ priceCents: 99, checkedAt: "2026-11-23T01:00:00Z", refreshedAt: WEEK_AGO, missing: 0 });
   });
 
+  it("stops at the first failed request, leaving the rest for the next run", async () => {
+    await linked("A", { name: "a" }, "2026-10-01T04:00:00Z");
+    await linked("B", { name: "b" }, "2026-10-02T04:00:00Z");
+    const { fetcher, asked } = searcher({ a: "unavailable" });
+    expect(await refreshStorePrices(db, fetcher, NOW)).toEqual({ refreshed: 0, missing: 0, failed: 1 });
+    expect(asked.map((a) => a.query)).toEqual(["a"]);
+  });
+
+  it("asks for up to 100 results so the product is found among cheaper near-matches", async () => {
+    await linked("Salsa", { name: "Salsa Fresca Continente" }, WEEK_AGO);
+    const limits: string[] = [];
+    const fetcher = (async (input: RequestInfo | URL) => {
+      limits.push(new URL(String(input)).searchParams.get("limite") ?? "");
+      return Response.json([]);
+    }) as Fetcher;
+    await refreshStorePrices(db, fetcher, NOW);
+    expect(limits).toEqual(["100"]);
+  });
+
   it("searches by barcode when there is one, in the link's store", async () => {
     await linked("Atum", { sourceId: "atum-pd", name: "Atum", ean: "560123" }, WEEK_AGO, "pingo_doce");
     const { fetcher, asked } = searcher({ "560123": [product({ sourceId: "atum-pd", store: "pingo_doce" })] });

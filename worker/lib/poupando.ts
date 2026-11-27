@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { nameKey } from "../../shared/names";
 import { packOf } from "../../shared/packs";
-import { SOURCE_NAME, type Store } from "../../shared/stores";
+import { SOURCE_NAME, STORE_URL, type Store } from "../../shared/stores";
 import type { StoreProduct } from "../../shared/types";
 
 export type Fetcher = typeof fetch;
@@ -18,45 +18,62 @@ const item = z.object({
   nome: z.string().min(1).max(300),
   preco: z.number().nonnegative().max(10_000),
   supermercado: z.string(),
-  link: z.url().max(1000),
+  link: z.url(STORE_URL).max(1000),
   ean: z.string().max(20).nullish(),
   unidade_preco: z.string().max(30).nullish(),
   descricao_embalagem: z.string().max(200).nullish(),
   ultima_atualizacao: z.string().min(10).max(40),
 });
 
-/** Products of `store` matching `query`, or "unavailable" when the source cannot be read. Items of an unexpected shape are dropped. */
-export async function searchStore(fetcher: Fetcher, query: string, store: Store, limit = 10): Promise<StoreProduct[] | "unavailable"> {
+async function fetchItems(fetcher: Fetcher, query: string, store: Store, limit: number): Promise<unknown[] | "unavailable"> {
   const url = new URL(SEARCH);
   url.search = new URLSearchParams({ pesquisa: query, supermercado: SOURCE_NAME[store], limite: String(limit) }).toString();
-  let body: unknown;
   try {
     const response = await fetcher(url, { headers: { accept: "application/json", "user-agent": "farnel" }, signal: AbortSignal.timeout(15_000) });
     if (!response.ok) return "unavailable";
-    body = await response.json();
+    const body: unknown = await response.json();
+    return Array.isArray(body) ? body.flat() : "unavailable";
   } catch {
     return "unavailable";
   }
-  if (!Array.isArray(body)) return "unavailable";
-  const products: StoreProduct[] = [];
-  for (const raw of body.flat()) {
-    const parsed = item.safeParse(raw);
-    if (!parsed.success || parsed.data.supermercado !== SOURCE_NAME[store]) continue;
-    const p = parsed.data;
-    products.push({
-      store,
-      sourceId: p.id,
-      name: p.nome,
-      url: p.link,
-      ean: p.ean ?? null,
-      packText: p.descricao_embalagem ?? null,
-      priceUnit: p.unidade_preco ?? null,
-      priceCents: Math.round(p.preco * 100),
-      checkedAt: p.ultima_atualizacao,
-      pack: packOf(p.unidade_preco ?? null, p.descricao_embalagem ?? null, p.nome),
-    });
+}
+
+function toProduct(raw: unknown, store: Store): StoreProduct | null {
+  const parsed = item.safeParse(raw);
+  if (!parsed.success || parsed.data.supermercado !== SOURCE_NAME[store]) return null;
+  const p = parsed.data;
+  return {
+    store,
+    sourceId: p.id,
+    name: p.nome,
+    url: p.link,
+    ean: p.ean ?? null,
+    packText: p.descricao_embalagem ?? null,
+    priceUnit: p.unidade_preco ?? null,
+    priceCents: Math.round(p.preco * 100),
+    checkedAt: p.ultima_atualizacao,
+    pack: packOf(p.unidade_preco ?? null, p.descricao_embalagem ?? null, p.nome),
+  };
+}
+
+/** Products of `store` matching `query`, once each, or "unavailable" when the source cannot be read. Items of an unexpected shape are dropped. */
+export async function searchStore(fetcher: Fetcher, query: string, store: Store, limit = 10): Promise<StoreProduct[] | "unavailable"> {
+  const items = await fetchItems(fetcher, query, store, limit);
+  if (items === "unavailable") return items;
+  const products = new Map<string, StoreProduct>();
+  for (const raw of items) {
+    const product = toProduct(raw, store);
+    if (product && !products.has(product.sourceId)) products.set(product.sourceId, product);
   }
-  return products;
+  return [...products.values()];
+}
+
+/** The product `sourceId` among up to 100 results for `query`; null when it is not listed. Only that item is validated. */
+export async function findProduct(fetcher: Fetcher, query: string, store: Store, sourceId: string): Promise<StoreProduct | null | "unavailable"> {
+  const items = await fetchItems(fetcher, query, store, 100);
+  if (items === "unavailable") return items;
+  const raw = items.find((i) => typeof i === "object" && i !== null && (i as { id?: unknown }).id === sourceId);
+  return raw === undefined ? null : toProduct(raw, store);
 }
 
 /**

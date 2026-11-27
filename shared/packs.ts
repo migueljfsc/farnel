@@ -9,7 +9,7 @@ export interface Pack {
 
 const PER: Record<string, Pack> = { kg: { quantity: 1000, unit: "g" }, l: { quantity: 1000, unit: "ml" }, un: { quantity: 1, unit: "un" } };
 
-const SIZE = /(\d+(?:[.,]\d+)?)\s*(?:x\s*(\d+(?:[.,]\d+)?)\s*)?(kg|gr|g|cl|ml|l|un)\b/i;
+const SIZE = /(\d+(?:[.,]\d+)?)\s*(?:x\s*(\d+(?:[.,]\d+)?)\s*)?(kg|gr|g|cl|ml|lt|l|un)\b/i;
 
 const SCALE: Record<string, Pack> = {
   kg: { quantity: 1000, unit: "g" },
@@ -18,6 +18,7 @@ const SCALE: Record<string, Pack> = {
   cl: { quantity: 10, unit: "ml" },
   ml: { quantity: 1, unit: "ml" },
   l: { quantity: 1000, unit: "ml" },
+  lt: { quantity: 1000, unit: "ml" },
   un: { quantity: 1, unit: "un" },
 };
 
