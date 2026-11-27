@@ -44,3 +44,6 @@ export function amountFor(pack: Pack, ingredientUnit: Unit, gramsPerUnit?: numbe
   if (ingredientUnit === "un" && pack.unit === "g" && gramsPerUnit && gramsPerUnit > 0) return Math.round((pack.quantity / gramsPerUnit) * 100) / 100;
   return null;
 }
+
+/** Price of 1000 g, 1000 ml or 1 un, from the price of an item that gives `amount` of the ingredient. */
+export const unitPriceCents = (priceCents: number, amount: number, unit: Unit): number => Math.round((priceCents / amount) * (unit === "un" ? 1 : 1000));

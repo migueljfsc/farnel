@@ -59,7 +59,28 @@ describe("patchFor", () => {
 
 describe("draftView", () => {
   it("shows the draft over what is saved, as text", () => {
-    expect(draftView(ingredient({ proteinGrams: 60, stock: 3, stockCount: 4 }), undefined)).toEqual({ aisle: "misc", unit: "un", price: "0.30", protein: "60", stock: "4", statuses: { 1: "safe" } });
-    expect(draftView(ingredient({ priceCents: null }), { aisle: "dairy", protein: "" })).toEqual({ aisle: "dairy", unit: "un", price: "", protein: "", stock: "", statuses: { 1: "safe" } });
+    expect(draftView(ingredient({ proteinGrams: 60, stock: 3, stockCount: 4 }), undefined)).toEqual({ aisle: "misc", unit: "un", price: "0.30", protein: "60", stock: "4", statuses: { 1: "safe" }, stores: { continente: null, pingo_doce: null } });
+    expect(draftView(ingredient({ priceCents: null }), { aisle: "dairy", protein: "" })).toEqual({ aisle: "dairy", unit: "un", price: "", protein: "", stock: "", statuses: { 1: "safe" }, stores: { continente: null, pingo_doce: null } });
+  });
+});
+
+describe("store links in drafts", () => {
+  const link = { sourceId: "s", name: "Ovos M", url: "https://www.continente.pt/p.html", ean: null, packText: "6 un", amount: 6, priceCents: 180, checkedAt: "2026-11-23T01:00:00Z" };
+  const saved = { ...link, store: "continente" as const, unitPriceCents: 30, missing: false, refreshedAt: "2026-11-23T04:00:00Z" };
+
+  it("shows a draft link over the saved one, and null as unlinked", () => {
+    expect(draftView(ingredient({ stores: [saved] }), undefined).stores).toEqual({ continente: saved, pingo_doce: null });
+    expect(draftView(ingredient({ stores: [saved] }), { stores: { continente: null, pingo_doce: link } }).stores).toEqual({ continente: null, pingo_doce: link });
+  });
+
+  it("sends only links that changed, and refuses one without a positive amount", () => {
+    expect(patchFor(ingredient({ stores: [saved] }), { stores: { continente: link } })).toEqual({ patch: {}, valid: true });
+    expect(patchFor(ingredient({ stores: [saved] }), { stores: { continente: null, pingo_doce: link } })).toEqual({ patch: { stores: { continente: null, pingo_doce: link } }, valid: true });
+    expect(patchFor(ingredient(), { stores: { continente: { ...link, amount: 0 } } }).valid).toBe(false);
+    expect(patchFor(ingredient(), { stores: { pingo_doce: null } })).toEqual({ patch: {}, valid: true });
+  });
+
+  it("takes the price from a store instead of the typed one", () => {
+    expect(patchFor(ingredient({ stores: [saved] }), { priceFromStore: "continente", price: "0.30" })).toEqual({ patch: { priceFromStore: "continente" }, valid: true });
   });
 });

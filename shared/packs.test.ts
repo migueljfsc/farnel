@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amountFor, packOf } from "./packs";
+import { amountFor, packOf, unitPriceCents } from "./packs";
 
 describe("packOf", () => {
   it("reads a price per kg, litre or unit", () => {
@@ -40,5 +40,13 @@ describe("amountFor", () => {
   it("refuses units that do not convert", () => {
     expect(amountFor({ quantity: 750, unit: "ml" }, "g")).toBeNull();
     expect(amountFor({ quantity: 6, unit: "un" }, "g")).toBeNull();
+  });
+});
+
+describe("unitPriceCents", () => {
+  it("prices 1000 g, 1000 ml or 1 un", () => {
+    expect(unitPriceCents(169, 1000, "g")).toBe(169);
+    expect(unitPriceCents(99, 50, "g")).toBe(1980);
+    expect(unitPriceCents(169, 6.67, "un")).toBe(25);
   });
 });

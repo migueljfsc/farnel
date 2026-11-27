@@ -1,8 +1,11 @@
-import { useState, type KeyboardEvent, type MouseEvent } from "react";
+import { Fragment, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { AISLES, type Aisle } from "../../shared/aisles";
 import { priceUnit } from "../../shared/format";
+import { unitPriceCents } from "../../shared/packs";
+import { SOURCE_NAME, STORES, type Store } from "../../shared/stores";
 import type { IngredientView, Restriction, RestrictionStatus, Unit } from "../../shared/types";
 import { NewIngredientForm } from "../components/NewIngredientForm";
+import { StoreSearch } from "../components/StoreSearch";
 import { SaveBar } from "../components/SaveBar";
 import { Check, SelectionBar } from "../components/SelectionBar";
 import { Button, Loaded, Page } from "../components/ui";
@@ -119,7 +122,7 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
           const shown = data.ingredients.filter((i) => changedIds.has(i.id) || matches(i, draftView(i, drafts[i.id]), { query, filter }, data.restrictions));
           if (data.ingredients.length === 0) return <p className="text-sm text-tinta-soft">{t("ingredients.empty")}</p>;
           if (shown.length === 0) return <p className="text-sm text-tinta-soft">{t(filter === "undecided" && !query ? "ingredients.nothingToDecide" : "ingredients.noMatch")}</p>;
-          const columns = 5 + data.restrictions.length;
+          const columns = 6 + data.restrictions.length;
           return (
             <div className="space-y-2">
               <SelectionBar
@@ -135,6 +138,9 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
                       <th className="w-9 py-2 pl-1" aria-label={t("selection.label")} />
                       <th className="py-2 pr-3">{t("ingredients.column.name")}</th>
                       <th className="w-36 py-2 pr-3">{t("ingredients.price")}</th>
+                      <th className="w-52 py-2 pr-3" title={t("ingredients.storesHint")}>
+                        {t("ingredients.stores")}
+                      </th>
                       <th className="w-32 py-2 pr-3" title={t("ingredients.proteinHint")}>
                         {t("ingredients.protein")}
                       </th>
@@ -176,6 +182,7 @@ export function Ingredients({ filter: routeFilter }: { filter?: "to-decide" }) {
                             ingredient={i}
                             view={draftView(i, drafts[i.id])}
                             restrictions={data.restrictions}
+                            columns={columns}
                             editing={editing === i.id}
                             changed={changedIds.has(i.id)}
                             selected={selection.selected.has(i.id)}
@@ -217,6 +224,7 @@ function IngredientRow({
   ingredient,
   view,
   restrictions,
+  columns,
   editing,
   changed,
   selected,
@@ -227,6 +235,7 @@ function IngredientRow({
   ingredient: IngredientView;
   view: DraftView;
   restrictions: Restriction[];
+  columns: number;
   editing: boolean;
   changed: boolean;
   selected: boolean;
@@ -235,6 +244,7 @@ function IngredientRow({
   onChange: (change: Draft) => void;
 }) {
   const { t } = useI18n();
+  const [searching, setSearching] = useState<Store | null>(null);
   const priceValid = patchFor(ingredient, { price: view.price }).valid;
   const proteinValid = patchFor(ingredient, { protein: view.protein }).valid;
   const stockValid = patchFor(ingredient, { stock: view.stock }).valid;
@@ -244,133 +254,239 @@ function IngredientRow({
   };
 
   return (
-    <tr
-      aria-label={editing ? undefined : t("ingredients.edit", { name: ingredient.name })}
-      tabIndex={editing ? undefined : 0}
-      onClick={(e) => !editing && !fromControl(e) && onEdit()}
-      onKeyDown={(e) => !editing && e.key === "Enter" && !fromControl(e) && onEdit()}
-      className={cx(
-        "border-b border-linha align-middle transition-colors",
-        editing ? "bg-mar-soft/50" : "cursor-pointer hover:bg-mar-soft/30",
-        selected && "bg-mar-soft/60",
-        changed && "shadow-[inset_3px_0_0_var(--mar)]",
-      )}
-    >
-      <td className="py-2 pl-1">
-        <Check checked={selected} onChange={onToggle} label={t("selection.select", { name: ingredient.name })} />
-      </td>
-      <td className="py-2 pr-3">
-        <span className="font-semibold">{ingredient.name}</span>
-        {editing && (
-          <span className="mt-1.5 flex flex-wrap gap-1.5">
-            <select
-              aria-label={t("ingredients.aisle")}
-              className={cx(inputBase, "w-full max-w-48 py-1")}
-              value={view.aisle}
-              onChange={(e) => onChange({ aisle: e.target.value as Aisle })}
-            >
-              {AISLES.map((a) => (
-                <option key={a} value={a}>
-                  {t(`aisle.${a}`)}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label={t("ingredients.unit")}
-              title={ingredient.inUse ? t("ingredients.unitLocked") : undefined}
-              disabled={ingredient.inUse}
-              className={cx(inputBase, "w-24 py-1")}
-              value={view.unit}
-              onChange={(e) => onChange({ unit: e.target.value as Unit })}
-            >
-              {UNITS.map((u) => (
-                <option key={u} value={u}>
-                  {t(`unit.${u}`)}
-                </option>
-              ))}
-            </select>
-          </span>
+    <Fragment>
+      <tr
+        aria-label={editing ? undefined : t("ingredients.edit", { name: ingredient.name })}
+        tabIndex={editing ? undefined : 0}
+        onClick={(e) => !editing && !fromControl(e) && onEdit()}
+        onKeyDown={(e) => !editing && e.key === "Enter" && !fromControl(e) && onEdit()}
+        className={cx(
+          "border-b border-linha align-middle transition-colors",
+          editing ? "bg-mar-soft/50" : "cursor-pointer hover:bg-mar-soft/30",
+          selected && "bg-mar-soft/60",
+          changed && "shadow-[inset_3px_0_0_var(--mar)]",
         )}
-      </td>
-      <td className="py-2 pr-3 tabular-nums">
-        {editing ? (
-          <span className="inline-flex items-center gap-1.5">
-            <input
-              aria-label={t("ingredients.price")}
-              aria-invalid={!priceValid}
-              className={cx(inputBase, "w-20 py-1", !priceValid && INVALID)}
-              inputMode="decimal"
-              value={view.price}
-              onChange={(e) => onChange({ price: e.target.value })}
-            />
-            <span className="text-tinta-soft">{priceUnit(view.unit)}</span>
-          </span>
-        ) : view.price.trim() ? (
-          <>
-            {view.price} <span className="text-tinta-soft">{priceUnit(view.unit)}</span>
-          </>
-        ) : (
-          <span className="text-tinta-soft">—</span>
-        )}
-      </td>
-      <td className="py-2 pr-3">
-        {editing ? (
-          view.unit === "un" ? (
+      >
+        <td className="py-2 pl-1">
+          <Check checked={selected} onChange={onToggle} label={t("selection.select", { name: ingredient.name })} />
+        </td>
+        <td className="py-2 pr-3">
+          <span className="font-semibold">{ingredient.name}</span>
+          {editing && (
+            <span className="mt-1.5 flex flex-wrap gap-1.5">
+              <select
+                aria-label={t("ingredients.aisle")}
+                className={cx(inputBase, "w-full max-w-48 py-1")}
+                value={view.aisle}
+                onChange={(e) => onChange({ aisle: e.target.value as Aisle })}
+              >
+                {AISLES.map((a) => (
+                  <option key={a} value={a}>
+                    {t(`aisle.${a}`)}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label={t("ingredients.unit")}
+                title={ingredient.inUse ? t("ingredients.unitLocked") : undefined}
+                disabled={ingredient.inUse}
+                className={cx(inputBase, "w-24 py-1")}
+                value={view.unit}
+                onChange={(e) => onChange({ unit: e.target.value as Unit })}
+              >
+                {UNITS.map((u) => (
+                  <option key={u} value={u}>
+                    {t(`unit.${u}`)}
+                  </option>
+                ))}
+              </select>
+            </span>
+          )}
+        </td>
+        <td className="py-2 pr-3 tabular-nums">
+          {editing ? (
             <span className="inline-flex items-center gap-1.5">
               <input
-                aria-label={t("ingredients.protein")}
-                aria-invalid={!proteinValid}
-                className={cx(inputBase, "w-16 py-1", !proteinValid && INVALID)}
+                aria-label={t("ingredients.price")}
+                aria-invalid={!priceValid}
+                className={cx(inputBase, "w-20 py-1", !priceValid && INVALID)}
                 inputMode="decimal"
-                placeholder="—"
-                value={view.protein}
-                onChange={(e) => onChange({ protein: e.target.value })}
+                value={view.price}
+                onChange={(e) => onChange({ price: e.target.value, priceFromStore: undefined })}
               />
-              <span className="whitespace-nowrap text-tinta-soft">{t("ingredients.proteinEach")}</span>
+              <span className="text-tinta-soft">{priceUnit(view.unit)}</span>
             </span>
+          ) : view.price.trim() ? (
+            <>
+              {view.price} <span className="text-tinta-soft">{priceUnit(view.unit)}</span>
+            </>
           ) : (
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" className="size-4 accent-mar" checked={view.protein !== ""} onChange={(e) => onChange({ protein: e.target.checked ? "1" : "" })} />
-              {t("ingredients.protein")}
-            </label>
-          )
-        ) : (
-          view.protein.trim() !== "" && (
-            <span className="rounded-[2px] bg-mar-soft px-1.5 py-0.5 text-[11px] font-bold text-mar">
-              {view.unit === "un" ? `${view.protein} ${t("ingredients.proteinEach")}` : t("ingredients.isProtein")}
-            </span>
-          )
-        )}
-      </td>
-      <td className="py-2 pr-3 tabular-nums">
-        {editing ? (
-          <span className="inline-flex items-center gap-1.5">
-            <input
-              aria-label={t("ingredients.stock")}
-              aria-invalid={!stockValid}
-              className={cx(inputBase, "w-20 py-1", !stockValid && INVALID)}
-              inputMode="decimal"
-              placeholder="—"
-              value={view.stock}
-              onChange={(e) => onChange({ stock: e.target.value })}
-            />
-            <span className="text-tinta-soft">{t(`unit.${view.unit}`)}</span>
-          </span>
-        ) : (
-          <StockCell ingredient={ingredient} view={view} />
-        )}
-      </td>
-      {restrictions.map((r) => (
-        <td key={r.id} className="px-1 py-2 text-center">
-          <StatusCell
-            status={view.statuses[r.id] ?? "unknown"}
-            label={`${r.name}, ${ingredient.name}`}
-            editable={editing}
-            onClick={() => setStatus(r.id, nextStatus(view.statuses[r.id] ?? "unknown"))}
+            <span className="text-tinta-soft">—</span>
+          )}
+        </td>
+        <td className="py-2 pr-3 tabular-nums">
+          <StoresCell
+            ingredient={ingredient}
+            view={view}
+            editing={editing}
+            onSearch={setSearching}
+            onUse={(store, cents) => onChange({ priceFromStore: store, price: (cents / 100).toFixed(2) })}
+            onUnlink={(store) => onChange({ stores: { ...view.stores, [store]: null } })}
           />
         </td>
-      ))}
-    </tr>
+        <td className="py-2 pr-3">
+          {editing ? (
+            view.unit === "un" ? (
+              <span className="inline-flex items-center gap-1.5">
+                <input
+                  aria-label={t("ingredients.protein")}
+                  aria-invalid={!proteinValid}
+                  className={cx(inputBase, "w-16 py-1", !proteinValid && INVALID)}
+                  inputMode="decimal"
+                  placeholder="—"
+                  value={view.protein}
+                  onChange={(e) => onChange({ protein: e.target.value })}
+                />
+                <span className="whitespace-nowrap text-tinta-soft">{t("ingredients.proteinEach")}</span>
+              </span>
+            ) : (
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" className="size-4 accent-mar" checked={view.protein !== ""} onChange={(e) => onChange({ protein: e.target.checked ? "1" : "" })} />
+                {t("ingredients.protein")}
+              </label>
+            )
+          ) : (
+            view.protein.trim() !== "" && (
+              <span className="rounded-[2px] bg-mar-soft px-1.5 py-0.5 text-[11px] font-bold text-mar">
+                {view.unit === "un" ? `${view.protein} ${t("ingredients.proteinEach")}` : t("ingredients.isProtein")}
+              </span>
+            )
+          )}
+        </td>
+        <td className="py-2 pr-3 tabular-nums">
+          {editing ? (
+            <span className="inline-flex items-center gap-1.5">
+              <input
+                aria-label={t("ingredients.stock")}
+                aria-invalid={!stockValid}
+                className={cx(inputBase, "w-20 py-1", !stockValid && INVALID)}
+                inputMode="decimal"
+                placeholder="—"
+                value={view.stock}
+                onChange={(e) => onChange({ stock: e.target.value })}
+              />
+              <span className="text-tinta-soft">{t(`unit.${view.unit}`)}</span>
+            </span>
+          ) : (
+            <StockCell ingredient={ingredient} view={view} />
+          )}
+        </td>
+        {restrictions.map((r) => (
+          <td key={r.id} className="px-1 py-2 text-center">
+            <StatusCell
+              status={view.statuses[r.id] ?? "unknown"}
+              label={`${r.name}, ${ingredient.name}`}
+              editable={editing}
+              onClick={() => setStatus(r.id, nextStatus(view.statuses[r.id] ?? "unknown"))}
+            />
+          </td>
+        ))}
+      </tr>
+      {editing && searching && (
+        <tr className="bg-mar-soft/50">
+          <td />
+          <td colSpan={columns - 1} className="pb-3 pr-3">
+            <StoreSearch
+              key={searching}
+              store={searching}
+              name={ingredient.name}
+              unit={view.unit}
+              onClose={() => setSearching(null)}
+              onPick={(link) => {
+                onChange({ stores: { ...view.stores, [searching]: link } });
+                setSearching(null);
+              }}
+            />
+          </td>
+        </tr>
+      )}
+    </Fragment>
+  );
+}
+
+/**
+ * The ingredient's price at each linked store, per kg, litre or unit, the cheaper one marked and
+ * one no longer listed greyed. While editing: search, use as Preço (saved links only) and unlink.
+ */
+function StoresCell({
+  ingredient,
+  view,
+  editing,
+  onSearch,
+  onUse,
+  onUnlink,
+}: {
+  ingredient: IngredientView;
+  view: DraftView;
+  editing: boolean;
+  onSearch: (store: Store) => void;
+  onUse: (store: Store, unitCents: number) => void;
+  onUnlink: (store: Store) => void;
+}) {
+  const { t, day } = useI18n();
+  const priced = STORES.flatMap((store) => {
+    const link = view.stores[store];
+    return link ? [{ store, link, cents: unitPriceCents(link.priceCents, link.amount, view.unit), stale: "missing" in link && link.missing }] : [];
+  });
+  const cheapest = priced.length === 2 && priced[0].cents !== priced[1].cents ? (priced[0].cents < priced[1].cents ? priced[0].store : priced[1].store) : null;
+  const price = (cents: number) => `${(cents / 100).toFixed(2)} ${priceUnit(view.unit)}`;
+  const row = (store: Store) => priced.find((p) => p.store === store);
+
+  if (!editing)
+    return (
+      <span className="flex flex-col gap-0.5">
+        {priced.map(({ store, link, cents, stale }) => (
+          <span
+            key={store}
+            title={t(stale ? "ingredients.storeStale" : "ingredients.storeChecked", { day: day(link.checkedAt.slice(0, 10)) })}
+            className={cx("whitespace-nowrap", stale && "text-tinta-soft line-through", cheapest === store && !stale && "font-semibold text-mar")}
+          >
+            <span className="text-xs font-normal text-tinta-soft">{SOURCE_NAME[store]}</span> {price(cents)}
+          </span>
+        ))}
+      </span>
+    );
+
+  return (
+    <span className="flex flex-col gap-1.5">
+      {STORES.map((store) => {
+        const p = row(store);
+        if (!p)
+          return (
+            <button key={store} type="button" onClick={() => onSearch(store)} className="w-fit text-left text-xs font-semibold text-mar underline-offset-2 hover:underline">
+              {t("ingredients.storeSearch", { store: SOURCE_NAME[store] })}
+            </button>
+          );
+        const saved = ingredient.stores.find((s) => s.store === store);
+        const unchanged = saved !== undefined && saved.sourceId === p.link.sourceId && saved.amount === p.link.amount;
+        return (
+          <span key={store} className="flex flex-wrap items-center gap-x-1.5 text-xs">
+            <a href={p.link.url} target="_blank" rel="noreferrer" title={p.link.name} className="max-w-36 truncate font-semibold hover:underline">
+              {SOURCE_NAME[store]}
+            </a>
+            <span className={cx(cheapest === store && "font-semibold text-mar")}>{price(p.cents)}</span>
+            {unchanged && (
+              <button type="button" title={t("ingredients.storeUseHint")} onClick={() => onUse(store, p.cents)} className="font-semibold text-mar hover:underline">
+                {t("ingredients.storeUse")}
+              </button>
+            )}
+            <button type="button" aria-label={t("ingredients.storeUnlink", { store: SOURCE_NAME[store] })} title={t("ingredients.storeUnlink", { store: SOURCE_NAME[store] })} onClick={() => onUnlink(store)} className="text-tinta-soft hover:text-tomate">
+              ✕
+            </button>
+          </span>
+        );
+      })}
+    </span>
   );
 }
 

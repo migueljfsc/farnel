@@ -1,6 +1,6 @@
 import type { DishStatus } from "../../shared/types";
 import { fail, json, noContent } from "../lib/http";
-import { searchStore } from "../lib/poupando";
+import { byRelevance, searchStore } from "../lib/poupando";
 import { dishInput, ids, ingredientCreate, ingredientPatch, store } from "../lib/schemas";
 import {
   archiveDish,
@@ -68,8 +68,8 @@ export const catalogueRoutes: Route[] = [
     const query = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
     const which = store.safeParse(url.searchParams.get("store"));
     if (!query || !which.success) return fail("invalid", 400);
-    const products = await searchStore(fetch, query, which.data);
-    return products === "unavailable" ? fail("source_unavailable", 502) : json({ products });
+    const products = await searchStore(fetch, query, which.data, 24);
+    return products === "unavailable" ? fail("source_unavailable", 502) : json({ products: byRelevance(products, query) });
   }),
   route(
     "PUT",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { searchStore, type Fetcher } from "./poupando";
+import { byRelevance, searchStore, type Fetcher } from "./poupando";
 
 const item = (over: Record<string, unknown>) => ({
   id: "5601312877158-continente",
@@ -69,5 +69,20 @@ describe("searchStore", () => {
       throw new Error("down");
     }) as unknown as Fetcher;
     expect(await searchStore(failing, "salsa", "continente")).toBe("unavailable");
+  });
+});
+
+describe("byRelevance", () => {
+  it("ranks names starting with the search as a word, then as a prefix, then holding it as a word, shorter first", () => {
+    const names = ["Comida Húmida para Gato Frango", "Nuggets Frango", "Frango Inteiro Continente", "Peito de Frango", "Frango", "Frangolins"];
+    const products = names.map((name, i) => ({ name, sourceId: String(i) }));
+    expect(byRelevance(products, "frango").map((p) => p.name)).toEqual([
+      "Frango",
+      "Frango Inteiro Continente",
+      "Frangolins",
+      "Nuggets Frango",
+      "Peito de Frango",
+      "Comida Húmida para Gato Frango",
+    ]);
   });
 });

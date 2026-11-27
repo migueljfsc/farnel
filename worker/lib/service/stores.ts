@@ -3,15 +3,13 @@
  * refreshed a few at a time, oldest first, so each run stays within the Worker's request budget.
  */
 
+import { unitPriceCents } from "../../../shared/packs";
 import type { Store } from "../../../shared/stores";
 import type { StoreLinkInput, StoreLinkView, Unit } from "../../../shared/types";
 import { rows } from "../db";
 import { searchStore, type Fetcher } from "../poupando";
 
 const REFRESH_EVERY_MS = 6 * 24 * 60 * 60 * 1000;
-
-/** Price of 1000 g, 1000 ml or 1 un, from the price of an item that gives `amount` of the ingredient. */
-export const unitPriceCents = (priceCents: number, amount: number, unit: Unit): number => Math.round((priceCents / amount) * (unit === "un" ? 1 : 1000));
 
 /** Every ingredient's store links, by ingredient id. */
 export async function storeLinks(db: D1Database): Promise<Map<number, StoreLinkView[]>> {

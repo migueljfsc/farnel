@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { nameKey } from "../../shared/names";
 import { packOf } from "../../shared/packs";
 import { SOURCE_NAME, type Store } from "../../shared/stores";
 import type { StoreProduct } from "../../shared/types";
@@ -56,4 +57,20 @@ export async function searchStore(fetcher: Fetcher, query: string, store: Store,
     });
   }
   return products;
+}
+
+/**
+ * Products ordered by how well their name matches `query` (case and accents ignored): starting with
+ * it as a word, starting with it, holding it as a word, the rest; shorter names first within each.
+ */
+export function byRelevance<P extends { name: string }>(products: P[], query: string): P[] {
+  const wanted = nameKey(query);
+  const tier = (name: string) => {
+    const key = nameKey(name);
+    if (key === wanted || key.startsWith(`${wanted} `)) return 0;
+    if (key.startsWith(wanted)) return 1;
+    if (` ${key} `.includes(` ${wanted} `)) return 2;
+    return 3;
+  };
+  return [...products].sort((a, b) => tier(a.name) - tier(b.name) || a.name.length - b.name.length);
 }

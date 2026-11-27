@@ -21,7 +21,8 @@ import { nameKey } from "../../../shared/names";
 import { costPerPortionCents, proteinPerPortionGrams, type DishFacts } from "../rules";
 import { weekStartOf } from "../../../shared/time";
 import { availableStock } from "./pantry";
-import { linkStatements, storeLinks, unitPriceCents } from "./stores";
+import { linkStatements, storeLinks } from "./stores";
+import { unitPriceCents } from "../../../shared/packs";
 import type { Store } from "../../../shared/stores";
 
 export interface IngredientLine {

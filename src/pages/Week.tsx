@@ -1,7 +1,8 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { APP_NAME } from "../../shared/app";
 import { addDays, todayLisbon, weekStartOf } from "../../shared/time";
-import type { CookingView, DishSummary, Meal, MealOption, PersonView, PlanView, ShoppingList, Slot } from "../../shared/types";
+import { SOURCE_NAME } from "../../shared/stores";
+import type { CookingView, DishSummary, Meal, MealOption, PersonView, PlanView, ShoppingList, Slot, StoreTotal } from "../../shared/types";
 import { buttonClass, cx, inputClass } from "../components/styles";
 import { Button, Link, Loaded } from "../components/ui";
 import { WeekCalendar } from "../components/WeekCalendar";
@@ -11,7 +12,7 @@ import { useApp } from "../lib/app-context";
 import { SLOTS, segments } from "../lib/board";
 import { AddMeal } from "../components/AddMeal";
 import { CloseButton, Sheet } from "../components/Sheet";
-import { byAisle, shoppingText } from "../lib/shopping";
+import { byAisle, cheaperStore, cheaperTotal, shoppingText } from "../lib/shopping";
 import { TIN_CLASS, tinTone } from "../lib/tins";
 import { pickRandom } from "../lib/random-dish";
 import { claudeLinks, planPrompt } from "../lib/claude";
@@ -680,6 +681,7 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
             {t("shopping.estimate", { total: money(list.totalCents), budget: money(plan.budgetCents) })}
             {list.missingPrices > 0 && <>, {tn("shopping.missing", list.missingPrices)}</>}
           </p>
+          <StoreTotals totals={list.stores} />
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold tabular-nums text-mar">{t("shopping.bought", { count: bought, total: toBuy.length })}</span>
@@ -695,6 +697,7 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
             <ul>
               {group.items.map((i) => {
                 const done = ticked.has(i.ingredientId);
+                const cheaper = cheaperStore(i.storeCosts);
                 return (
                   <li key={i.ingredientId}>
                     <label className="flex cursor-pointer items-center gap-3 border-b border-linha py-2 text-sm">
@@ -713,7 +716,10 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
                         {quantity(i.quantity, i.unit)}
                         {i.fromStock > 0 && <span className="block text-[11px] text-mar">{t("shopping.fromStock", { quantity: quantity(i.fromStock, i.unit) })}</span>}
                       </span>
-                      <span className="w-14 text-right tabular-nums text-tinta-soft">{i.costCents === null ? "–" : money(i.costCents)}</span>
+                      <span className="w-20 text-right tabular-nums text-tinta-soft">
+                        {i.costCents === null ? "–" : money(i.costCents)}
+                        {cheaper && <span className="block text-[11px] text-mar">{SOURCE_NAME[cheaper]}</span>}
+                      </span>
                     </label>
                   </li>
                 );
@@ -736,5 +742,26 @@ function Shopping({ list, plan }: { list: ShoppingList; plan: PlanView }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** What still to buy costs at each store; the cheaper total is marked only when both priced every item. */
+function StoreTotals({ totals }: { totals: StoreTotal[] }) {
+  const { t, tn, money } = useI18n();
+  if (totals.every((s) => s.missing > 0 && s.totalCents === 0)) return null;
+  const cheaper = cheaperTotal(totals);
+  return (
+    <p className="text-sm text-tinta-soft">
+      {t("shopping.stores")}:{" "}
+      {totals.map((s, index) => (
+        <span key={s.store}>
+          {index > 0 && ", "}
+          <span className={cx(cheaper === s.store && "font-semibold text-mar")} title={cheaper === s.store ? t("ingredients.storeCheaper") : undefined}>
+            {SOURCE_NAME[s.store]} {money(s.totalCents)}
+          </span>
+          {s.missing > 0 && <> ({tn("shopping.storeMissing", s.missing)})</>}
+        </span>
+      ))}
+    </p>
   );
 }

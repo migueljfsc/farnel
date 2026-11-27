@@ -2,7 +2,8 @@
 
 import type { Aisle } from "../../shared/aisles";
 import { parseMoney } from "../../shared/format";
-import type { DecidedStatus, IngredientView, RestrictionStatus, Unit } from "../../shared/types";
+import { STORES, type Store } from "../../shared/stores";
+import type { DecidedStatus, IngredientView, RestrictionStatus, StoreLinkInput, StoreLinkView, Unit } from "../../shared/types";
 
 /** What a person changed on one ingredient, as typed. `protein` is grams per unit; "" when not a protein. */
 export interface Draft {
@@ -13,6 +14,10 @@ export interface Draft {
   /** A new count of what is at home, before planned cookings; "" clears it. */
   stock?: string;
   statuses?: Record<number, DecidedStatus>;
+  /** A new product per store; null unlinks it. */
+  stores?: Partial<Record<Store, StoreLinkInput | null>>;
+  /** Take Preço from this store's saved link instead of the typed price. */
+  priceFromStore?: Store;
 }
 
 export interface IngredientPatch {
@@ -22,6 +27,8 @@ export interface IngredientPatch {
   proteinGrams?: number | null;
   stock?: number | null;
   statuses?: Record<number, DecidedStatus>;
+  stores?: Partial<Record<Store, StoreLinkInput | null>>;
+  priceFromStore?: Store;
 }
 
 export interface DraftView {
@@ -31,6 +38,7 @@ export interface DraftView {
   protein: string;
   stock: string;
   statuses: Record<number, RestrictionStatus>;
+  stores: Record<Store, StoreLinkInput | StoreLinkView | null>;
 }
 
 const priceText = (cents: number | null): string => (cents === null ? "" : (cents / 100).toFixed(2));
@@ -44,8 +52,15 @@ export function draftView(ingredient: IngredientView, draft: Draft | undefined):
     protein: draft?.protein ?? (ingredient.proteinGrams === null ? "" : String(ingredient.proteinGrams)),
     stock: draft?.stock ?? (ingredient.stockCount === null ? "" : String(ingredient.stockCount)),
     statuses: { ...ingredient.statuses, ...draft?.statuses },
+    stores: Object.fromEntries(STORES.map((store) => [store, draft?.stores?.[store] !== undefined ? draft.stores[store] : savedLink(ingredient, store)])) as DraftView["stores"],
   };
 }
+
+const savedLink = (ingredient: IngredientView, store: Store): StoreLinkView | null => ingredient.stores.find((s) => s.store === store) ?? null;
+
+const LINK_FIELDS = ["sourceId", "name", "url", "ean", "packText", "amount", "priceCents", "checkedAt"] as const;
+
+const sameLink = (a: StoreLinkInput | null, b: StoreLinkInput | null): boolean => (a === null || b === null ? a === b : LINK_FIELDS.every((f) => a[f] === b[f]));
 
 function parseProtein(text: string): number | null | undefined {
   if (text.trim() === "") return null;
@@ -60,7 +75,8 @@ export function patchFor(ingredient: IngredientView, draft: Draft | undefined): 
   if (!draft) return { patch, valid };
   if (draft.aisle !== undefined && draft.aisle !== ingredient.aisle) patch.aisle = draft.aisle;
   if (draft.unit !== undefined && draft.unit !== ingredient.unit) patch.unit = draft.unit;
-  if (draft.price !== undefined) {
+  if (draft.priceFromStore !== undefined) patch.priceFromStore = draft.priceFromStore;
+  else if (draft.price !== undefined) {
     const cents = draft.price.trim() === "" ? null : parseMoney(draft.price);
     if (draft.price.trim() !== "" && cents === null) valid = false;
     else if (cents !== ingredient.priceCents) patch.priceCents = cents;
@@ -75,6 +91,16 @@ export function patchFor(ingredient: IngredientView, draft: Draft | undefined): 
     const count = text === "" ? null : Number(text);
     if (count !== null && !(Number.isFinite(count) && count >= 0)) valid = false;
     else if (count !== ingredient.stockCount) patch.stock = count;
+  }
+  if (draft.stores !== undefined) {
+    const stores: Partial<Record<Store, StoreLinkInput | null>> = {};
+    for (const store of STORES) {
+      const link = draft.stores[store];
+      if (link === undefined || sameLink(link, savedLink(ingredient, store))) continue;
+      if (link && !(link.amount > 0)) valid = false;
+      stores[store] = link;
+    }
+    if (Object.keys(stores).length > 0) patch.stores = stores;
   }
   if (draft.statuses !== undefined && Object.entries(draft.statuses).some(([id, status]) => ingredient.statuses[Number(id)] !== status)) {
     patch.statuses = draft.statuses;

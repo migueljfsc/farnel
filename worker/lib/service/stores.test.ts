@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { StoreLinkInput, StoreProduct } from "../../../shared/types";
 import { addIngredient, resetDb } from "../../test/fixtures";
 import type { Fetcher } from "../poupando";
-import { linkStatements, refreshStorePrices, storeLinks, unitPriceCents } from "./stores";
+import { linkStatements, refreshStorePrices, storeLinks } from "./stores";
 
 const db = env.DB;
 const NOW = "2026-11-27T04:00:00Z";
@@ -21,14 +21,6 @@ const link = (over: Partial<StoreLinkInput> = {}): StoreLinkInput => ({
   priceCents: 99,
   checkedAt: "2026-11-23T01:00:00Z",
   ...over,
-});
-
-describe("unitPriceCents", () => {
-  it("prices 1000 g, 1000 ml or 1 un", () => {
-    expect(unitPriceCents(169, 1000, "g")).toBe(169);
-    expect(unitPriceCents(99, 50, "g")).toBe(1980);
-    expect(unitPriceCents(169, 6.67, "un")).toBe(25);
-  });
 });
 
 describe("links", () => {
